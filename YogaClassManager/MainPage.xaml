@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.MainPage"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:Models="clr-namespace:YogaClassManager.Models"
+             Padding="0,0,0,10">
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}"/>
+        <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}"/>
+    </ContentPage.Behaviors>
+    <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="7*"/>
+                </Grid.RowDefinitions>
+                <ImageButton BackgroundColor="White" Source="tracygrayyoga_header.jpg" MaximumHeightRequest="300" MinimumHeightRequest="200"
+                         Command="{Binding HeaderPressedCommand}"/>
+        
+            <ScrollView Grid.Row="1">
+                <VerticalStackLayout Padding="10" Spacing="5" MaximumWidthRequest="600" WidthRequest="{OnPlatform MacCatalyst=600}" HorizontalOptions="CenterAndExpand">
+                    <Label Text="{Binding HeaderText}" FontSize="Title" HorizontalOptions="Center" HorizontalTextAlignment="Center" LineBreakMode="WordWrap"/>
+                    <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                        
+                        <Label Text="Quick Actions" Style="{DynamicResource SectionHeader}"/>
+                        <CollectionView ItemsLayout="HorizontalList" ItemsSource="{Binding QuickActions}" VerticalOptions="Start" MaximumHeightRequest="140">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                                           Margin="5" Padding="5">
+                                        <Grid HeightRequest="120" WidthRequest="120">
+
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="2*"/>
+                                                <RowDefinition Height="1*"/>
+                                            </Grid.RowDefinitions>
+                                            <Label Text="{Binding Label}" 
+                                               Grid.Row="2"
+                                               HorizontalTextAlignment="Center" 
+                                               VerticalTextAlignment="Center" 
+                                               VerticalOptions="Center" 
+                                               FontAttributes="Bold"
+                                               LineBreakMode="WordWrap"/>
+                                            <Image Source="{Binding Icon}" 
+                                               HeightRequest="50"/>
+                                            <Button Grid.RowSpan="2" 
+                                                BackgroundColor="Transparent" 
+                                                BorderColor="Transparent"
+                                                Command="{Binding Command}"/>
+                                        </Grid>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                        <Label Text="Todays Classes" Style="{DynamicResource SectionHeader}"/>
+                        <CollectionView ItemsLayout="HorizontalList"
+                                    ItemsSource="{Binding TodaysClasses}"
+                                         MaximumHeightRequest="140">
+                            <CollectionView.EmptyView>
+                                <Label Text="No classes are scheduled for today"
+                               Style="{DynamicResource CollectionViewEmpty}"
+                                   HorizontalTextAlignment="Start"
+                                   Margin="50,5,10,5"/>
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" Margin="5" Padding="5">
+                                        <Grid HeightRequest="120" WidthRequest="120">
+
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="2*"/>
+                                                <RowDefinition Height="1*"/>
+                                            </Grid.RowDefinitions>
+                                            <Label Text="{Binding Label}" 
+                                               Grid.Row="2"
+                                               HorizontalTextAlignment="Center" 
+                                               VerticalTextAlignment="Center" 
+                                               VerticalOptions="Center" 
+                                               FontAttributes="Bold"
+                                               LineBreakMode="WordWrap"/>
+                                            <Image Source="{Binding Icon}" 
+                                               HeightRequest="50">
+                                            </Image>
+                                            <Button Grid.RowSpan="2" 
+                                                BackgroundColor="Transparent" 
+                                                BorderColor="Transparent"
+                                                Command="{Binding Command}"/>
+                                        </Grid>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                    <Label Text="{Binding Quote}" FontSize="Small" FontAttributes="Italic" 
+                           HorizontalTextAlignment="Center" MaximumWidthRequest="550"
+                           Margin="0,10,0,0" LineBreakMode="WordWrap"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray500}}"/>
+                </VerticalStackLayout>
+        </ScrollView>
+
+        <Frame BackgroundColor="Transparent" BorderColor="Transparent" CornerRadius="0" IsVisible="{Binding IsBusy}"/>
+
+        <Frame Background="{AppThemeBinding Light='White', Dark='Black'}" HorizontalOptions="Center" VerticalOptions="Center"
+                           IsVisible="{Binding IsBusy}">
+            <VerticalStackLayout VerticalOptions="Center" Spacing="10" HorizontalOptions="Center">
+                <Label Text="Please wait..." HorizontalOptions="Center"/>
+                <ActivityIndicator IsRunning="True"
+                           HorizontalOptions="FillAndExpand"
+                           VerticalOptions="CenterAndExpand"/>
+            </VerticalStackLayout>
+        </Frame>
+    </Grid>
+ 
+</ContentPage>

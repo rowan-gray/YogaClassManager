@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="YogaClassManager.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:YogaClassManager"
+    xmlns:views="clr-namespace:YogaClassManager.Views"
+    xmlns:terms="clr-namespace:YogaClassManager.Views.Terms"
+    xmlns:people="clr-namespace:YogaClassManager.Views.People"
+    xmlns:classes="clr-namespace:YogaClassManager.Views.Classes"
+    FlyoutBehavior="{x:OnPlatform Default=Flyout, MacCatalyst=Locked}"
+    MinimumWidthRequest="1200"
+    MinimumHeightRequest="800"
+    x:Name="this">
+    <FlyoutItem Title="Home">
+        <ShellContent Title="Home"
+                      ContentTemplate="{DataTemplate local:MainPage}"
+                      Route="HomePage"/>
+    </FlyoutItem>
+    <FlyoutItem Title="Classes">
+        <ShellContent
+        Title="Class Times"
+        ContentTemplate="{DataTemplate classes:ClassesPage}"
+        Route="ClassTimes">
+        </ShellContent>
+        <ShellContent
+        Title="Terms"
+        ContentTemplate="{DataTemplate terms:TermsPage}"
+        Route="Terms">
+        </ShellContent>
+    </FlyoutItem>
+    <FlyoutItem Title="Students">
+        <ShellContent
+        Title="Students"
+        ContentTemplate="{DataTemplate views:StudentsPage}"
+        Route="Students">
+        </ShellContent>
+        <ShellContent
+        Title="People"
+        ContentTemplate="{DataTemplate people:PeoplePage}"
+        Route="People">
+        </ShellContent>
+    </FlyoutItem>
+    <FlyoutItem Title="Settings">
+        <ShellContent
+            Title="Settings"
+            ContentTemplate="{DataTemplate views:SettingsPage}"
+            Route="Settings"/>
+    </FlyoutItem>
+</Shell>
+

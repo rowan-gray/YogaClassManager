@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.EmergencyContactsView"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Name="this">
+    <VerticalStackLayout BindingContext="{x:Reference this}">
+        <Grid ColumnDefinitions="auto, *, auto">
+            <Label Text="Emergency Contacts" Style="{DynamicResource SectionHeader}"/>
+            <HorizontalStackLayout Grid.Column="2" Spacing="5">
+                <Button Text="Remove" Command="{Binding RemoveCommand}" 
+                        CommandParameter="{Binding RemoveCommandParameter}"
+                        Style="{DynamicResource RemoveButton}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button"
+                                Binding="{Binding RemoveCommand, Converter={toolkit:IsNullConverter}}"
+                                Value="True">
+                            <Setter Property="IsVisible"
+                            Value="False"/>
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Text="Edit" Command="{Binding EditCommand}" CommandParameter="{Binding EditCommandParameter}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button"
+                                Binding="{Binding EditCommand, Converter={toolkit:IsNullConverter}}"
+                                Value="True">
+                            <Setter Property="IsVisible"
+                            Value="False"/>
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Text="Add" Command="{Binding AddCommand}" CommandParameter="{Binding AddCommandParameter}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button"
+                                Binding="{Binding AddCommand, Converter={toolkit:IsNullConverter}}"
+                                Value="True">
+                            <Setter Property="IsVisible"
+                            Value="False"/>
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+            </HorizontalStackLayout>
+        </Grid>
+        <CollectionView ItemsSource="{Binding EmergencyContacts}" SelectedItem="{Binding SelectedEmergencyContact}"
+                        SelectionMode="Single" MaximumHeightRequest="200">
+            <CollectionView.EmptyView>
+                <Label Text="This student has no emergency contacts"
+                       Style="{DynamicResource CollectionViewEmpty}"/>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <VerticalStackLayout Padding="5">
+                        <Label Text="{Binding FullName}" FontAttributes="Bold"/>
+
+                        <VerticalStackLayout Margin="10,0">
+                            <HorizontalStackLayout Spacing="20">
+                                <Label Text="{Binding PhoneNumber, StringFormat='Phone Number: {0}'}"/>
+                                <Label Text="{Binding Email, StringFormat='Email: {0}'}"/>
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout Spacing="20">
+                                <Label Text="{Binding Relationship, StringFormat='Relationship: {0}'}"/>
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </VerticalStackLayout>
+</ContentView>

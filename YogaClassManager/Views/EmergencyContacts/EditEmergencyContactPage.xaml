@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.EmergencyContacts.EditEmergencyContactPage"
+             Title="EditEmergencyContactPage">
+    <Grid MaximumWidthRequest="800" VerticalOptions="Start" WidthRequest="{OnPlatform MacCatalyst=800}">
+        <Frame Style="{DynamicResource PageContentFrame}" MaximumWidthRequest="800">
+            <Grid RowDefinitions="*,auto">
+                <ScrollView>
+                    
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="{Binding EmergencyContact.FullName}" Style="{DynamicResource SectionHeader}"/>
+                        <VerticalStackLayout Spacing="5" Margin="10,0,0,0">
+                            <Label Text="Relationship"/>
+                            <Picker ItemsSource="{Binding Relationships}" SelectedItem="{Binding EmergencyContact.Relationship}"/>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </ScrollView>
+                <Grid ColumnDefinitions="*,*" Grid.Row="1">
+                    <Button Text="Cancel" 
+                    Style="{DynamicResource CancelButton}"
+                    Command="{Binding CancelCommand}"/>
+                    <Button Grid.Column="1" Text="Save" Command="{Binding SaveCommand}"/>
+                </Grid>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentPage>

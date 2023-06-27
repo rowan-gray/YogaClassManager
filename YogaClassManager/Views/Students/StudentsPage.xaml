@@ -1,0 +1,177 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.StudentsPage"
+             xmlns:views="clr-namespace:YogaClassManager.Views" 
+             xmlns:viewModels="clr-namespace:YogaClassManager.ViewModels"
+             xmlns:people="clr-namespace:YogaClassManager.Models.People"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:helpers="clr-namespace:YogaClassManager.Helpers"
+             Title="Students"
+             x:DataType="viewModels:StudentsPageModel"
+             Style="{StaticResource PaddedContentPage}">
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}"/>
+        <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}"/>
+    </ContentPage.Behaviors>
+    <Grid>
+        <Grid Style="{StaticResource ContentGrid}" WidthRequest="{OnPlatform MacCatalyst=800}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Frame Style="{DynamicResource MainCollectionFrame}">
+                <Grid RowSpacing="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <VerticalStackLayout Spacing="5">
+                        <Grid>
+                            <HorizontalStackLayout>
+                                <Label Text="Students" FontSize="Title" FontAttributes="Bold" VerticalTextAlignment="Center" Padding="10,0"/>
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout HorizontalOptions="End" Style="{DynamicResource Buttons}">
+                                <Button Text="Hide" 
+                                        Command="{Binding RemoveStudentCommand}"
+                                        Style="{DynamicResource MainCollectionRemoveButton}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button"
+                                                     Binding="{Binding Selection.IsActive}"
+                                                     Value="false">
+                                            <Setter Property="Text" Value="Unhide"/>
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                                <Button Text="Add" Command="{Binding AddStudentCommand}"/>
+                            </HorizontalStackLayout>
+                        </Grid>
+                        <SearchBar x:Name="SearchStudents" 
+                                   Placeholder="Search students"
+                                   Text="{Binding CurrentSearchQuery}"
+                                   SearchCommand="{Binding SearchCollectionCommand}">
+                            <SearchBar.Behaviors>
+                                <toolkit:EventToCommandBehavior EventName="SearchButtonPressed" Command="{Binding UpdatePassCanExecute}"/>
+                            </SearchBar.Behaviors>
+                        </SearchBar>
+                        <HorizontalStackLayout Spacing="2" HorizontalOptions="Center">
+                            <Label Text="Show inactive &amp; hidden students"
+                                   VerticalOptions="Center"/>
+                            <CheckBox IsChecked="{Binding ShowInactiveStudents}">
+                                <CheckBox.Behaviors>
+                                    <toolkit:EventToCommandBehavior EventName="CheckedChanged"/>
+                                </CheckBox.Behaviors>
+                            </CheckBox>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                    <CollectionView x:Name="StudentsList" 
+                                        ItemsSource="{Binding DisplayedCollection}"
+                                        SelectionMode="Single"
+                                        SelectedItem="{Binding Selection}"
+                                        Grid.Row="1"
+                                        VerticalScrollBarVisibility="Default"
+                                        Scrolled="StudentsList_Scrolled">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Padding="5" x:DataType="people:Student">
+                                    <Label Text="{Binding FullName}" Style="{DynamicResource ActiveLabel}" FontAttributes="Bold">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                 Binding="{Binding IsActive}"
+                                                                 Value="False">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                                <Setter Property="Text" Value="{Binding FullName, StringFormat='{0} - Hidden'}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Label Text="{Binding PhoneNumber}" Style="{DynamicResource ActiveLabel}" Margin="10,0">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                 Binding="{Binding IsActive}"
+                                                                 Value="False">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Label Text="{Binding Email}" Style="{DynamicResource ActiveLabel}" Margin="10,0">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                 Binding="{Binding IsActive}"
+                                                                 Value="False">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Grid>
+            </Frame>
+            <Label Grid.Column="1" 
+                       HorizontalOptions="Center" 
+                       Text="Oops... there's no student selected"
+                       FontSize="Subtitle"
+                       TextColor="{StaticResource Gray300}"
+                       IsVisible="False">
+                <Label.Triggers>
+                    <DataTrigger TargetType="Label"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                        <Setter Property="IsVisible" Value="True"/>
+                    </DataTrigger>
+                </Label.Triggers>
+            </Label>
+            <ScrollView Grid.Column="1" Margin="0,0,-10,0">
+                <ScrollView.Triggers>
+                    <DataTrigger TargetType="ScrollView"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+
+                </ScrollView.Triggers>
+                <VerticalStackLayout Margin="0,0,10,0">
+                    <views:DetailsView Person="{Binding Selection}" 
+                                           EditCommand="{Binding EditDetailsCommand}"/>
+                    <views:PassesView x:Name="passesView"
+                                          SelectedPass="{Binding SelectedPass, Mode=TwoWay}"
+                                          Passes="{Binding Selection.Passes}"
+                                          EditCommand="{Binding EditPassCommand}"
+                                          AddCommand="{Binding AddPassCommand}"
+                                          RemoveCommand="{Binding RemovePassCommand}"
+                                      AdvancedViewCommand="{Binding AdvancedPassesViewCommand}"
+                                          MinimumHeightRequest="100"
+                                      MaximumHeightRequest="300"/>
+                    <views:EmergencyContactsView x:Name="emergencyContacts"
+                                                     SelectedEmergencyContact="{Binding SelectedEmergencyContact, Mode=TwoWay}"
+                                                     EmergencyContacts="{Binding Selection.EmergencyContacts}"
+                                                     EditCommand="{Binding EditEmergencyContactCommand}"
+                                                     AddCommand="{Binding AddEmergencyContactCommand}"
+                                                     RemoveCommand="{Binding RemoveEmergencyContactCommand}"
+                                                     MinimumHeightRequest="100"
+                                                 MaximumHeightRequest="200"/>
+                    <views:HealthConcernsContentView HealthConcerns="{Binding Selection.HealthConcerns}" 
+                                                         AddCommand="{Binding AddHealthConcernCommand}"
+                                                         RemoveCommand="{Binding RemoveHealthConcernCommand}"
+                                                         SelectedHealthConcern="{Binding SelectedHealthConcern}"
+                                                         MinimumHeightRequest="100"
+                                                     MaximumHeightRequest="200"/>
+                </VerticalStackLayout>
+            </ScrollView>
+
+
+        </Grid>
+        <Frame Background="{AppThemeBinding Light='White', Dark='Black'}" HorizontalOptions="Center" VerticalOptions="Center"
+                           IsVisible="{Binding IsBusy}">
+            <VerticalStackLayout VerticalOptions="Center" Spacing="10" HorizontalOptions="Center">
+                <Label Text="Please wait..." HorizontalOptions="Center"/>
+                <ActivityIndicator IsRunning="True"
+                           HorizontalOptions="FillAndExpand"
+                           VerticalOptions="CenterAndExpand"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <Frame BackgroundColor="Transparent" BorderColor="Transparent" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

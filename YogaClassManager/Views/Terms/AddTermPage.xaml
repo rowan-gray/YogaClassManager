@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.Terms.AddTermPage"
+             xmlns:converters="clr-namespace:YogaClassManager.Converters"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="AddTermPage">
+    <ContentPage.Resources>
+        <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter"/>
+    </ContentPage.Resources>
+    <VerticalStackLayout
+           MaximumWidthRequest="800">
+        <Frame Style="{DynamicResource PageContentFrame}">
+            <VerticalStackLayout Spacing="5">
+                <Label Text="New Term" Style="{DynamicResource SectionHeader}"/>
+                <VerticalStackLayout Spacing="5" Padding="10,0,0,0">
+                    <Label Text="Term Name"/>
+                    <Entry Text="{Binding Term.Name}">
+                        <Entry.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateAddCommand}"/>
+                        </Entry.Behaviors>
+                    </Entry>
+                    <Label Text="Start Date"/>
+                        <DatePicker Date="{Binding Term.StartDate, Converter={StaticResource DateOnlyToDateTimeConverter}}">
+                        <DatePicker.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="DateSelected" Command="{Binding UpdateAddCommand}"/>
+                        </DatePicker.Behaviors>
+                    </DatePicker>
+                    <Label Text="End Date"/>
+                        <DatePicker Date="{Binding Term.EndDate, Converter={StaticResource DateOnlyToDateTimeConverter}}">
+                        <DatePicker.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="DateSelected" Command="{Binding UpdateAddCommand}"/>
+                        </DatePicker.Behaviors>
+                    </DatePicker>
+                    <HorizontalStackLayout>
+                        <Label Text="Earlybird Start Date" VerticalOptions="Center"/>
+                        <CheckBox IsChecked="{Binding IsCatchupStartDate}"/>
+                    </HorizontalStackLayout>
+                    <DatePicker Date="{Binding Term.CatchupStartDate, Converter={StaticResource DateOnlyToDateTimeConverter}}">
+                        <DatePicker.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="DateSelected" Command="{Binding UpdateAddCommand}"/>
+                        </DatePicker.Behaviors>
+                        <DatePicker.Triggers>
+                            <DataTrigger TargetType="DatePicker" Binding="{Binding Term.CatchupStartDate, Converter={toolkit:IsNullConverter}}" Value="true">
+                                <Setter Property="IsEnabled" Value="False"/>
+                            </DataTrigger>
+                        </DatePicker.Triggers>
+                    </DatePicker>
+                    <HorizontalStackLayout>
+                        <Label Text="Catchup End Date" VerticalOptions="Center"/>
+                        <CheckBox  IsChecked="{Binding IsCatchupEndDate}"/>
+                    </HorizontalStackLayout>
+                    <DatePicker Date="{Binding Term.CatchupEndDate, Converter={StaticResource DateOnlyToDateTimeConverter}}">
+                        <DatePicker.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="DateSelected" Command="{Binding UpdateAddCommand}"/>
+                        </DatePicker.Behaviors>
+                        <DatePicker.Triggers>
+                            <DataTrigger TargetType="DatePicker" Binding="{Binding Term.CatchupEndDate, Converter={toolkit:IsNullConverter}}" Value="true">
+                                <Setter Property="IsEnabled" Value="False"/>
+                            </DataTrigger>
+                        </DatePicker.Triggers>
+                    </DatePicker>
+                </VerticalStackLayout>
+                <Grid ColumnDefinitions="*,*">
+                    <Button Text="Cancel" Command="{Binding CancelCommand}" Style="{DynamicResource CancelButton}"/>
+                    <Button Grid.Column="1" Text="Save" Command="{Binding AddCommand}"/>
+                </Grid>
+            </VerticalStackLayout>
+        </Frame>
+    </VerticalStackLayout>
+</ContentPage>

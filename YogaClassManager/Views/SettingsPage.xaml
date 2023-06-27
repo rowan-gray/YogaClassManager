@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.SettingsPage"
+             xmlns:helpers="clr-namespace:YogaClassManager.Helpers"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="SettingsPage">
+    <Grid MaximumWidthRequest="800" VerticalOptions="Start" WidthRequest="{OnPlatform MacCatalyst=800}">
+        <Frame Style="{DynamicResource PageContentFrame}">
+            <Grid RowDefinitions="*,auto">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Settings" Style="{DynamicResource SectionHeader}"/>
+                        <VerticalStackLayout Spacing="5" Margin="10,0,0,0">
+                            <HorizontalStackLayout Spacing="5">
+                                <Label Text="Database Location" VerticalOptions="Center"/>
+                                <Button FontFamily="MaterialDesignIcons" Text="{x:Static helpers:IconFont.FileEdit}" BackgroundColor="Transparent" Command="{Binding ChooseFileCommand}"/>
+                                <Button FontFamily="MaterialDesignIcons" Text="{x:Static helpers:IconFont.FileDocumentPlus}" BackgroundColor="Transparent" Command="{Binding CreateFileCommand}"/>
+                            </HorizontalStackLayout>
+                            <Label Text="{Binding DbFilePath}" Margin="10,0,0,0" TextColor="LightGray">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding DbFilePath, Converter={toolkit:IsNullConverter}}" Value="true">
+                                        <Setter Property="Text" Value="No path set"/>
+                                    </DataTrigger> 
+                                </Label.Triggers>
+                            </Label>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentPage>

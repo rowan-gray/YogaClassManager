@@ -1,0 +1,172 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.Classes.MarkRollPage"
+             xmlns:converters="clr-namespace:YogaClassManager.Converters"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="MarkRollPage"
+             x:Name="this"
+             Style="{DynamicResource PaddedContentPage}">
+    <ContentPage.Resources>
+        <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter"/>
+        <converters:IntSubractionConverter x:Key="IntSubractionConverter"/>
+    </ContentPage.Resources>
+    <Grid MaximumWidthRequest="1100" MaximumHeightRequest="1200" WidthRequest="{OnPlatform MacCatalyst=1100}">
+        <Frame Style="{DynamicResource PageContentFrame}">
+            <Grid RowDefinitions="auto,*,auto" 
+                  ColumnDefinitions="2*,3*">
+                <VerticalStackLayout Spacing="5" Grid.ColumnSpan="2">
+                    <Label Text="{Binding HeaderText}" Style="{DynamicResource SectionHeader}" Grid.ColumnSpan="2"/>
+                    <Label Text="Class Details" Style="{DynamicResource SubSectionHeader}"/>
+                    <Label Text="Date" Margin="10,0,0,0"/>
+                    <DatePicker Date="{Binding Date, Converter={StaticResource DateOnlyToDateTimeConverter}}" Margin="10,0,0,0" IsEnabled="False">
+                        <DatePicker.Triggers>
+                            <DataTrigger TargetType="DatePicker" Binding="{Binding MarkedStudents.Count}" Value="0">
+                                <Setter Property="IsEnabled" Value="True"/>
+                            </DataTrigger>
+                        </DatePicker.Triggers>
+                    </DatePicker>
+                </VerticalStackLayout>
+
+                <Frame Grid.Row="1" Style="{DynamicResource SecondaryCollectionFrame}">
+                    <Grid RowDefinitions="auto,*">
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Select Students" Style="{DynamicResource SubSectionHeader}"/>
+                            <SearchBar Placeholder="Enter a students name"
+                                        x:Name="studentSearch"
+                                        Margin="10,0,0,0"
+                                        Text="{Binding Search}"
+                                        SearchCommand="{Binding SearchStudentsCommand}"
+                                        SearchCommandParameter="{Binding Text, Source={x:Reference studentSearch}}"/>
+                        </VerticalStackLayout>
+
+                        <CollectionView
+                            Grid.Row="1"
+                                    ItemsSource="{Binding SearchedStudents}"
+                                    SelectionMode="Single" EmptyView="{Binding SearchFeedback}"
+                            VerticalScrollBarVisibility="Never"
+                            ItemSizingStrategy="MeasureFirstItem">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,auto">
+                                        <VerticalStackLayout Padding="5">
+                                            <Label Text="{Binding FullName}" FontAttributes="Bold"/>
+
+                                            <VerticalStackLayout Margin="10,0">
+                                                <VerticalStackLayout Spacing="5">
+                                                    <Label Text="{Binding PhoneNumber, StringFormat='Phone Number: {0}'}"/>
+                                                    <Label Text="{Binding Email, StringFormat='Email: {0}'}"/>
+                                                </VerticalStackLayout>
+                                            </VerticalStackLayout>
+
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" 
+                                                    Text="Add" 
+                                                    Margin="2,2,10,2"
+                                                    VerticalOptions="Center"
+                                                    Command="{Binding Source={x:Reference this}, Path=BindingContext.AddStudentCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+                </Frame>
+
+                <Frame Grid.Row="1" Grid.Column="1" Style="{DynamicResource MainCollectionFrame}" x:Name="MarkedStudentsFrame">
+                    <Grid RowDefinitions="auto,*,auto">
+                        <Label Text="Added Students" Style="{DynamicResource SubSectionHeader}"/>
+                        <CollectionView
+                            Grid.Row="1"
+                                Margin="5,0,0,0"
+                                ItemsSource="{Binding MarkedStudents}"
+                                SelectionMode="Single" EmptyView="No Students Added" 
+                                VerticalScrollBarVisibility="Never">
+                            <CollectionView.Behaviors>
+                                <toolkit:EventToCommandBehavior EventName="SizeChanged" Command="{Binding SaveCommandCanExecuteChangedCommand}"/>
+                            </CollectionView.Behaviors>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,auto" Padding="10,0,10,0">
+                                        <Grid ColumnSpacing="10" ColumnDefinitions="auto,*" RowDefinitions="auto,auto,auto,auto" Padding="5" VerticalOptions="Center">
+                                            <Label Text="{Binding Student.FullName}" FontAttributes="Bold" FontSize="Micro" VerticalTextAlignment="Center"/>
+
+                                            <Picker     ItemsSource="{Binding Student.Passes}" 
+                                                        SelectedItem="{Binding Pass}">
+                                                <Picker.Behaviors>
+                                                    <toolkit:EventToCommandBehavior EventName="SelectedIndexChanged" Command="{Binding Source={x:Reference this}, Path=BindingContext.UpdatePassCommand}" CommandParameter="{Binding}"/>
+                                                </Picker.Behaviors>
+                                                <Picker.Resources>
+                                                    <Style TargetType="Picker">
+                                                        <Setter Property="VisualStateManager.VisualStateGroups">
+                                                            <VisualStateGroupList>
+                                                                <VisualStateGroup>
+                                                                    <VisualState x:Name="Horizontal">
+                                                                        <VisualState.StateTriggers>
+                                                                            <AdaptiveTrigger MinWindowWidth="1100"/>
+                                                                        </VisualState.StateTriggers>
+                                                                        <VisualState.Setters>
+                                                                            <Setter Property="Grid.Column" Value="1"/>
+                                                                            <Setter Property="Grid.Row" Value="0"/>
+                                                                        </VisualState.Setters>
+                                                                    </VisualState>
+                                                                    <VisualState x:Name="Vertical">
+                                                                        <VisualState.StateTriggers>
+                                                                            <AdaptiveTrigger MinWindowWidth="0"/>
+                                                                        </VisualState.StateTriggers>
+                                                                        <VisualState.Setters>
+                                                                            <Setter Property="Grid.Column" Value="0"/>
+                                                                            <Setter Property="Grid.Row" Value="1"/>
+                                                                        </VisualState.Setters>
+                                                                    </VisualState>
+                                                                </VisualStateGroup>
+
+                                                            </VisualStateGroupList>
+                                                        </Setter>
+                                                    </Style>
+                                                </Picker.Resources>
+                                            </Picker>
+
+                                            <Label Text="{Binding Pass.ClassesRemaining, StringFormat='Classes remaining: {0}', 
+                                                    Converter={StaticResource IntSubractionConverter}, ConverterParameter='1'}" 
+                                                       Margin="10,0,0,0" Grid.Row="2" Grid.ColumnSpan="2"/>
+
+                                            <ListView ItemsSource="{Binding Student.HealthConcerns}" Margin="10,0,10,0" SelectionMode="None" 
+                                                      Grid.Row="3" Grid.ColumnSpan="2">
+                                                <ListView.Triggers>
+                                                    <DataTrigger TargetType="ListView" Binding="{Binding Student.HealthConcerns, Converter={toolkit:IsListNullOrEmptyConverter}}" Value="True">
+                                                        <Setter Property="IsVisible" Value="False"/>
+                                                    </DataTrigger>
+                                                </ListView.Triggers>
+                                            </ListView>
+
+                                        </Grid>
+                                        <Button Grid.Column="1"
+                                                    Text="Remove" 
+                                                    Margin="5,5,0,5"
+                                                VerticalOptions="Center"
+                                                Style="{DynamicResource RemoveButton}"
+                                                    Command="{Binding Source={x:Reference this}, Path=BindingContext.RemoveStudentCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                        <Label Text="{Binding MarkedStudents.Count, StringFormat='Total - {0}'}" IsVisible="true" Style="{DynamicResource InactiveLabel}" Grid.Row="2">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding MarkedStudents.Count}" Value="0">
+                                    <Setter Property="IsVisible" Value="false"/>
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                    </Grid>
+                </Frame>
+
+                <Grid ColumnDefinitions="*,*" Grid.Row="3" Grid.ColumnSpan="2">
+                    <Button Text="Cancel" Command="{Binding CancelCommand}" Style="{DynamicResource CancelButton}"/>
+                    <Button Grid.Column="1" Text="Save" Command="{Binding SaveCommand}"/>
+                </Grid>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentPage>

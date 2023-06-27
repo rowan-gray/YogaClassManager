@@ -1,0 +1,173 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.Passes.AddPassPage"
+             xmlns:converters="clr-namespace:YogaClassManager.Converters"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="AddPassPage"
+             x:Name="this">
+    <ContentPage.Resources>
+        <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter"/>
+    </ContentPage.Resources>
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding AppearingCommand}"/>
+    </ContentPage.Behaviors>
+    <Grid MaximumWidthRequest="800" WidthRequest="{OnPlatform MacCatalyst=800}" VerticalOptions="{OnPlatform WinUI=Start}">
+        <Frame Style="{DynamicResource PageContentFrame}">
+            <Grid RowDefinitions="*,auto">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="{Binding Student.FullName, StringFormat='{0}'}" Style="{DynamicResource SectionHeader}"/>
+                        <Label Text="Pass Type" Style="{DynamicResource SubSectionHeader}"/>
+                        <VerticalStackLayout Spacing="5" Padding="10,0">
+                            <Label Text="Pass Type"/>
+                            <Picker x:Name="PassTypePicker" SelectedItem="{Binding PassType}" HorizontalOptions="Fill" ItemsSource="{Binding PassTypes}">
+                                <Picker.Behaviors>
+                                    <toolkit:EventToCommandBehavior EventName="SelectedIndexChanged" Command="{Binding UpdateCanExecutesCommand}"/>
+                                </Picker.Behaviors>
+                            </Picker>
+                        </VerticalStackLayout>
+
+                        <Label Text="Details" Style="{DynamicResource SubSectionHeader}"/>
+                        <!--Dated Pass-->
+                        <VerticalStackLayout IsVisible="False" Spacing="5" Padding="10,0">
+                            <VerticalStackLayout.Triggers>
+                                <DataTrigger TargetType="VerticalStackLayout"
+                                        Binding="{Binding PassType}"
+                                     Value="Dated Pass">
+                                    <Setter Property="IsVisible"
+                                    Value="True"/>
+                                </DataTrigger>
+                            </VerticalStackLayout.Triggers>
+                            <Label Text="Number of Classes"/>
+                            <Entry Text="{Binding DatedPass.ClassCount}">
+                                <Entry.Behaviors>
+                                    <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateCanExecutesCommand}"/>
+                                </Entry.Behaviors>
+                            </Entry>
+                            <Label Text="Start Date"/>
+                            <DatePicker Date="{Binding DatedPass.StartDate, Converter={StaticResource DateOnlyToDateTimeConverter}}">
+                                <DatePicker.Behaviors>
+                                    <toolkit:EventToCommandBehavior EventName="DateSelected" Command="{Binding UpdateCanExecutesCommand}"/>
+                                </DatePicker.Behaviors>
+                            </DatePicker>
+                            <Label Text="End Date"/>
+                            <DatePicker Date="{Binding DatedPass.EndDate, Converter={StaticResource DateOnlyToDateTimeConverter}}">
+                                <DatePicker.Behaviors>
+                                    <toolkit:EventToCommandBehavior EventName="DateSelected" Command="{Binding UpdateCanExecutesCommand}"/>
+                                </DatePicker.Behaviors>
+                            </DatePicker>
+                        </VerticalStackLayout>
+                        
+                        <!--Casual Pass-->
+                        <VerticalStackLayout IsVisible="False" Spacing="5" Padding="10,0">
+                            <VerticalStackLayout.Triggers>
+                                <DataTrigger TargetType="VerticalStackLayout"
+                                        Binding="{Binding PassType}"
+                                     Value="Casual Pass">
+                                    <Setter Property="IsVisible"
+                                    Value="True"/>
+                                </DataTrigger>
+                            </VerticalStackLayout.Triggers>
+                            <Label Text="Number of Classes"/>
+                            <Entry Text="{Binding CasualPass.ClassCount}">
+                                <Entry.Behaviors>
+                                    <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateCanExecutesCommand}"/>
+                                </Entry.Behaviors>
+                            </Entry>
+                        </VerticalStackLayout>
+
+                        <!--Term Pass-->
+                        <VerticalStackLayout IsVisible="False"  Spacing="5" Padding="10,0">
+                            <VerticalStackLayout.Triggers>
+                                <DataTrigger TargetType="VerticalStackLayout"
+                                        Binding="{Binding PassType}"
+                                     Value="Term Pass">
+                                    <Setter Property="IsVisible"
+                                    Value="True"/>
+
+                                </DataTrigger>
+                            </VerticalStackLayout.Triggers>
+                            <Label Text="Term"/>
+                            <Picker x:Name="termPicker"
+                            SelectedItem="{Binding TermPass.Term}" 
+                            ItemsSource="{Binding Terms}">
+                                <Picker.Behaviors>
+                                    <toolkit:EventToCommandBehavior EventName="SelectedIndexChanged" Command="{Binding TermChangedCommand}"/>
+                                    <toolkit:EventToCommandBehavior EventName="SelectedIndexChanged" Command="{Binding UpdateCanExecutesCommand}"/>
+                                </Picker.Behaviors>
+                            </Picker>
+                            <Label Text="Class"/>
+                            <Picker ItemsSource="{Binding SelectedItem.Classes, Source={x:Reference termPicker}}"
+                            SelectedItem="{Binding TermPass.TermClassSchedule}">
+                                <Picker.Behaviors>
+                                    <toolkit:EventToCommandBehavior EventName="SelectedIndexChanged" Command="{Binding UpdateCanExecutesCommand}"/>
+                                </Picker.Behaviors>
+                            </Picker>
+                        </VerticalStackLayout>
+                        
+                        <!--Pass Alterations-->
+                        <VerticalStackLayout  Spacing="5">
+                            <Label Text="Alterations" Style="{DynamicResource SectionHeader}"/>
+                            <Grid ColumnDefinitions="*,*" Padding="10,0">
+                                <Frame Style="{DynamicResource MainCollectionFrame}" Margin="0,0,5,0">
+                                    <CollectionView ItemsSource="{Binding CurrentPass.Alterations}" 
+                                                    HeightRequest="150"
+                                                    SelectionMode="Single" 
+                                                    EmptyView="No alterations">
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="*,auto">
+                                                    <VerticalStackLayout Padding="5">
+                                                        <Label Text="{Binding Amount}" FontAttributes="Bold"/>
+
+                                                        <VerticalStackLayout Margin="10,0">
+                                                            <Label Text="{Binding Reason, StringFormat='Reason: {0}'}">
+                                                                <Label.Triggers>
+                                                                    <DataTrigger TargetType="Label" Binding="{Binding Reason, Converter={toolkit:IsStringNullOrEmptyConverter}}" Value="true">
+                                                                        <Setter Property="Text" Value="No reason provided"/>
+                                                                        <Setter Property="TextColor" Value="{DynamicResource Gray400}"/>
+                                                                    </DataTrigger>
+                                                                </Label.Triggers>
+                                                            </Label>
+                                                        </VerticalStackLayout>
+
+                                                    </VerticalStackLayout>
+                                                    <Button Grid.Column="1" 
+                                                            Text="Remove" 
+                                                            Command="{Binding BindingContext.RemoveAlterationCommand, Source={x:Reference this}}" 
+                                                            CommandParameter="{Binding}" Margin="5"
+                                                            Style="{DynamicResource RemoveButton}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+                                </Frame>
+
+                                <VerticalStackLayout Grid.Column="1" Margin="5,0,0,0"  Spacing="5">
+                                    <Label Text="Alteration Amount"/>
+                                    <Entry Placeholder="Enter an amount" Text="{Binding NewAlteration.Amount}">
+                                        <Entry.Behaviors>
+                                            <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateCanAddAlterationExecuteCommand}"/>
+                                        </Entry.Behaviors>
+                                    </Entry>
+                                    <Label Text="Reason"/>
+                                    <Entry Placeholder="Reason" Text="{Binding NewAlteration.Reason}">
+                                        <Entry.Behaviors>
+                                            <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateCanAddAlterationExecuteCommand}"/>
+                                        </Entry.Behaviors>
+                                    </Entry>
+                                    <Button Grid.Column="1" Text="Add" Command="{Binding AddAlterationCommand}" HorizontalOptions="End"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </ScrollView>
+                <Grid ColumnDefinitions="*,*" Grid.Row="1">
+                    <Button Text="Cancel" Command="{Binding CancelCommand}" Style="{DynamicResource CancelButton}"/>
+                    <Button Grid.Column="1" Text="Save" Command="{Binding SaveCommand}"/>
+                </Grid>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,130 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.People.PeoplePage"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="PeoplePage"
+             Style="{StaticResource PaddedContentPage}"
+             xmlns:views="clr-namespace:YogaClassManager.Views">
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}"/>
+        <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}"/>
+    </ContentPage.Behaviors>
+    <Grid WidthRequest="{OnPlatform MacCatalyst=800}">
+        <Grid Style="{StaticResource ContentGrid}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Frame Style="{DynamicResource MainCollectionFrame}">
+                <Grid RowSpacing="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <VerticalStackLayout Spacing="5">
+                        <Grid>
+                            <HorizontalStackLayout>
+                                <Label Text="People" FontSize="Title" FontAttributes="Bold" VerticalTextAlignment="Center" Padding="10,0"/>
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout HorizontalOptions="End" Style="{DynamicResource Buttons}">
+                                <Button Text="Hide" 
+                                        Command="{Binding RemovePersonCommand}"
+                                        Style="{DynamicResource MainCollectionRemoveButton}"/>
+                                <Button Text="Add" Command="{Binding AddPersonCommand}"/>
+                            </HorizontalStackLayout>
+                        </Grid>
+                        <SearchBar x:Name="SearchPeople" 
+                                   Placeholder="Search people"
+                                   Text="{Binding CurrentSearchQuery}"
+                                   SearchCommand="{Binding SearchCollectionCommand}"/>
+                    </VerticalStackLayout>
+                    <CollectionView x:Name="PeopleList" 
+                                        ItemsSource="{Binding DisplayedCollection}"
+                                        SelectedItem="{Binding Selection, Mode=TwoWay}"
+                                        Grid.Row="1"
+                                        VerticalScrollBarVisibility="Default"
+                                        Scrolled="PeopleList_Scrolled"
+                                        SelectionMode="Single">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Padding="5">
+                                    <Label Text="{Binding FullName}" Style="{DynamicResource ActiveLabel}" FontAttributes="Bold">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                 Binding="{Binding IsActive}"
+                                                                 Value="False">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                                <Setter Property="Text" Value="{Binding FullName, StringFormat='{0} - Hidden'}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Label Text="{Binding PhoneNumber}" Style="{DynamicResource ActiveLabel}" Margin="10,0">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                 Binding="{Binding IsActive}"
+                                                                 Value="False">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Label Text="{Binding Email}" Style="{DynamicResource ActiveLabel}" Margin="10,0">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                 Binding="{Binding IsActive}"
+                                                                 Value="False">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Grid>
+            </Frame>
+            <Label Grid.Column="1" 
+                       HorizontalOptions="Center" 
+                       Text="Oops... there's no one selected"
+                       FontSize="Subtitle"
+                       TextColor="{StaticResource Gray300}"
+                       IsVisible="False">
+                <Label.Triggers>
+                    <DataTrigger TargetType="Label"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                        <Setter Property="IsVisible" Value="True"/>
+                    </DataTrigger>
+                </Label.Triggers>
+            </Label>
+            <ScrollView Grid.Column="1" Margin="0,0,-10,0">
+                <ScrollView.Triggers>
+                    <DataTrigger TargetType="ScrollView"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+
+                </ScrollView.Triggers>
+                <VerticalStackLayout Margin="0,0,10,0">
+                    <views:DetailsView Person="{Binding Selection}" 
+                                           EditCommand="{Binding EditDetailsCommand}"/>
+                </VerticalStackLayout>
+            </ScrollView>
+
+
+        </Grid>
+        
+        <Frame Background="{AppThemeBinding Light='White', Dark='Black'}" HorizontalOptions="Center" VerticalOptions="Center"
+                           IsVisible="{Binding IsBusy}">
+            <VerticalStackLayout VerticalOptions="Center" Spacing="10" HorizontalOptions="Center">
+                <Label Text="Please wait..." HorizontalOptions="Center"/>
+                <ActivityIndicator IsRunning="True"
+                           HorizontalOptions="FillAndExpand"
+                           VerticalOptions="CenterAndExpand"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <Frame BackgroundColor="Transparent" BorderColor="Transparent" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.Classes.SelectClassPage"
+             Title="SelectClassPage"
+             x:Name="this">
+    <Grid MaximumWidthRequest="800"  WidthRequest="{OnPlatform MacCatalyst=800}">
+        <Frame Style="{DynamicResource PageContentFrame}" VerticalOptions="Start">
+            <Grid RowDefinitions="auto,*,auto" ColumnDefinitions="*,*" MaximumHeightRequest="400" MinimumHeightRequest="200">
+                <Label Text="Available Classes" Style="{DynamicResource SectionHeader}"/>
+                <CollectionView Grid.Row="1"  ItemsSource="{Binding AvailableClasses}"
+                                        Margin="10,0">
+                    <CollectionView.EmptyView>
+                        <Label Text="No classes selected" Style="{DynamicResource CollectionViewEmpty}"/>
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <VerticalStackLayout Padding="5">
+                                    <Label Text="{Binding Day}" FontAttributes="Bold"/>
+
+                                    <VerticalStackLayout Margin="10,0">
+                                        <Label Text="{Binding Time, StringFormat='Time: {0}'}"/>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                                <Button Text="Select" HorizontalOptions="End" VerticalOptions="Center"
+                                                Command="{Binding BindingContext.SelectClassCommand, Source={x:Reference this}}"
+                                                CommandParameter="{Binding}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                <Label Grid.Column="1" Text="Selected Classes" Style="{DynamicResource SectionHeader}"/>
+                <CollectionView Grid.Row="1" Grid.Column="1"  ItemsSource="{Binding SelectedClasses}"
+                                        Margin="10,0">
+                    <CollectionView.EmptyView>
+                        <Label Text="No classes selected" Style="{DynamicResource CollectionViewEmpty}"/>
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <VerticalStackLayout Padding="5">
+                                    <Label Text="{Binding ClassSchedule.Day}" FontAttributes="Bold"/>
+
+                                    <VerticalStackLayout Margin="10,0">
+                                        <Label Text="{Binding ClassSchedule.Time, StringFormat='Time: {0}'}"/>
+                                        <HorizontalStackLayout Spacing="5">
+                                            <Label Text="{Binding ClassCount, StringFormat='Class Count: {0}'}" VerticalOptions="Center"/>
+                                            <Button Text="Change" FontSize="Body" Padding="3,1"
+                                                            Command="{Binding BindingContext.ChangeClassCountCommand, Source={x:Reference this}}"
+                                                            CommandParameter="{Binding}"/>
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                                <Button Text="Remove" Style="{DynamicResource RemoveButton}"
+                                                HorizontalOptions="End" VerticalOptions="Center"
+                                                Command="{Binding BindingContext.RemoveClassCommand, Source={x:Reference this}}"
+                                                CommandParameter="{Binding}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                <Button Text="Cancel" Grid.Row="2" Command="{Binding CancelCommand}" Style="{DynamicResource CancelButton}"/>
+                <Button Grid.Column="1" Text="Add" Grid.Row="2" Command="{Binding AddCommand}"/>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentPage>

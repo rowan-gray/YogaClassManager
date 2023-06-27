@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.People.SearchPeoplePage"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="SearchPeoplePage">
+    <Grid MaximumWidthRequest="800" MaximumHeightRequest="800" VerticalOptions="Start" WidthRequest="{OnPlatform MacCatalyst=800}">
+        <Frame Style="{DynamicResource PageContentFrame}">
+            <Grid RowDefinitions="auto, *, auto">
+                <Grid ColumnDefinitions="*, auto">
+                    <SearchBar Placeholder="Search by name"
+                       Text="{Binding SearchQuery}"
+                       SearchCommand="{Binding SearchPeopleCommand}"/>
+                    <HorizontalStackLayout Grid.Column="1" Spacing="5" Margin="10,0,0,0">
+                        <Label Text="Show hidden people" VerticalTextAlignment="Center"/>
+                        <CheckBox IsChecked="{Binding ReturnHiddenPeople}">
+                            <CheckBox.Behaviors>
+                                <toolkit:EventToCommandBehavior EventName="CheckedChanged" Command="{Binding SearchPeopleCommand}"/>
+                            </CheckBox.Behaviors>
+                        </CheckBox>
+                    </HorizontalStackLayout>
+                </Grid>
+                <ScrollView Grid.Row="1">
+                    <CollectionView ItemsSource="{Binding SearchedPeople}" 
+                                        SelectedItem="{Binding SelectedPerson}"
+                                        SelectionMode="Single" MinimumHeightRequest="500">
+                        <CollectionView.EmptyView>
+                            <Label Text="No people returned from search"
+                                       Style="{DynamicResource CollectionViewEmpty}"/>
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Padding="5">
+                                    <Label Text="{Binding FullName}" Style="{DynamicResource StudentListDisplay}" FontAttributes="Bold">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                         Binding="{Binding IsActive}"
+                                                                         Value="False">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                                <Setter Property="Text" Value="{Binding FullName, StringFormat='{0} - Hidden'}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Label Text="{Binding PhoneNumber}" Margin="10,0">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                         Binding="{Binding IsActive}"
+                                                                         Value="False">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Label Text="{Binding Email}" Margin="10,0">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                         Binding="{Binding IsActive}"
+                                                                         Value="False">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </ScrollView>
+                    <Grid Grid.Row="2" ColumnDefinitions="*,*">
+                    <Button Text="Cancel" 
+                            Style="{DynamicResource CancelButton}"
+                            Command="{Binding CancelCommand}"/>
+                    <Button Grid.Column="1" Text="Select" Command="{Binding SelectCommand}"/>
+                </Grid>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentPage>

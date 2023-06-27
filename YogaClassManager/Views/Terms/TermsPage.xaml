@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.Terms.TermsPage"
+             xmlns:terms="clr-namespace:YogaClassManager.Models.Classes"
+             xmlns:termViews="clr-namespace:YogaClassManager.Views.Terms"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:converters="clr-namespace:YogaClassManager.Converters"
+             Title="TermsPage"
+             Style="{StaticResource PaddedContentPage}">
+    <ContentPage.Resources>
+        <converters:IsTermCompletedConverter x:Key="IsTermCompletedConverter"/>
+    </ContentPage.Resources>
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}"/>
+        <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}"/>
+    </ContentPage.Behaviors>
+    <Grid>
+    <Grid Style="{StaticResource ContentGrid}">
+        <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="320"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Frame Style="{DynamicResource MainCollectionFrame}">
+            <Grid RowDefinitions="auto,*" RowSpacing="5">
+
+                <VerticalStackLayout Spacing="5">
+                    <Grid>
+                        <HorizontalStackLayout>
+                            <Label Text="Terms" FontSize="Title" FontAttributes="Bold" VerticalTextAlignment="Center" Padding="10,0"/>
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout HorizontalOptions="End" Style="{DynamicResource Buttons}">
+                            <Button Text="Remove"
+                                        Command="{Binding RemoveTermCommand}"
+                                            Style="{DynamicResource MainCollectionRemoveButton}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                         Binding="{Binding SelectedItem.IsActive}"
+                                                         Value="false">
+                                        <Setter Property="Text" Value="Unhide"/>
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="Add" Command="{Binding AddTermCommand}"/>
+                        </HorizontalStackLayout>
+                    </Grid>
+                    <HorizontalStackLayout Spacing="2" HorizontalOptions="Center">
+                        <Label Text="Show completed terms"
+                                       VerticalOptions="Center"/>
+                        <CheckBox IsChecked="{Binding RetrieveCompletedTerms}"/>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+                <CollectionView x:Name="TermsList" ItemsSource="{Binding DisplayedCollection}" Grid.Row="1" 
+                            SelectedItem="{Binding Selection, Mode=TwoWay}" SelectionMode="Single">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <VerticalStackLayout Padding="5" x:DataType="terms:Term">
+                                <Label Text="{Binding Name}" FontAttributes="Bold">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label"
+                                                                    Binding="{Binding Converter={StaticResource IsTermCompletedConverter}}"
+                                                                    Value="True">
+                                            <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                            <Setter Property="Text" Value="{Binding Name, StringFormat='{0} - Completed'}"/>
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Label Margin="10,0">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label"
+                                                                    Binding="{Binding Converter={StaticResource IsTermCompletedConverter}}"
+                                                                    Value="True">
+                                            <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                    <Label.Text>
+                                        <MultiBinding StringFormat="{}{0} to {1}">
+                                            <Binding Path="StartDate"/>
+                                            <Binding Path="EndDate"/>
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+                </Frame>
+                <Label Grid.Column="1" 
+                       HorizontalOptions="Center" 
+                       Text="Oops... there's no term selected"
+                       Padding="10,15,5,5"
+                       FontSize="Subtitle"
+                       TextColor="{StaticResource Gray300}"
+                       IsVisible="False">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                            <Setter Property="IsVisible" Value="True"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+        <ScrollView Grid.Column="1">
+            <ScrollView.Triggers>
+                <DataTrigger TargetType="ScrollView"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                    <Setter Property="IsVisible" Value="False"/>
+                </DataTrigger>
+            </ScrollView.Triggers>
+            <VerticalStackLayout>
+                <termViews:TermDetailsView Term="{Binding Selection}" EditCommand="{Binding EditTermCommand}"/>
+                <termViews:ClassListView Classes="{Binding Selection.Classes}" 
+                                                 SelectedClass="{Binding SelectedClass, Mode=TwoWay}"
+                                                 AddCommand="{Binding AddClassCommand}"
+                                                 RemoveCommand="{Binding RemoveClassCommand}"/>
+            </VerticalStackLayout>
+            </ScrollView>
+
+        </Grid>
+
+        <Frame Background="{AppThemeBinding Light='White', Dark='Black'}" HorizontalOptions="Center" VerticalOptions="Center"
+                           IsVisible="{Binding IsBusy}">
+            <VerticalStackLayout VerticalOptions="Center" Spacing="10" HorizontalOptions="Center">
+                <Label Text="Please wait..." HorizontalOptions="Center"/>
+                <ActivityIndicator IsRunning="True"
+                           HorizontalOptions="FillAndExpand"
+                           VerticalOptions="CenterAndExpand"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <Frame BackgroundColor="Transparent" BorderColor="Transparent" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

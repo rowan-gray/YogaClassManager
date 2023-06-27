@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.Classes.ClassesPage"
+             xmlns:class="clr-namespace:YogaClassManager.Models.Classes"
+             xmlns:views="clr-namespace:YogaClassManager.Views.Classes"
+             xmlns:viewModel="clr-namespace:YogaClassManager.ViewModels"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="ClassesPage"
+             Style="{StaticResource PaddedContentPage}">
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}"/>
+        <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}"/>
+    </ContentPage.Behaviors>
+    <Grid  WidthRequest="{OnPlatform MacCatalyst=800}">
+        <Grid Style="{StaticResource ContentGrid}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Frame Style="{DynamicResource MainCollectionFrame}">
+                <Grid RowSpacing="5" RowDefinitions="auto,*">
+
+                    <VerticalStackLayout Spacing="5">
+                        <Grid>
+                            <HorizontalStackLayout>
+                                <Label Text="Classes" 
+                                       FontSize="Title" 
+                                       FontAttributes="Bold" 
+                                       VerticalTextAlignment="Center" 
+                                       Padding="10,0"/>
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout HorizontalOptions="End" Style="{DynamicResource Buttons}">
+                                <Button Text="Remove"
+                                    Command="{Binding RemoveClassScheduleCommand}"
+                                        Style="{DynamicResource MainCollectionRemoveButton}"/>
+                                <Button Text="Add" Command="{Binding AddClassCommand}"/>
+                            </HorizontalStackLayout>
+                        </Grid>
+                        <HorizontalStackLayout Spacing="2" HorizontalOptions="Center">
+                            <Label Text="Show archived classes"
+                                   VerticalOptions="Center"/>
+                            <CheckBox IsChecked="{Binding RetrieveArchivedClasses}"/>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                    <CollectionView x:Name="StudentsList" ItemsSource="{Binding DisplayedCollection}" Grid.Row="1" 
+                          SelectedItem="{Binding Selection, Mode=TwoWay}"
+                                SelectionMode="Single">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Padding="5" x:DataType="class:ClassSchedule">
+                                    <Label Text="{Binding Day}" Style="{DynamicResource ActiveLabel}" FontAttributes="Bold">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                 Binding="{Binding IsArchived}"
+                                                                 Value="True">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                                <Setter Property="Text" Value="{Binding Day, StringFormat='{0} - Archived'}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Label Text="{Binding Time}" Style="{DynamicResource ActiveLabel}" Margin="10,0">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                                     Binding="{Binding IsArchived}"
+                                                                     Value="True">
+                                                <Setter Property="Style" Value="{DynamicResource InactiveLabel}"/>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Grid>
+            </Frame>
+            <Label Grid.Column="1" 
+                       HorizontalOptions="Center" 
+                       Text="Oops... there's no class selected"
+                       Padding="10,15,5,5"
+                       FontSize="Subtitle"
+                       TextColor="{StaticResource Gray300}"
+                       IsVisible="False">
+                <Label.Triggers>
+                    <DataTrigger TargetType="Label"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                        <Setter Property="IsVisible" Value="True"/>
+                    </DataTrigger>
+                </Label.Triggers>
+            </Label>
+            <ScrollView Grid.Column="1">
+                <ScrollView.Triggers>
+                    <DataTrigger TargetType="ScrollView"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                </ScrollView.Triggers>
+                <VerticalStackLayout>
+                    <views:ClassDetailsView Class="{Binding Selection}" EditCommand="{Binding EditClassScheduleCommand}"/>
+                    <views:ClassRollsView ClassRolls="{Binding ClassRolls}" SelectedClassRoll="{Binding SelectedClassRoll, Mode=TwoWay}"
+                                              AddCommand="{Binding AddClassRollCommand}"
+                                              EditCommand="{Binding UpdateClassRollCommand}"
+                                              RemoveCommand="{Binding RemoveClassRollCommand}"/>
+                </VerticalStackLayout>
+            </ScrollView>
+
+        </Grid>
+
+        <Frame Background="{AppThemeBinding Light='White', Dark='Black'}" HorizontalOptions="Center" VerticalOptions="Center"
+                           IsVisible="{Binding IsBusy}">
+            <VerticalStackLayout VerticalOptions="Center" Spacing="10" HorizontalOptions="Center">
+                <Label Text="Please wait..." HorizontalOptions="Center"/>
+                <ActivityIndicator IsRunning="True"
+                           HorizontalOptions="FillAndExpand"
+                           VerticalOptions="CenterAndExpand"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <Frame BackgroundColor="Transparent" BorderColor="Transparent" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

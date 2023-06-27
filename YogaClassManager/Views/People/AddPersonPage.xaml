@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.People.AddPersonPage"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="AddPersonPage">
+    <VerticalStackLayout MaximumWidthRequest="800" WidthRequest="{OnPlatform MacCatalyst=800}">
+        <Frame Style="{DynamicResource PageContentFrame}">
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Details" Style="{DynamicResource SectionHeader}"/>
+                <VerticalStackLayout Spacing="5" Padding="10,0">
+                    <Label Text="First Name"/>
+                    <Entry Text="{Binding Person.FirstName}">
+                        <Entry.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateCanExecutesCommand}"/>
+                        </Entry.Behaviors>
+                    </Entry>
+                    <Label Text="Last Name"/>
+                    <Entry Text="{Binding Person.LastName}">
+                        <Entry.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateCanExecutesCommand}"/>
+                        </Entry.Behaviors>
+                    </Entry>
+                    <Label Text="Phone Number"/>
+                    <Entry Text="{Binding Person.PhoneNumber}">
+                        <Entry.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateCanExecutesCommand}"/>
+                        </Entry.Behaviors>
+                    </Entry>
+                    <Label Text="Email"/>
+                    <Entry Text="{Binding Person.Email}">
+                        <Entry.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateCanExecutesCommand}"/>
+                        </Entry.Behaviors>
+                    </Entry>
+                </VerticalStackLayout>
+                <Grid ColumnDefinitions="*,*">
+                    <Button Text="Cancel" Command="{Binding CancelCommand}" Style="{DynamicResource CancelButton}"/>
+                    <Button Grid.Column="1" Text="Save" Command="{Binding AddCommand}"/>
+                </Grid>
+            </VerticalStackLayout>
+        </Frame>
+    </VerticalStackLayout>
+</ContentPage>

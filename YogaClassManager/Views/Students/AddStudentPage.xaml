@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.Students.AddStudentPage"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:views="clr-namespace:YogaClassManager.Views"
+             Title="AddStudentPage">
+    <Grid MaximumWidthRequest="900" MaximumHeightRequest="1200" VerticalOptions="Start">
+        <Frame Style="{DynamicResource PageContentFrame}">
+            <Grid RowDefinitions="*,auto">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="10" VerticalOptions="Start">
+                        <VerticalStackLayout>
+                            <Label Text="Details" Style="{DynamicResource SectionHeader}"/>
+                            <VerticalStackLayout Spacing="5" Padding="10,0">
+                                <Label Text="First Name"/>
+                                <Entry Text="{Binding Student.FirstName}">
+                                    <Entry.Behaviors>
+                                        <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateSaveCommandCanExecute}"/>
+                                    </Entry.Behaviors>
+                                </Entry>
+                                <Label Text="Last Name"/>
+                                <Entry Text="{Binding Student.LastName}">
+                                    <Entry.Behaviors>
+                                        <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateSaveCommandCanExecute}"/>
+                                    </Entry.Behaviors>
+                                </Entry>
+                                <Label Text="Phone Number"/>
+                                <Entry Text="{Binding Student.PhoneNumber}">
+                                    <Entry.Behaviors>
+                                        <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateSaveCommandCanExecute}"/>
+                                    </Entry.Behaviors>
+                                </Entry>
+                                <Label Text="Email"/>
+                                <Entry Text="{Binding Student.Email}">
+                                    <Entry.Behaviors>
+                                        <toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding UpdateSaveCommandCanExecute}"/>
+                                    </Entry.Behaviors>
+                                </Entry>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                        <views:PassesView x:Name="passesView"
+                                              SelectedPass="{Binding SelectedPass, Mode=TwoWay}"
+                                              Passes="{Binding Student.ObservablePasses}"
+                                              EditCommand="{Binding EditPassCommand}"
+                                              AddCommand="{Binding AddPassCommand}"
+                                              RemoveCommand="{Binding RemovePassCommand}"
+                                              MinimumHeightRequest="100"/>
+                        <views:EmergencyContactsView x:Name="emergencyContacts"
+                                                         SelectedEmergencyContact="{Binding SelectedEmergencyContact, Mode=TwoWay}"
+                                                         EmergencyContacts="{Binding Student.ObservableEmergencyContacts}"
+                                                         EditCommand="{Binding EditEmergencyContactCommand}"
+                                                         AddCommand="{Binding AddEmergencyContactCommand}"
+                                                         RemoveCommand="{Binding RemoveEmergencyContactCommand}"
+                                                         MinimumHeightRequest="100"/>
+                        <views:HealthConcernsContentView HealthConcerns="{Binding Student.ObservableHealthConcerns}" 
+                                                             AddCommand="{Binding AddHealthConcernCommand}"
+                                                             EditCommand="{Binding EditHealthConcernCommand}"
+                                                             RemoveCommand="{Binding RemoveHealthConcernCommand}"
+                                                             SelectedHealthConcern="{Binding SelectedHealthConcern}"
+                                                             MinimumHeightRequest="100"/>
+                    </VerticalStackLayout>
+                </ScrollView>
+                <Grid ColumnDefinitions="*,*" Grid.Row="1">
+                    <Button Text="Cancel" Command="{Binding CancelCommand}" Style="{DynamicResource CancelButton}"/>
+                    <Button Grid.Column="1" Text="Save" Command="{Binding AddCommand}"/>
+                </Grid>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="YogaClassManager.Views.Passes.StudentPassesPage"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:passesViews="clr-namespace:YogaClassManager.Views.Passes"
+             Title="StudentPassesPage"        
+             Style="{StaticResource PaddedContentPage}">
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}"/>
+        <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}"/>
+    </ContentPage.Behaviors>
+    <Grid RowDefinitions="auto,*">
+        <Grid Style="{StaticResource ContentGrid}" WidthRequest="{OnPlatform MacCatalyst=800}">
+            <Frame Style="{DynamicResource MainCollectionFrame}">
+                <VerticalStackLayout>
+                    <HorizontalStackLayout Spacing="10">
+                        <Button Text="Back"/>
+                        <Label Text="{Binding Student.FullName, StringFormat='Viewing {0}\&apos;s passes'}" FontSize="Title" VerticalOptions="Center" FontAttributes="Bold"/>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+        </Grid>
+        <Grid Style="{StaticResource ContentGrid}" WidthRequest="{OnPlatform MacCatalyst=800}" Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Frame Style="{DynamicResource MainCollectionFrame}">
+                <Grid RowSpacing="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <VerticalStackLayout Spacing="5">
+                        <Grid>
+                            <HorizontalStackLayout>
+                                <Label Text="Passes" FontSize="Title" FontAttributes="Bold" VerticalTextAlignment="Center" Padding="10,0"/>
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout HorizontalOptions="End" Style="{DynamicResource Buttons}">
+                                <Button Text="Hide" 
+                                        Command="{Binding RemovePassCommand}"
+                                        Style="{DynamicResource MainCollectionRemoveButton}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button"
+                                                     Binding="{Binding Selection.IsActive}"
+                                                     Value="false">
+                                            <Setter Property="Text" Value="Unhide"/>
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                                <Button Text="Add" Command="{Binding AddStudentCommand}"/>
+                            </HorizontalStackLayout>
+                        </Grid>
+                        <SearchBar x:Name="SearchStudents" 
+                                   Placeholder="Search students"
+                                   Text="{Binding CurrentSearchQuery}"
+                                   SearchCommand="{Binding SearchCollectionCommand}">
+                            <SearchBar.Behaviors>
+                                <toolkit:EventToCommandBehavior EventName="SearchButtonPressed" Command="{Binding UpdatePassCanExecute}"/>
+                            </SearchBar.Behaviors>
+                        </SearchBar>
+                        <HorizontalStackLayout Spacing="2" HorizontalOptions="Center">
+                            <Label Text="Show inactive &amp; hidden students"
+                                   VerticalOptions="Center"/>
+                            <CheckBox IsChecked="{Binding ShowInactiveStudents}">
+                                <CheckBox.Behaviors>
+                                    <toolkit:EventToCommandBehavior EventName="CheckedChanged"/>
+                                </CheckBox.Behaviors>
+                            </CheckBox>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                    <CollectionView x:Name="MainCollection" 
+                                        ItemsSource="{Binding DisplayedCollection}"
+                                        SelectionMode="Single"
+                                        SelectedItem="{Binding Selection}"
+                                        Grid.Row="1"
+                                        VerticalScrollBarVisibility="Default"
+                                        Scrolled="MainCollectionScrolled">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Padding="5">
+                                    <Label FontAttributes="Bold">
+                                        <MultiBinding StringFormat="{}{0} - {1} classes remaining">
+                                            <Binding Path="PassName"/>
+                                            <Binding Path="ClassesRemaining"/>
+                                        </MultiBinding>
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
+                                                <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                                <Setter Property="Text">
+                                                    <MultiBinding StringFormat="{}Expired: {0} - {1} classes remaining">
+                                                        <Binding Path="PassName"/>
+                                                        <Binding Path="ClassesRemaining"/>
+                                                    </MultiBinding>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+
+                                    <VerticalStackLayout Margin="10,0" IsVisible="False">
+                                        <VerticalStackLayout.Triggers>
+                                            <DataTrigger TargetType="VerticalStackLayout"
+                                                                 Binding="{Binding PassName}"
+                                                                 Value="Term Pass">
+                                                <Setter Property="IsVisible" Value="True"/>
+                                            </DataTrigger>
+                                        </VerticalStackLayout.Triggers>
+                                        <Label Text="{Binding Term.Name, StringFormat='Term Name: {0}'}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
+                                                    <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+
+                                        <Label>
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
+                                                    <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                            <Label.Text>
+                                                <MultiBinding StringFormat="{}{0} to {1}">
+                                                    <Binding Path="Term.StartDate"/>
+                                                    <Binding Path="Term.EndDate"/>
+                                                </MultiBinding>
+                                            </Label.Text>
+                                        </Label>
+                                    </VerticalStackLayout>
+
+
+                                    <VerticalStackLayout Margin="10,0" IsVisible="False">
+                                        <VerticalStackLayout.Triggers>
+                                            <DataTrigger TargetType="VerticalStackLayout"
+                                                                 Binding="{Binding PassName}"
+                                                                 Value="Casual Pass">
+                                                <Setter Property="IsVisible"
+                                                                Value="True"/>
+                                            </DataTrigger>
+                                        </VerticalStackLayout.Triggers>
+                                        <Label Text="{Binding NumberOfClasses, StringFormat='Number of Classes: {0}'}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
+                                                    <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                    </VerticalStackLayout>
+
+
+                                    <VerticalStackLayout Margin="10,0" IsVisible="False">
+                                        <VerticalStackLayout.Triggers>
+                                            <DataTrigger TargetType="VerticalStackLayout"
+                                                                 Binding="{Binding PassName}"
+                                                                 Value="Dated Pass">
+                                                <Setter Property="IsVisible"
+                                                                Value="True"/>
+                                            </DataTrigger>
+                                        </VerticalStackLayout.Triggers>
+
+                                        <Label>
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
+                                                    <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                            <Label.Text>
+                                                <MultiBinding StringFormat="{}{0} to {1}">
+                                                    <Binding Path="StartDate"/>
+                                                    <Binding Path="EndDate"/>
+                                                </MultiBinding>
+                                            </Label.Text>
+                                        </Label>
+
+                                        <Label Text="{Binding Alterations.Count, StringFormat='Alterations: {0}'}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
+                                                    <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Grid>
+            </Frame>
+            <Label Grid.Column="1" 
+                       HorizontalOptions="Center" 
+                       Text="Oops... there's no pass selected"
+                       FontSize="Subtitle"
+                       TextColor="{StaticResource Gray300}"
+                       IsVisible="False">
+                <Label.Triggers>
+                    <DataTrigger TargetType="Label"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                        <Setter Property="IsVisible" Value="True"/>
+                    </DataTrigger>
+                </Label.Triggers>
+            </Label>
+            <ScrollView Grid.Column="1" Margin="0,0,-10,0">
+                <ScrollView.Triggers>
+                    <DataTrigger TargetType="ScrollView"
+                                     Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                </ScrollView.Triggers>
+                <VerticalStackLayout Margin="0,0,10,0">
+                    <passesViews:PassDetailsView Pass="{Binding Selection}"/>
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+        <Frame Background="{AppThemeBinding Light='White', Dark='Black'}" HorizontalOptions="Center" VerticalOptions="Center"
+                           IsVisible="{Binding IsBusy}">
+            <VerticalStackLayout VerticalOptions="Center" Spacing="10" HorizontalOptions="Center">
+                <Label Text="Please wait..." HorizontalOptions="Center"/>
+                <ActivityIndicator IsRunning="True"
+                           HorizontalOptions="FillAndExpand"
+                           VerticalOptions="CenterAndExpand"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <Frame BackgroundColor="Transparent" BorderColor="Transparent" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>
