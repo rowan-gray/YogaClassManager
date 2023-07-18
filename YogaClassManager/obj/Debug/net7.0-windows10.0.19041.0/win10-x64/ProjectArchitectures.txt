@@ -1,1 +1,0 @@
-C:\Users\rgray\Clones\YogaClassManager\YogaClassManager\YogaClassManager.csproj;x64
