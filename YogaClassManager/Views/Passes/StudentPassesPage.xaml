@@ -15,7 +15,7 @@
             <Frame Style="{DynamicResource MainCollectionFrame}">
                 <VerticalStackLayout>
                     <HorizontalStackLayout Spacing="10">
-                        <Button Text="Back"/>
+                        <Button Text="Back" Command="{Binding BackCommand}"/>
                         <Label Text="{Binding Student.FullName, StringFormat='Viewing {0}\&apos;s passes'}" FontSize="Title" VerticalOptions="Center" FontAttributes="Bold"/>
                     </HorizontalStackLayout>
                 </VerticalStackLayout>

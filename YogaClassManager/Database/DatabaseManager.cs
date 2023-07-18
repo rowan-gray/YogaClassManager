@@ -30,8 +30,7 @@ namespace YogaClassManager.Database
         public DatabaseManager(string dbLocation)
         {
             this.filePath = dbLocation;
-
-            if (ValidateFilePath(filePath))
+            if (ValidateFilePath(dbLocation))
             {
                 Database = new SQLiteAsyncConnection(filePath, AppConstants.Flags);
             }
@@ -59,18 +58,6 @@ namespace YogaClassManager.Database
         public bool ValidateFilePath(string filePath)
         {
             return File.Exists(filePath) && filePath.Split(".").LastOrDefault() == "db";
-        }
-
-        public Task CreateDbAsync()
-        {
-            throw new NotImplementedException();
-            //using Stream fileStream = await FileSystem.Current.OpenAppPackageFileAsync("DatabaseCreation.sql");
-            //using StreamReader reader = new StreamReader(fileStream);
-            //string query = await reader.ReadToEndAsync();
-
-            //using var connection = await GetConnectionAsync(CancellationToken.None);
-            //var command = new SQLiteCommand(query, connection);
-            //command.ExecuteNonQuery();
         }
 
         public async Task BeginTransactionAsync()

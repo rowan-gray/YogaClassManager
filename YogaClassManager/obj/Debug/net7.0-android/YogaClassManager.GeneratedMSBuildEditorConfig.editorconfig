@@ -1,0 +1,225 @@
+is_global = true
+build_property.TargetFramework = net7.0-android
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = false
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.EnableAotAnalyzer = 
+build_property.EnableSingleFileAnalyzer = true
+build_property.EnableTrimAnalyzer = false
+build_property.IncludeAllContentForSelfExtract = 
+build_property.RootNamespace = YogaClassManager
+build_property.ProjectDir = C:\Users\rgray\Clones\YogaClassManager\YogaClassManager\
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/App.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.App.xaml
+build_metadata.AdditionalFiles.TargetPath = App.xaml
+build_metadata.AdditionalFiles.RelativePath = App.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/AppShell.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.AppShell.xaml
+build_metadata.AdditionalFiles.TargetPath = AppShell.xaml
+build_metadata.AdditionalFiles.RelativePath = AppShell.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/MainPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.MainPage.xaml
+build_metadata.AdditionalFiles.TargetPath = MainPage.xaml
+build_metadata.AdditionalFiles.RelativePath = MainPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Resources/Styles/Colors.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Resources.Styles.Colors.xaml
+build_metadata.AdditionalFiles.TargetPath = Resources\Styles\Colors.xaml
+build_metadata.AdditionalFiles.RelativePath = Resources\Styles\Colors.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Resources/Styles/CustomStyles.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Resources.Styles.CustomStyles.xaml
+build_metadata.AdditionalFiles.TargetPath = Resources\Styles\CustomStyles.xaml
+build_metadata.AdditionalFiles.RelativePath = Resources\Styles\CustomStyles.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Resources/Styles/Styles.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Resources.Styles.Styles.xaml
+build_metadata.AdditionalFiles.TargetPath = Resources\Styles\Styles.xaml
+build_metadata.AdditionalFiles.RelativePath = Resources\Styles\Styles.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Classes/AddClassPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Classes.AddClassPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Classes\AddClassPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Classes\AddClassPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Classes/ClassDetailsView.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Classes.ClassDetailsView.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Classes\ClassDetailsView.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Classes\ClassDetailsView.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Classes/ClassesPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Classes.ClassesPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Classes\ClassesPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Classes\ClassesPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Classes/ClassRollsView.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Classes.ClassRollsView.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Classes\ClassRollsView.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Classes\ClassRollsView.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Classes/EditClassDetailsPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Classes.EditClassDetailsPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Classes\EditClassDetailsPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Classes\EditClassDetailsPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Classes/MarkRollPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Classes.MarkRollPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Classes\MarkRollPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Classes\MarkRollPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Classes/SelectClassPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Classes.SelectClassPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Classes\SelectClassPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Classes\SelectClassPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Details/DetailsView.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Details.DetailsView.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Details\DetailsView.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Details\DetailsView.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Details/EditDetailsPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Details.EditDetailsPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Details\EditDetailsPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Details\EditDetailsPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/EmergencyContacts/AddEmergencyContactPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.EmergencyContacts.AddEmergencyContactPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\EmergencyContacts\AddEmergencyContactPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\EmergencyContacts\AddEmergencyContactPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/EmergencyContacts/EditEmergencyContactPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.EmergencyContacts.EditEmergencyContactPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\EmergencyContacts\EditEmergencyContactPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\EmergencyContacts\EditEmergencyContactPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/EmergencyContacts/EmergencyContactsView.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.EmergencyContacts.EmergencyContactsView.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\EmergencyContacts\EmergencyContactsView.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\EmergencyContacts\EmergencyContactsView.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/HealthConcerns/HealthConcernsContentView.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.HealthConcerns.HealthConcernsContentView.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\HealthConcerns\HealthConcernsContentView.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\HealthConcerns\HealthConcernsContentView.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Passes/AddPassPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Passes.AddPassPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Passes\AddPassPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Passes\AddPassPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Passes/EditPassPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Passes.EditPassPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Passes\EditPassPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Passes\EditPassPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Passes/PassDetailsView.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Passes.PassDetailsView.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Passes\PassDetailsView.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Passes\PassDetailsView.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Passes/PassesView.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Passes.PassesView.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Passes\PassesView.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Passes\PassesView.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Passes/StudentPassesPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Passes.StudentPassesPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Passes\StudentPassesPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Passes\StudentPassesPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/People/AddPersonPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.People.AddPersonPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\People\AddPersonPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\People\AddPersonPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/People/PeoplePage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.People.PeoplePage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\People\PeoplePage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\People\PeoplePage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/People/SearchPeoplePage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.People.SearchPeoplePage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\People\SearchPeoplePage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\People\SearchPeoplePage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/SettingsPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.SettingsPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\SettingsPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\SettingsPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Students/AddStudentPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Students.AddStudentPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Students\AddStudentPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Students\AddStudentPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Students/StudentsPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Students.StudentsPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Students\StudentsPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Students\StudentsPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Terms/AddTermPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Terms.AddTermPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Terms\AddTermPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Terms\AddTermPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Terms/ClassListView.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Terms.ClassListView.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Terms\ClassListView.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Terms\ClassListView.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Terms/EditTermPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Terms.EditTermPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Terms\EditTermPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Terms\EditTermPage.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Terms/TermDetailsView.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Terms.TermDetailsView.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Terms\TermDetailsView.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Terms\TermDetailsView.xaml
+
+[C:/Users/rgray/Clones/YogaClassManager/YogaClassManager/Views/Terms/TermsPage.xaml]
+build_metadata.AdditionalFiles.GenKind = Xaml
+build_metadata.AdditionalFiles.ManifestResourceName = YogaClassManager.Views.Terms.TermsPage.xaml
+build_metadata.AdditionalFiles.TargetPath = Views\Terms\TermsPage.xaml
+build_metadata.AdditionalFiles.RelativePath = Views\Terms\TermsPage.xaml

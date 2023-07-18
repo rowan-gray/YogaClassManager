@@ -21,8 +21,10 @@ namespace YogaClassManager.ViewModels
         private Student student;
         PassesService passesService => databaseManager.PassesService;
         StudentsService studentService => databaseManager.StudentsService;
+        public Command BackCommand { get; set; }
         public StudentPassesPageModel(DatabaseManager databaseManager, PopupService popupService) : base(databaseManager, popupService, 20, false)
         {
+            BackCommand = new Command(async () => { await NavigationService.GoBackAsync(); });
         }
 
         protected override Task<List<int>> GetDeletedIds()
@@ -66,7 +68,9 @@ namespace YogaClassManager.ViewModels
                     RetrieveCollection();
                 }
                 else
+                {
                     throw new ArgumentException("Student must be provided");
+                }
 
                 queryAttributesApplied = true;
             }
