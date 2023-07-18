@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\rgray\\Clones\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj": {}
+    "D:\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj": {}
   },
   "projects": {
-    "C:\\Users\\rgray\\Clones\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj": {
+    "D:\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\rgray\\Clones\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj",
+        "projectUniqueName": "D:\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj",
         "projectName": "YogaClassManager",
-        "projectPath": "C:\\Users\\rgray\\Clones\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj",
+        "projectPath": "D:\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj",
         "packagesPath": "C:\\Users\\rgray\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\rgray\\Clones\\YogaClassManager\\YogaClassManager\\obj\\",
+        "outputPath": "D:\\YogaClassManager\\YogaClassManager\\obj\\",
         "projectStyle": "PackageReference",
         "crossTargeting": true,
         "fallbackFolders": [

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "6MyTD9vzt05w6dicvPGb7lEGOySSyuXOSglG5wDZkpv/9PmAK8rF7q+Q+Qh4JG6jQjznlTJyJcT2mkJPKzUwuA==",
+  "dgSpecHash": "9bje+aPMNQ7Bll162HlaPByTleEuBagmp/4XEMBAxXiKigDo0mSN0Gbgvme3TIzWQv6gxepo+qlMi3CDCQlS3Q==",
   "success": true,
-  "projectFilePath": "C:\\Users\\rgray\\Clones\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj",
+  "projectFilePath": "D:\\YogaClassManager\\YogaClassManager\\YogaClassManager.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\rgray\\.nuget\\packages\\communitytoolkit.maui\\4.0.0\\communitytoolkit.maui.4.0.0.nupkg.sha512",
     "C:\\Users\\rgray\\.nuget\\packages\\communitytoolkit.maui.core\\4.0.0\\communitytoolkit.maui.core.4.0.0.nupkg.sha512",
