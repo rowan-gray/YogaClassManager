@@ -21,7 +21,7 @@ public static class MauiProgram
         var dbFilePath = Preferences.Default.Get("DbFilePath", default(string));;
 
         builder.Services.AddSingleton(new DatabaseManager(dbFilePath));
-        builder.Services.AddSingleton<PopupService>();
+        builder.Services.AddSingleton<Services.PopupService>();
         builder.Services.AddTransient<MainPage>();
         builder.Services.AddTransient<MainPageModel>();
         builder.Services.AddTransient<StudentsPageModel>();

@@ -43,7 +43,7 @@ namespace YogaClassManager.ViewModels
                 Preferences.Default.Set("DbFilePath", filePath);
                 databaseManager.SetFilePath(filePath);
 
-                await databaseManager.CreateDbAsync();
+                //await databaseManager.CreateDbAsync();
             }
             catch { }
         }

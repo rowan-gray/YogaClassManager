@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="YogaClassManager.MainPage"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-             xmlns:Models="clr-namespace:YogaClassManager.Models"
              Padding="0,0,0,10">
     <ContentPage.Behaviors>
         <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}"/>
@@ -98,10 +97,10 @@
                 </VerticalStackLayout>
         </ScrollView>
 
-        <Frame BackgroundColor="Transparent" BorderColor="Transparent" CornerRadius="0" IsVisible="{Binding IsBusy}"/>
+        <Frame Grid.Row="0" BackgroundColor="Transparent" BorderColor="Transparent" CornerRadius="0" IsVisible="{Binding IsBusy}"/>
 
-        <Frame Background="{AppThemeBinding Light='White', Dark='Black'}" HorizontalOptions="Center" VerticalOptions="Center"
-                           IsVisible="{Binding IsBusy}">
+        <Frame Grid.Row="0" Background="{AppThemeBinding Light='White', Dark='Black'}" HorizontalOptions="Center" VerticalOptions="Center"
+               IsVisible="{Binding IsBusy}">
             <VerticalStackLayout VerticalOptions="Center" Spacing="10" HorizontalOptions="Center">
                 <Label Text="Please wait..." HorizontalOptions="Center"/>
                 <ActivityIndicator IsRunning="True"
