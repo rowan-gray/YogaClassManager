@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿#nullable enable
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using YogaClassManager.Models.Classes;
 
@@ -24,6 +25,11 @@ namespace YogaClassManager.Models.Passes
         {
             get
             {
+                if (TermClassSchedule == null)
+                {
+                    return 0;
+                }
+                
                 var classCount = TermClassSchedule.ClassCount;
                 foreach (var alteration in Alterations)
                 {
@@ -34,10 +40,10 @@ namespace YogaClassManager.Models.Passes
         }
 
         [ObservableProperty]
-        private Term term;
+        private Term? _term;
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(NumberOfClasses))]
-        private TermClassSchedule termClassSchedule;
+        private TermClassSchedule? _termClassSchedule;
 
         public static TermPass Copy(TermPass termPass)
         {
