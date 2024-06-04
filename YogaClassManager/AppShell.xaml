@@ -8,7 +8,7 @@
     xmlns:terms="clr-namespace:YogaClassManager.Views.Terms"
     xmlns:people="clr-namespace:YogaClassManager.Views.People"
     xmlns:classes="clr-namespace:YogaClassManager.Views.Classes"
-    FlyoutBehavior="{x:OnPlatform Default=Flyout, MacCatalyst=Locked}"
+    FlyoutBehavior="{x:OnPlatform Default=Flyout, MacCatalyst=Flyout}"
     MinimumWidthRequest="1200"
     MinimumHeightRequest="800"
     x:Name="this">

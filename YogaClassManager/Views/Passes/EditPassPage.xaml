@@ -11,7 +11,7 @@
             <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter"/>
         </ResourceDictionary>
     </ContentPage.Resources>
-    <Grid MaximumWidthRequest="800" VerticalOptions="Start" WidthRequest="{OnPlatform MacCatalyst=800}">
+    <Grid MaximumWidthRequest="800" VerticalOptions="Start" >
         <Frame Style="{DynamicResource PageContentFrame}">
             <Grid RowDefinitions="*,auto">
                 <ScrollView>

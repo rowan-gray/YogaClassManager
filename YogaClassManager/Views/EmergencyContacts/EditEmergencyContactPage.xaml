@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="YogaClassManager.Views.EmergencyContacts.EditEmergencyContactPage"
              Title="EditEmergencyContactPage">
-    <Grid MaximumWidthRequest="800" VerticalOptions="Start" WidthRequest="{OnPlatform MacCatalyst=800}">
+    <Grid MaximumWidthRequest="800" VerticalOptions="Start" >
         <Frame Style="{DynamicResource PageContentFrame}" MaximumWidthRequest="800">
             <Grid RowDefinitions="*,auto">
                 <ScrollView>

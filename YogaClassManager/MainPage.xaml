@@ -17,7 +17,7 @@
                          Command="{Binding HeaderPressedCommand}"/>
         
             <ScrollView Grid.Row="1">
-                <VerticalStackLayout Padding="10" Spacing="5" MaximumWidthRequest="600" WidthRequest="{OnPlatform MacCatalyst=600}" HorizontalOptions="CenterAndExpand">
+                <VerticalStackLayout Padding="10" Spacing="5" MaximumWidthRequest="600" HorizontalOptions="CenterAndExpand">
                     <Label Text="{Binding HeaderText}" FontSize="Title" HorizontalOptions="Center" HorizontalTextAlignment="Center" LineBreakMode="WordWrap"/>
                     <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
                         

@@ -12,7 +12,7 @@
     <ContentPage.Behaviors>
         <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding AppearingCommand}"/>
     </ContentPage.Behaviors>
-    <Grid MaximumWidthRequest="800" WidthRequest="{OnPlatform MacCatalyst=800}" VerticalOptions="{OnPlatform WinUI=Start}">
+    <Grid MaximumWidthRequest="800" VerticalOptions="{OnPlatform WinUI=Start}">
         <Frame Style="{DynamicResource PageContentFrame}">
             <Grid RowDefinitions="*,auto">
                 <ScrollView>

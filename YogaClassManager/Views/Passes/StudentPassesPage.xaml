@@ -11,7 +11,7 @@
         <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}"/>
     </ContentPage.Behaviors>
     <Grid RowDefinitions="auto,*">
-        <Grid Style="{StaticResource ContentGrid}" WidthRequest="{OnPlatform MacCatalyst=800}">
+        <Grid Style="{StaticResource ContentGrid}" >
             <Frame Style="{DynamicResource MainCollectionFrame}">
                 <VerticalStackLayout>
                     <HorizontalStackLayout Spacing="10">
@@ -21,7 +21,7 @@
                 </VerticalStackLayout>
             </Frame>
         </Grid>
-        <Grid Style="{StaticResource ContentGrid}" WidthRequest="{OnPlatform MacCatalyst=800}" Grid.Row="1">
+        <Grid Style="{StaticResource ContentGrid}"  Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="320"/>
                 <ColumnDefinition Width="*"/>

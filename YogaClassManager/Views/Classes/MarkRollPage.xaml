@@ -11,7 +11,7 @@
         <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter"/>
         <converters:IntSubractionConverter x:Key="IntSubractionConverter"/>
     </ContentPage.Resources>
-    <Grid MaximumWidthRequest="1100" MaximumHeightRequest="1200" WidthRequest="{OnPlatform MacCatalyst=1100}">
+    <Grid MaximumWidthRequest="1100" MaximumHeightRequest="1200">
         <Frame Style="{DynamicResource PageContentFrame}">
             <Grid RowDefinitions="auto,*,auto" 
                   ColumnDefinitions="2*,3*">

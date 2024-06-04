@@ -4,7 +4,7 @@
              x:Class="YogaClassManager.Views.People.AddPersonPage"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              Title="AddPersonPage">
-    <VerticalStackLayout MaximumWidthRequest="800" WidthRequest="{OnPlatform MacCatalyst=800}">
+    <VerticalStackLayout MaximumWidthRequest="800">
         <Frame Style="{DynamicResource PageContentFrame}">
             <VerticalStackLayout Spacing="5">
                 <Label Text="Details" Style="{DynamicResource SectionHeader}"/>

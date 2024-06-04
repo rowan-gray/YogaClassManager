@@ -4,7 +4,7 @@
              x:Class="YogaClassManager.Views.People.SearchPeoplePage"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              Title="SearchPeoplePage">
-    <Grid MaximumWidthRequest="800" MaximumHeightRequest="800" VerticalOptions="Start" WidthRequest="{OnPlatform MacCatalyst=800}">
+    <Grid MaximumWidthRequest="800" MaximumHeightRequest="800" VerticalOptions="Start" >
         <Frame Style="{DynamicResource PageContentFrame}">
             <Grid RowDefinitions="auto, *, auto">
                 <Grid ColumnDefinitions="*, auto">

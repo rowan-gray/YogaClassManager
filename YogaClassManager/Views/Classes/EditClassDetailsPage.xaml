@@ -7,7 +7,7 @@
     <ContentPage.Resources>
         <converters:TimeOnlyToTimeSpanConverter x:Key="TimeOnlyToTimeSpanConverter"/>
     </ContentPage.Resources>
-    <Grid MaximumWidthRequest="800" VerticalOptions="Start"  WidthRequest="{OnPlatform MacCatalyst=800}">
+    <Grid MaximumWidthRequest="800" VerticalOptions="Start"  >
         <Frame Style="{DynamicResource PageContentFrame}">
             <Grid RowDefinitions="*,auto">
                 <ScrollView>

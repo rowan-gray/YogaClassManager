@@ -12,7 +12,7 @@
         <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}"/>
         <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}"/>
     </ContentPage.Behaviors>
-    <Grid  WidthRequest="{OnPlatform MacCatalyst=800}">
+    <Grid  >
         <Grid Style="{StaticResource ContentGrid}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="320"/>

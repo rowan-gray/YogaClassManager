@@ -4,7 +4,7 @@
              x:Class="YogaClassManager.Views.Classes.SelectClassPage"
              Title="SelectClassPage"
              x:Name="this">
-    <Grid MaximumWidthRequest="800"  WidthRequest="{OnPlatform MacCatalyst=800}">
+    <Grid MaximumWidthRequest="800"  >
         <Frame Style="{DynamicResource PageContentFrame}" VerticalOptions="Start">
             <Grid RowDefinitions="auto,*,auto" ColumnDefinitions="*,*" MaximumHeightRequest="400" MinimumHeightRequest="200">
                 <Label Text="Available Classes" Style="{DynamicResource SectionHeader}"/>

@@ -1,5 +1,7 @@
 /.idea
 /.vs
 
+.DS_Store
+
 /YogaClassManager/obj
 /YogaClassManager/bin
