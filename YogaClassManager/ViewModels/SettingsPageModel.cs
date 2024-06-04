@@ -1,4 +1,8 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Storage;
+using CommunityToolkit.Mvvm.ComponentModel;
+using System.Threading;
 using YogaClassManager.Database;
 using YogaClassManager.Services;
 
@@ -20,30 +24,35 @@ namespace YogaClassManager.ViewModels
         {
             try
             {
-                var folderPath = await popupService.DisplayPromptAsync("Specify folder", "Please enter the folder where you'd like the database to be created", "Continue", "Cancel");
+                var result = await FolderPicker.Default.PickAsync(new CancellationToken());
 
-                if (folderPath == null)
+                if (result.IsSuccessful)
                 {
-                    await popupService.DisplayAlert("Invalid Location", "Invalid location chosen", "Ok");
-                    return;
+                    var folderPath = await popupService.DisplayPromptAsync("Specify folder", "Please enter the folder where you'd like the database to be created", "Continue", "Cancel");
+
+                    if (folderPath == null)
+                    {
+                        await popupService.DisplayAlert("Invalid Location", "Invalid location chosen", "Ok");
+                        return;
+                    }
+
+
+                    var filePath = folderPath + @"\yogamanager.db";
+
+                    if (File.Exists(filePath))
+                    {
+                        await popupService.DisplayAlert("Invalid Location", "A database already exists in that location", "Ok");
+                        return;
+                    }
+
+                    //SQLiteConnection.CreateFile(filePath);
+
+                    DbFilePath = filePath;
+                    Preferences.Default.Set("DbFilePath", filePath);
+                    databaseManager.SetFilePath(filePath);
+
+                    //await databaseManager.CreateDbAsync();
                 }
-
-
-                var filePath = folderPath + @"\yogamanager.db";
-
-                if (File.Exists(filePath))
-                {
-                    await popupService.DisplayAlert("Invalid Location", "A database already exists in that location", "Ok");
-                    return;
-                }
-
-                //SQLiteConnection.CreateFile(filePath);
-
-                DbFilePath = filePath;
-                Preferences.Default.Set("DbFilePath", filePath);
-                databaseManager.SetFilePath(filePath);
-
-                //await databaseManager.CreateDbAsync();
             }
             catch { }
         }
@@ -76,6 +85,11 @@ namespace YogaClassManager.ViewModels
                 };
 
                 var result = await FilePicker.Default.PickAsync(options);
+                if (result is null)
+                {
+                    return;
+                }
+
                 var filePath = result.FullPath;
 
                 if (!databaseManager.ValidateFilePath(filePath))
