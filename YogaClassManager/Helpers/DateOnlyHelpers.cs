@@ -1,26 +1,19 @@
 ﻿#nullable enable
-using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace YogaClassManager.Helpers;
 
-namespace YogaClassManager.Helpers
+internal class DateOnlyHelpers
 {
-    internal class DateOnlyHelpers
+    internal static DateOnly GetDateOnly(string date)
     {
-        internal static DateOnly GetDateOnly(string date)
-        {
-            return DateOnly.ParseExact(date, "yyyy-MM-dd");
-        }
-        internal static DateOnly? GetNullableDateOnly(string? date)
-        {
-            if (date is null) return null;
+        return DateOnly.ParseExact(date, "yyyy-MM-dd");
+    }
 
-            if (date.Trim().Length == 0) return null;
+    internal static DateOnly? GetNullableDateOnly(string? date)
+    {
+        if (date is null) return null;
 
-            return DateOnly.ParseExact(date, "yyyy-MM-dd");
-        }
+        if (date.Trim().Length == 0) return null;
+
+        return DateOnly.ParseExact(date, "yyyy-MM-dd");
     }
 }

@@ -1,8 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 
-namespace YogaClassManager.Models
+namespace YogaClassManager.Models;
+
+public class QuickActionCollection : ObservableCollection<QuickActionItem>
 {
-    public class QuickActionCollection : ObservableCollection<QuickActionItem>
-    {
-    }
 }

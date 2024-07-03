@@ -1,7 +1,6 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using YogaClassManager.Database;
-using YogaClassManager.Services;
 using YogaClassManager.ViewModels;
 using YogaClassManager.Views;
 using YogaClassManager.Views.Classes;
@@ -10,18 +9,19 @@ using YogaClassManager.Views.Passes;
 using YogaClassManager.Views.People;
 using YogaClassManager.Views.Students;
 using YogaClassManager.Views.Terms;
+using PopupService = YogaClassManager.Services.PopupService;
 
 namespace YogaClassManager;
 
 public static class MauiProgram
 {
-	public static MauiApp CreateMauiApp()
-	{
-		var builder = MauiApp.CreateBuilder();
-        var dbFilePath = Preferences.Default.Get("DbFilePath", default(string));;
+    public static MauiApp CreateMauiApp()
+    {
+        var builder = MauiApp.CreateBuilder();
+        var dbFilePath = Preferences.Default.Get("DbFilePath", default(string));
 
         builder.Services.AddSingleton(new DatabaseManager(dbFilePath));
-        builder.Services.AddSingleton<Services.PopupService>();
+        builder.Services.AddSingleton<PopupService>();
         builder.Services.AddTransient<MainPage>();
         builder.Services.AddTransient<MainPageModel>();
         builder.Services.AddTransient<StudentsPageModel>();
@@ -66,20 +66,19 @@ public static class MauiProgram
         builder.Services.AddTransient<StudentPassesPage>();
 
         builder
-			.UseMauiApp<App>()
-			.UseMauiCommunityToolkit()
-			.ConfigureFonts(fonts =>
+            .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
+            .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("MaterialDesignIcons.ttf", "MaterialDesignIcons");
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-			});
+            });
 
 #if DEBUG
-		builder.Logging.AddDebug();
+        builder.Logging.AddDebug();
 #endif
 
-		return builder.Build();
-	}
+        return builder.Build();
+    }
 }
-

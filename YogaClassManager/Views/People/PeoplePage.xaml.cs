@@ -9,17 +9,17 @@ public partial class PeoplePage : ContentPage
     {
         InitializeComponent();
         BindingContext = pageModel;
-        pageModel.ScrollToIndex += new ScrollToIndexEventHandler(ScrollToIndex);
+        pageModel.ScrollToIndex += ScrollToIndex;
     }
+
     private void ScrollToIndex(object source, ScrollToIndexEventArgs e)
     {
         PeopleList.ScrollTo(e.GetIndex(), animate: e.ShouldAnimate());
     }
+
     private void PeopleList_Scrolled(object sender, ItemsViewScrolledEventArgs e)
     {
         if (e.LastVisibleItemIndex > ((PeoplePageModel)BindingContext).DisplayedCollection.Count - 6)
-        {
             ((PeoplePageModel)BindingContext).EndOfListCommand.Execute(null);
-        }
     }
 }

@@ -1,98 +1,108 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System.Threading;
+﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using YogaClassManager.Database;
 using YogaClassManager.Models;
+using YogaClassManager.Models.Passes;
 using YogaClassManager.Models.People;
 using YogaClassManager.Services;
 
-namespace YogaClassManager.ViewModels
+namespace YogaClassManager.ViewModels;
+
+[QueryProperty(nameof(IdCallbackParameter), "idCallback")]
+[QueryProperty(nameof(PersonCallbackParameter), "personCallback")]
+[QueryProperty(nameof(IsPersonSavedParameter), "saveToDatabase")]
+public partial class AddPersonPageModel : ObservableObject
 {
-    [QueryProperty(nameof(IdCallbackParameter), "idCallback")]
-    [QueryProperty(nameof(PersonCallbackParameter), "personCallback")]
-    [QueryProperty(nameof(IsPersonSavedParameter), "saveToDatabase")]
-    public partial class AddPersonPageModel : ObservableObject
+    private readonly DatabaseManager databaseManager;
+    private readonly PopupService popupService;
+
+    [ObservableProperty] private Person person;
+
+    public AddPersonPageModel(DatabaseManager databaseManager, PopupService popupService)
     {
-        public Message IdCallbackParameter { set => IdCallback = (Action<int>)value.Parameter; }
+        this.databaseManager = databaseManager;
+        this.popupService = popupService;
+        Person = new Person(-1, "", null, null, null, true);
 
-        public Action<int> IdCallback { get; set; }
-        public Message PersonCallbackParameter { set => PersonCallback = (Action<Person>)value.Parameter; }
+        CancelCommand = new Command(CancelCommandExecute);
+        AddCommand = new Command(AddCommandExecute, AddCommandCanExecute);
+        UpdateCanExecutesCommand = new Command(UpdateCanExecutesCommandExecute);
+    }
 
-        public Action<Person> PersonCallback { get; set; }
-        public Message IsPersonSavedParameter { set => IsPersonSaved = (bool)value.Parameter; }
-        public bool IsPersonSaved { get; set; }
+    public Message IdCallbackParameter
+    {
+        set => IdCallback = (Action<int>)value.Parameter;
+    }
 
-        public Command CancelCommand { get; set; }
-        public Command AddCommand { get; set; }
-        public Command UpdateCanExecutesCommand { get; init; }
+    public Action<int> IdCallback { get; set; }
 
-        [ObservableProperty]
-        private Person person;
-        private readonly DatabaseManager databaseManager;
-        private readonly PopupService popupService;
+    public Message PersonCallbackParameter
+    {
+        set => PersonCallback = (Action<Person>)value.Parameter;
+    }
 
-        public AddPersonPageModel(DatabaseManager databaseManager, PopupService popupService)
+    public Action<Person> PersonCallback { get; set; }
+
+    public Message IsPersonSavedParameter
+    {
+        set => IsPersonSaved = (bool)value.Parameter;
+    }
+
+    public bool IsPersonSaved { get; set; }
+
+    public Command CancelCommand { get; set; }
+    public Command AddCommand { get; set; }
+    public Command UpdateCanExecutesCommand { get; init; }
+
+    private bool AddCommandCanExecute()
+    {
+        return person.Validate();
+    }
+
+    public void UpdateCanExecutesCommandExecute()
+    {
+        AddCommand?.ChangeCanExecute();
+    }
+
+    private async void CancelCommandExecute()
+    {
+        await NavigationService.GoBackAsync();
+    }
+
+    private async void AddCommandExecute()
+    {
+        var id = -1;
+
+        var student = new Student(Person, new ObservableCollection<Pass>(),
+            new ObservableCollection<EmergencyContact>(), new ObservableCollection<string>());
+
+        if (!Person.Validate())
         {
-            this.databaseManager = databaseManager;
-            this.popupService = popupService;
-            Person = new Person(-1, "", null, null, null, true);
-
-            CancelCommand = new(CancelCommandExecute);
-            AddCommand = new(AddCommandExecute, AddCommandCanExecute);
-            UpdateCanExecutesCommand = new(UpdateCanExecutesCommandExecute);
+            await popupService.DisplayAlert("Invalid field/s", "One or more of the fields is not valid!", "Ok");
+            return;
         }
 
-        private bool AddCommandCanExecute()
-        {
-            return person.Validate();
-        }
-        public void UpdateCanExecutesCommandExecute()
-        {
-            AddCommand?.ChangeCanExecute();
-        }
-
-        private async void CancelCommandExecute()
-        {
-            await NavigationService.GoBackAsync();
-        }
-
-        private async void AddCommandExecute()
-        {
-            var id = -1;
-
-            var student = new Student(Person, new(), new(), new());
-
-            if (!Person.Validate())
+        if (IsPersonSaved)
+            try
             {
-                await popupService.DisplayAlert("Invalid field/s", "One or more of the fields is not valid!", "Ok");
+                id = await databaseManager.PeopleService.AddPersonAsync(CancellationToken.None, Person);
+                await NavigationService.GoBackAsync();
+                IdCallback?.Invoke(id);
+                Person.Id = id;
+            }
+            catch (TaskCanceledException)
+            {
+                await popupService.DisplayAlert("Operation Cancelled", "The previous operation was cancelled!", "Ok");
                 return;
             }
-
-            if (IsPersonSaved)
+            catch (Exception e)
             {
-                try
-                {
-                    id = await databaseManager.PeopleService.AddPersonAsync(CancellationToken.None, Person);
-                    await NavigationService.GoBackAsync();
-                    IdCallback?.Invoke(id);
-                    Person.Id = id;
-                }
-                catch (TaskCanceledException)
-                {
-                    await popupService.DisplayAlert("Operation Cancelled", "The previous operation was cancelled!", "Ok");
-                    return;
-                }
-                catch (Exception e)
-                {
-                    await popupService.DisplayAlert("Database error", $"There was an error while trying to access the database.\n{e.Message}", "Ok");
-                }
+                await popupService.DisplayAlert("Database error",
+                    $"There was an error while trying to access the database.\n{e.Message}", "Ok");
             }
-            else
-            {
-                await NavigationService.GoBackAsync();
-            }
+        else
+            await NavigationService.GoBackAsync();
 
-            PersonCallback?.Invoke(Person);
-
-        }
+        PersonCallback?.Invoke(Person);
     }
 }

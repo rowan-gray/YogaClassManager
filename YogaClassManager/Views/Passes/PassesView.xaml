@@ -1,4 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8"?>
+
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="YogaClassManager.Views.PassesView"
@@ -6,81 +7,82 @@
              xmlns:helpers="clr-namespace:YogaClassManager.Helpers"
              x:Name="this">
     <ContentView.Resources>
-        <converters:IsNullConverter x:Key="IsNullConverter"/>
+        <converters:IsNullConverter x:Key="IsNullConverter" />
     </ContentView.Resources>
     <VerticalStackLayout BindingContext="{x:Reference this}">
         <Grid ColumnDefinitions="auto, *">
             <HorizontalStackLayout Spacing="5">
-                <Label Text="Passes" Style="{DynamicResource SectionHeader}"/>
-                <Button BackgroundColor="{DynamicResource Gray600}" 
+                <Label Text="Passes" Style="{DynamicResource SectionHeader}" />
+                <Button BackgroundColor="{DynamicResource Gray600}"
                         FontFamily="MaterialDesignIcons" Text="{x:Static helpers:IconFont.ExpandAll}"
-                        Command="{Binding AdvancedViewCommand}" >
+                        Command="{Binding AdvancedViewCommand}">
                     <Button.Triggers>
                         <DataTrigger TargetType="Button"
-                                Binding="{Binding AdvancedViewCommand, Converter={StaticResource IsNullConverter}}"
-                                Value="True">
+                                     Binding="{Binding AdvancedViewCommand, Converter={StaticResource IsNullConverter}}"
+                                     Value="True">
                             <Setter Property="IsVisible"
-                            Value="False"/>
+                                    Value="False" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
             </HorizontalStackLayout>
             <HorizontalStackLayout Grid.Column="1" Spacing="5" HorizontalOptions="End">
-                <Button Text="Remove" 
+                <Button Text="Remove"
                         Style="{DynamicResource RemoveButton}"
-                        Command="{Binding RemoveCommand}" 
+                        Command="{Binding RemoveCommand}"
                         CommandParameter="{Binding RemoveCommandParameter}">
                     <Button.Triggers>
                         <DataTrigger TargetType="Button"
-                                Binding="{Binding RemoveCommand, Converter={StaticResource IsNullConverter}}"
-                                Value="True">
+                                     Binding="{Binding RemoveCommand, Converter={StaticResource IsNullConverter}}"
+                                     Value="True">
                             <Setter Property="IsVisible"
-                            Value="False"/>
+                                    Value="False" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
                 <Button Text="Edit" Command="{Binding EditCommand}" CommandParameter="{Binding EditCommandParameter}">
                     <Button.Triggers>
                         <DataTrigger TargetType="Button"
-                                Binding="{Binding EditCommand, Converter={StaticResource IsNullConverter}}"
-                                Value="True">
+                                     Binding="{Binding EditCommand, Converter={StaticResource IsNullConverter}}"
+                                     Value="True">
                             <Setter Property="IsVisible"
-                            Value="False"/>
+                                    Value="False" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
                 <Button Text="Add" Command="{Binding AddCommand}" CommandParameter="{Binding AddCommandParameter}">
                     <Button.Triggers>
                         <DataTrigger TargetType="Button"
-                                Binding="{Binding AddCommand, Converter={StaticResource IsNullConverter}}"
-                                Value="True">
+                                     Binding="{Binding AddCommand, Converter={StaticResource IsNullConverter}}"
+                                     Value="True">
                             <Setter Property="IsVisible"
-                            Value="False"/>
+                                    Value="False" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
             </HorizontalStackLayout>
         </Grid>
-        <CollectionView ItemsSource="{Binding Passes}" SelectedItem="{Binding SelectedPass, Mode=TwoWay}" SelectionMode="Single" MaximumHeightRequest="200">
+        <CollectionView ItemsSource="{Binding Passes}" SelectedItem="{Binding SelectedPass, Mode=TwoWay}"
+                        SelectionMode="Single" MaximumHeightRequest="200">
             <CollectionView.EmptyView>
                 <Label Text="This student has no active passes"
-                       Style="{DynamicResource CollectionViewEmpty}"/>
+                       Style="{DynamicResource CollectionViewEmpty}" />
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <VerticalStackLayout Padding="5">
                         <Label FontAttributes="Bold">
                             <MultiBinding StringFormat="{}{0} - {1} classes remaining">
-                                <Binding Path="PassName"/>
-                                <Binding Path="ClassesRemaining"/>
+                                <Binding Path="PassName" />
+                                <Binding Path="ClassesRemaining" />
                             </MultiBinding>
                             <Label.Triggers>
                                 <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                    <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                    <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                     <Setter Property="Text">
                                         <MultiBinding StringFormat="{}Expired: {0} - {1} classes remaining">
-                                            <Binding Path="PassName"/>
-                                            <Binding Path="ClassesRemaining"/>
+                                            <Binding Path="PassName" />
+                                            <Binding Path="ClassesRemaining" />
                                         </MultiBinding>
                                     </Setter>
                                 </DataTrigger>
@@ -90,23 +92,23 @@
                         <VerticalStackLayout Margin="10,0" IsVisible="False">
                             <VerticalStackLayout.Triggers>
                                 <DataTrigger TargetType="VerticalStackLayout"
-                                                                 Binding="{Binding PassName}"
-                                                                 Value="Term Pass">
-                                    <Setter Property="IsVisible" Value="True"/>
+                                             Binding="{Binding PassName}"
+                                             Value="Term Pass">
+                                    <Setter Property="IsVisible" Value="True" />
                                 </DataTrigger>
                             </VerticalStackLayout.Triggers>
                             <HorizontalStackLayout Spacing="20">
                                 <Label Text="{Binding NumberOfClasses, StringFormat='Number of Classes: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
                                 <Label Text="{Binding Term.Name, StringFormat='Term Name: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
@@ -115,14 +117,14 @@
                                 <Label Text="{Binding Term.StartDate, StringFormat='Start Date: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
                                 <Label Text="{Binding Term.EndDate, StringFormat='End Date: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
@@ -131,14 +133,14 @@
                                 <Label Text="{Binding Term.CatchupStartDate, StringFormat='Catchup Start Date: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
                                 <Label Text="{Binding Term.CatchupEndDate, StringFormat='Catchup End Date: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
@@ -149,16 +151,16 @@
                         <VerticalStackLayout Margin="10,0" IsVisible="False">
                             <VerticalStackLayout.Triggers>
                                 <DataTrigger TargetType="VerticalStackLayout"
-                                                                 Binding="{Binding PassName}"
-                                                                 Value="Casual Pass">
+                                             Binding="{Binding PassName}"
+                                             Value="Casual Pass">
                                     <Setter Property="IsVisible"
-                                                                Value="True"/>
+                                            Value="True" />
                                 </DataTrigger>
                             </VerticalStackLayout.Triggers>
                             <Label Text="{Binding NumberOfClasses, StringFormat='Number of Classes: {0}'}">
                                 <Label.Triggers>
                                     <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                        <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                        <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                     </DataTrigger>
                                 </Label.Triggers>
                             </Label>
@@ -168,41 +170,41 @@
                         <VerticalStackLayout Margin="10,0" IsVisible="False">
                             <VerticalStackLayout.Triggers>
                                 <DataTrigger TargetType="VerticalStackLayout"
-                                                                 Binding="{Binding PassName}"
-                                                                 Value="Dated Pass">
+                                             Binding="{Binding PassName}"
+                                             Value="Dated Pass">
                                     <Setter Property="IsVisible"
-                                                                Value="True"/>
+                                            Value="True" />
                                 </DataTrigger>
                             </VerticalStackLayout.Triggers>
-                            <HorizontalStackLayout Spacing="20" >
+                            <HorizontalStackLayout Spacing="20">
                                 <Label Text="{Binding NumberOfClasses, StringFormat='Number of Classes: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
                                 <Label Text="{Binding PassType.Name, StringFormat='Pass Name: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
                             </HorizontalStackLayout>
 
-                            <HorizontalStackLayout Spacing="20" >
+                            <HorizontalStackLayout Spacing="20">
                                 <Label Text="{Binding StartDate, StringFormat='Activation Date: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
                                 <Label Text="{Binding EndDate, StringFormat='Expiry Date: {0}'}">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsExpired}" Value="True">
-                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}"/>
+                                            <Setter Property="TextColor" Value="{DynamicResource Gray300}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>

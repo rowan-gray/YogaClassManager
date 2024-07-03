@@ -1,19 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SQLite;
 
-namespace YogaClassManager.Resources
+namespace YogaClassManager.Resources;
+
+public static class AppConstants
 {
-    public static class AppConstants
-    {
-        public const SQLite.SQLiteOpenFlags Flags =
+    public const SQLiteOpenFlags Flags =
         // open the database in read/write mode
-        SQLite.SQLiteOpenFlags.ReadWrite |
+        SQLiteOpenFlags.ReadWrite |
         // enable multi-threaded database access
-        SQLite.SQLiteOpenFlags.SharedCache |
+        SQLiteOpenFlags.SharedCache |
         // database file isn't encrypted.
-        SQLite.SQLiteOpenFlags.ProtectionNone;
-    }
+        SQLiteOpenFlags.ProtectionNone;
 }

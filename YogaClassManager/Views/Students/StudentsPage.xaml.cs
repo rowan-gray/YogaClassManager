@@ -8,8 +8,8 @@ public partial class StudentsPage : ContentPage
     public StudentsPage(StudentsPageModel pageModel)
     {
         InitializeComponent();
-        this.BindingContext = pageModel;
-        pageModel.ScrollToIndex += new ScrollToIndexEventHandler(ScrollToStudent);
+        BindingContext = pageModel;
+        pageModel.ScrollToIndex += ScrollToStudent;
     }
 
     private void ScrollToStudent(object source, ScrollToIndexEventArgs e)
@@ -20,8 +20,6 @@ public partial class StudentsPage : ContentPage
     private void StudentsList_Scrolled(object sender, ItemsViewScrolledEventArgs e)
     {
         if (e.LastVisibleItemIndex >= ((StudentsPageModel)BindingContext).DisplayedCollection.Count - 6)
-        {
             ((StudentsPageModel)BindingContext).EndOfListCommand.Execute(null);
-        }
     }
 }

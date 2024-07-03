@@ -1,25 +1,20 @@
 ﻿using SQLite;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace YogaClassManager.Database
+namespace YogaClassManager.Database;
+
+public class DatabaseService
 {
-    public class DatabaseService
+    protected readonly DatabaseManager dbManager;
+
+    public DatabaseService(DatabaseManager dbManager)
     {
-        protected readonly DatabaseManager dbManager;
-        protected SQLiteAsyncConnection Database => dbManager.Database;
+        this.dbManager = dbManager;
+    }
 
-        public DatabaseService(DatabaseManager dbManager)
-        {
-            this.dbManager = dbManager;
-        }
+    protected SQLiteAsyncConnection Database => dbManager.Database;
 
-        protected DateOnly StringToDateOnly(string date)
-        {
-            return DateOnly.ParseExact(date, "yyyy-MM-dd");
-        }
+    protected DateOnly StringToDateOnly(string date)
+    {
+        return DateOnly.ParseExact(date, "yyyy-MM-dd");
     }
 }

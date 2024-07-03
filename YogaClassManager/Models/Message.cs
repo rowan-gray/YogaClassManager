@@ -1,12 +1,11 @@
-﻿namespace YogaClassManager.Models
-{
-    public class Message
-    {
-        public Message(object parameter)
-        {
-            Parameter = parameter;
-        }
+﻿namespace YogaClassManager.Models;
 
-        public object Parameter { get; }
+public class Message
+{
+    public Message(object parameter)
+    {
+        Parameter = parameter;
     }
+
+    public object Parameter { get; }
 }

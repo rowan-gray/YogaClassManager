@@ -9,8 +9,9 @@ public partial class TermsPage : ContentPage
     {
         InitializeComponent();
         BindingContext = pageModel;
-        pageModel.ScrollToIndex += new ScrollToIndexEventHandler(ScrollToIndex);
+        pageModel.ScrollToIndex += ScrollToIndex;
     }
+
     private void ScrollToIndex(object source, ScrollToIndexEventArgs e)
     {
         TermsList.ScrollTo(e.GetIndex(), animate: e.ShouldAnimate());
@@ -19,8 +20,6 @@ public partial class TermsPage : ContentPage
     private void MainCollection_Scrolled(object sender, ItemsViewScrolledEventArgs e)
     {
         if (e.LastVisibleItemIndex >= ((StudentsPageModel)BindingContext).DisplayedCollection.Count - 6)
-        {
             ((StudentsPageModel)BindingContext).EndOfListCommand.Execute(null);
-        }
     }
 }

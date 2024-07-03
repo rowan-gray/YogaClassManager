@@ -1,7 +1,11 @@
-﻿namespace YogaClassManager.Models.People
+﻿namespace YogaClassManager.Models.People;
+
+public enum Relationship
 {
-    public enum Relationship
-    {
-        Parent, Spouse, Partner, Child, Friend, Other
-    }
+    Parent,
+    Spouse,
+    Partner,
+    Child,
+    Friend,
+    Other
 }

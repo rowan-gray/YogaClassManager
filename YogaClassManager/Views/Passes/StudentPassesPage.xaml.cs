@@ -5,11 +5,11 @@ namespace YogaClassManager.Views.Passes;
 
 public partial class StudentPassesPage : ContentPage
 {
-	public StudentPassesPage(StudentPassesPageModel pageModel)
-	{
-		InitializeComponent();
-		BindingContext = pageModel;
-        pageModel.ScrollToIndex += new ScrollToIndexEventHandler(ScrollToIndex);
+    public StudentPassesPage(StudentPassesPageModel pageModel)
+    {
+        InitializeComponent();
+        BindingContext = pageModel;
+        pageModel.ScrollToIndex += ScrollToIndex;
     }
 
     private void ScrollToIndex(object source, ScrollToIndexEventArgs e)
@@ -20,8 +20,6 @@ public partial class StudentPassesPage : ContentPage
     private void MainCollectionScrolled(object sender, ItemsViewScrolledEventArgs e)
     {
         if (e.LastVisibleItemIndex >= ((StudentPassesPageModel)BindingContext).DisplayedCollection.Count - 6)
-        {
             ((StudentPassesPageModel)BindingContext).EndOfListCommand.Execute(null);
-        }
     }
 }

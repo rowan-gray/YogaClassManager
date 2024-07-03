@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace YogaClassManager.Database.Models;
 
-namespace YogaClassManager.Database.Models
+internal class StudentHealthConcernMapping
 {
-    internal class StudentHealthConcernMapping
-    {
-        public string HealthConcern { get; set; }
-    } 
+    public string HealthConcern { get; set; }
 }

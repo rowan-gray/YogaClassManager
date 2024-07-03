@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
+
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="YogaClassManager.Views.Classes.ClassRollsView"
@@ -6,56 +7,57 @@
              x:Name="this">
     <VerticalStackLayout BindingContext="{x:Reference this}">
         <Grid ColumnDefinitions="auto, *, auto">
-            <Label Text="Classes" Style="{DynamicResource SectionHeader}"/>
+            <Label Text="Classes" Style="{DynamicResource SectionHeader}" />
             <HorizontalStackLayout Grid.Column="2" Spacing="5">
-                <Button Text="Remove" 
+                <Button Text="Remove"
                         Style="{DynamicResource RemoveButton}"
                         Command="{Binding RemoveCommand}">
                     <Button.Triggers>
                         <DataTrigger TargetType="Button"
-                                Binding="{Binding RemoveCommand, Converter={toolkit:IsNullConverter}}"
-                                Value="True">
+                                     Binding="{Binding RemoveCommand, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
                             <Setter Property="IsVisible"
-                            Value="False"/>
+                                    Value="False" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
                 <Button Text="Edit" Command="{Binding EditCommand}">
                     <Button.Triggers>
                         <DataTrigger TargetType="Button"
-                                Binding="{Binding EditCommand, Converter={toolkit:IsNullConverter}}"
-                                Value="True">
+                                     Binding="{Binding EditCommand, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
                             <Setter Property="IsVisible"
-                            Value="False"/>
+                                    Value="False" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
                 <Button Text="Add" Command="{Binding AddCommand}">
                     <Button.Triggers>
                         <DataTrigger TargetType="Button"
-                                Binding="{Binding AddCommand, Converter={toolkit:IsNullConverter}}"
-                                Value="True">
+                                     Binding="{Binding AddCommand, Converter={toolkit:IsNullConverter}}"
+                                     Value="True">
                             <Setter Property="IsVisible"
-                            Value="False"/>
+                                    Value="False" />
                         </DataTrigger>
                     </Button.Triggers>
                 </Button>
             </HorizontalStackLayout>
         </Grid>
-        <CollectionView ItemsSource="{Binding ClassRolls}" SelectedItem="{Binding SelectedClassRoll, Mode=TwoWay}" SelectionMode="Single" EmptyView="No classes">
+        <CollectionView ItemsSource="{Binding ClassRolls}" SelectedItem="{Binding SelectedClassRoll, Mode=TwoWay}"
+                        SelectionMode="Single" EmptyView="No classes">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <VerticalStackLayout Padding="5">
                         <Label FontAttributes="Bold">
                             <MultiBinding StringFormat="{}{0} - {1} | {2}">
-                                <Binding Path="Date"/>
-                                <Binding Path="ClassSchedule.Day"/>
-                                <Binding Path="ClassSchedule.Time"/>
+                                <Binding Path="Date" />
+                                <Binding Path="ClassSchedule.Day" />
+                                <Binding Path="ClassSchedule.Time" />
                             </MultiBinding>
                         </Label>
 
                         <VerticalStackLayout Margin="10,0">
-                            <Label Text="{Binding StudentEntries.Count, StringFormat='Number in attendance: {0}'}"/>
+                            <Label Text="{Binding StudentEntries.Count, StringFormat='Number in attendance: {0}'}" />
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </DataTemplate>

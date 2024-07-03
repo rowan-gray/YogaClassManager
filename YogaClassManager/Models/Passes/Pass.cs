@@ -1,65 +1,61 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using CommunityToolkit.Mvvm.ComponentModel;
 using YogaClassManager.Models.Classes;
-using YogaClassManager.Models.Passes;
 
-namespace YogaClassManager.Models.Passes
+namespace YogaClassManager.Models.Passes;
+
+public partial class Pass : ObservableObject, IUpdateable<Pass>, IIdentifiable
 {
-    public partial class Pass : ObservableObject, IUpdateable<Pass>, IIdentifiable
+    [ObservableProperty] private ObservableCollection<PassAlteration> alterations;
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ClassesRemaining))]
+    public int classesUsed;
+
+    public Pass(int id, int studentId, int classesUsed, ObservableCollection<PassAlteration> alterations)
     {
-        public Pass(int id, int studentId, int classesUsed, ObservableCollection<PassAlteration> alterations)
-        {
-            Id = id;
-            StudentId = studentId;
-            ClassesUsed = classesUsed;
-            Alterations = alterations;
-            Alterations.CollectionChanged += AlterationsChanged;
-        }
+        Id = id;
+        StudentId = studentId;
+        ClassesUsed = classesUsed;
+        Alterations = alterations;
+        Alterations.CollectionChanged += AlterationsChanged;
+    }
 
-        private void AlterationsChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            OnPropertyChanged(nameof(ClassesRemaining));
-        }
+    public int StudentId { get; set; }
+    public virtual int NumberOfClasses { get; set; }
+    public virtual bool IsExpired => false;
 
-        public int Id { get; set; }
-        public int StudentId { get; set; }
-        public virtual int NumberOfClasses { get; set; }
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(ClassesRemaining))]
-        public int classesUsed;
-        [ObservableProperty]
-        private ObservableCollection<PassAlteration> alterations;
-        public virtual bool IsExpired => false;
+    public int ClassesRemaining => NumberOfClasses - ClassesUsed;
+    public virtual string PassName { get; }
 
-        public int ClassesRemaining => NumberOfClasses - ClassesUsed;
-        public virtual string PassName { get; }
+    public int Id { get; set; }
 
-        public static Pass Copy(Pass pass)
-        {
-            ObservableCollection<PassAlteration> alterationsCopy = new();
+    public void Update(Pass updatedData)
+    {
+        throw new NotImplementedException();
+    }
 
-            foreach (var alteration in pass.Alterations)
-            {
-                alterationsCopy.Add(PassAlteration.Copy(alteration));
-            }
+    private void AlterationsChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(ClassesRemaining));
+    }
 
-            return new(pass.Id, pass.StudentId, pass.ClassesUsed, alterationsCopy);
-        }
+    public static Pass Copy(Pass pass)
+    {
+        ObservableCollection<PassAlteration> alterationsCopy = new();
 
-        public virtual bool IsValid()
-        {
-            return true;
-        }
+        foreach (var alteration in pass.Alterations) alterationsCopy.Add(PassAlteration.Copy(alteration));
 
-        public virtual int? GetPassUsagePriority(ClassSchedule classSchedule, DateOnly date)
-        {
-            return null;
-        }
+        return new Pass(pass.Id, pass.StudentId, pass.ClassesUsed, alterationsCopy);
+    }
 
-        public void Update(Pass updatedData)
-        {
-            throw new NotImplementedException();
-        }
+    public virtual bool IsValid()
+    {
+        return true;
+    }
+
+    public virtual int? GetPassUsagePriority(ClassSchedule classSchedule, DateOnly date)
+    {
+        return null;
     }
 }

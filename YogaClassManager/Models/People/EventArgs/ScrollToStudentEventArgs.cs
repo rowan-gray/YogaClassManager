@@ -1,24 +1,23 @@
-﻿namespace YogaClassManager.Models.People.EventArguments
+﻿namespace YogaClassManager.Models.People.EventArguments;
+
+public class ScrollToIndexEventArgs : EventArgs
 {
-    public class ScrollToIndexEventArgs : EventArgs
+    private readonly int index;
+    private readonly bool isAnimation;
+
+    public ScrollToIndexEventArgs(int index, bool isAnimation)
     {
-        private int index;
-        private bool isAnimation;
+        this.index = index;
+        this.isAnimation = isAnimation;
+    }
 
-        public ScrollToIndexEventArgs(int index, bool isAnimation)
-        {
-            this.index = index;
-            this.isAnimation = isAnimation;
-        }
+    public int GetIndex()
+    {
+        return index;
+    }
 
-        public int GetIndex()
-        {
-            return index;
-        }
-
-        public bool ShouldAnimate()
-        {
-            return isAnimation;
-        }
+    public bool ShouldAnimate()
+    {
+        return isAnimation;
     }
 }

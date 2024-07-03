@@ -1,4 +1,5 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
 <Shell
     x:Class="YogaClassManager.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -15,37 +16,32 @@
     <FlyoutItem Title="Home">
         <ShellContent Title="Home"
                       ContentTemplate="{DataTemplate local:MainPage}"
-                      Route="HomePage"/>
+                      Route="HomePage" />
     </FlyoutItem>
     <FlyoutItem Title="Classes">
         <ShellContent
-        Title="Class Times"
-        ContentTemplate="{DataTemplate classes:ClassesPage}"
-        Route="ClassTimes">
-        </ShellContent>
+            Title="Class Times"
+            ContentTemplate="{DataTemplate classes:ClassesPage}"
+            Route="ClassTimes" />
         <ShellContent
-        Title="Terms"
-        ContentTemplate="{DataTemplate terms:TermsPage}"
-        Route="Terms">
-        </ShellContent>
+            Title="Terms"
+            ContentTemplate="{DataTemplate terms:TermsPage}"
+            Route="Terms" />
     </FlyoutItem>
     <FlyoutItem Title="Students">
         <ShellContent
-        Title="Students"
-        ContentTemplate="{DataTemplate views:StudentsPage}"
-        Route="Students">
-        </ShellContent>
+            Title="Students"
+            ContentTemplate="{DataTemplate views:StudentsPage}"
+            Route="Students" />
         <ShellContent
-        Title="People"
-        ContentTemplate="{DataTemplate people:PeoplePage}"
-        Route="People">
-        </ShellContent>
+            Title="People"
+            ContentTemplate="{DataTemplate people:PeoplePage}"
+            Route="People" />
     </FlyoutItem>
     <FlyoutItem Title="Settings">
         <ShellContent
             Title="Settings"
             ContentTemplate="{DataTemplate views:SettingsPage}"
-            Route="Settings"/>
+            Route="Settings" />
     </FlyoutItem>
 </Shell>
-

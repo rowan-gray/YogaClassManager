@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace YogaClassManager.Helpers;
 
-namespace YogaClassManager.Helpers
+internal static class TimeOnlyHelpers
 {
-    internal static class TimeOnlyHelpers
+    internal static TimeOnly GetTimeOnlyFromMinutes(int minutes)
     {
-        internal static TimeOnly GetTimeOnlyFromMinutes(int minutes)
-        {
-            return TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(minutes));
-        }
+        return TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(minutes));
     }
 }

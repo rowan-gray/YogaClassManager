@@ -1,7 +1,6 @@
-﻿namespace YogaClassManager.Models
+﻿namespace YogaClassManager.Models;
+
+public interface IIdentifiable
 {
-    public interface IIdentifiable
-    {
-        public abstract int Id { get; set; }
-    }
+    public int Id { get; set; }
 }

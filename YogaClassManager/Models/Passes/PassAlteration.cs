@@ -1,28 +1,27 @@
-﻿namespace YogaClassManager.Models.Passes
+﻿namespace YogaClassManager.Models.Passes;
+
+public class PassAlteration
 {
-    public class PassAlteration
+    public PassAlteration(int id, int passId, int amount, string reason)
     {
-        public int Id { get; private set; }
-        public int PassId { get; set; }
-        public int Amount { get; set; }
-        public string Reason { get; set; }
+        Id = id;
+        PassId = passId;
+        Amount = amount;
+        Reason = reason;
+    }
 
-        public PassAlteration(int id, int passId, int amount, string reason)
-        {
-            Id = id;
-            PassId = passId;
-            Amount = amount;
-            Reason = reason;
-        }
+    public int Id { get; }
+    public int PassId { get; set; }
+    public int Amount { get; set; }
+    public string Reason { get; set; }
 
-        public bool IsValid()
-        {
-            return Amount != 0;
-        }
+    public bool IsValid()
+    {
+        return Amount != 0;
+    }
 
-        internal static PassAlteration Copy(PassAlteration alteration)
-        {
-            return new PassAlteration(alteration.Id, alteration.PassId, alteration.Amount, alteration.Reason);
-        }
+    internal static PassAlteration Copy(PassAlteration alteration)
+    {
+        return new PassAlteration(alteration.Id, alteration.PassId, alteration.Amount, alteration.Reason);
     }
 }

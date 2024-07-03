@@ -1,7 +1,6 @@
-﻿namespace YogaClassManager.Models
+﻿namespace YogaClassManager.Models;
+
+public interface IUpdateable<T>
 {
-    public interface IUpdateable<T>
-    {
-        public abstract void Update(T updatedData);
-    }
+    public void Update(T updatedData);
 }

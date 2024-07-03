@@ -1,12 +1,12 @@
-﻿namespace YogaClassManager;
+﻿using YogaClassManager.ViewModels;
+
+namespace YogaClassManager;
 
 public partial class MainPage : ContentPage
 {
-    public MainPage(ViewModels.MainPageModel mainPageModel)
+    public MainPage(MainPageModel mainPageModel)
     {
         InitializeComponent();
         BindingContext = mainPageModel;
     }
 }
-
-

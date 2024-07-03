@@ -1,6 +1,4 @@
-﻿namespace YogaClassManager;
-
-using YogaClassManager.ViewModels;
+﻿using YogaClassManager.ViewModels;
 using YogaClassManager.Views;
 using YogaClassManager.Views.Classes;
 using YogaClassManager.Views.EmergencyContacts;
@@ -9,13 +7,15 @@ using YogaClassManager.Views.People;
 using YogaClassManager.Views.Students;
 using YogaClassManager.Views.Terms;
 
+namespace YogaClassManager;
+
 public partial class App : Application
 {
-	public App()
-	{
-		InitializeComponent();
+    public App()
+    {
+        InitializeComponent();
 
-		MainPage = new AppShell();
+        MainPage = new AppShell();
 
 
         Routing.RegisterRoute(nameof(EditDetailsPage), typeof(EditDetailsPage));
@@ -35,4 +35,3 @@ public partial class App : Application
         Routing.RegisterRoute(nameof(StudentPassesPageModel), typeof(StudentPassesPage));
     }
 }
-
