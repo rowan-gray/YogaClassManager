@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using YogaClassManager.NewDatabase;
 
 namespace YogaClassManager.NewModels;
 

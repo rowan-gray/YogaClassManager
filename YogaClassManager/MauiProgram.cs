@@ -22,6 +22,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton(new DatabaseManager(dbFilePath));
         builder.Services.AddSingleton<PopupService>();
+        builder.Services.AddSingleton<NewDatabase.DatabaseService>();
         builder.Services.AddTransient<MainPage>();
         builder.Services.AddTransient<MainPageModel>();
         builder.Services.AddTransient<StudentsPageModel>();
