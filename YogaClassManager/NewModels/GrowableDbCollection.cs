@@ -7,19 +7,17 @@ namespace YogaClassManager.NewModels;
 public class GrowableDbCollection<T, TModel, TFilter>
     : ObservableCollection<TModel>, IGrowableCollection where T : IDbModel<TModel, TFilter>
 {
-    private readonly TFilter filter;
-    private readonly uint growAmount;
+    private readonly T dbModel;
 
-    public GrowableDbCollection(TFilter filter, uint growAmount)
+    public GrowableDbCollection(T dbModel)
     {
-        this.filter = filter;
-        this.growAmount = growAmount;
+        this.dbModel = dbModel;
     }
 
     public async Task GrowCollection(uint amount)
     {
         var models = await
-            T.LoadMultiple(filter, growAmount, Convert.ToUInt32(Count));
+            dbModel.LoadMultiple( amount, Convert.ToUInt32(Count));
 
         InsertRange(models);
     }

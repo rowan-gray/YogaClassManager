@@ -9,7 +9,7 @@ public class DatabaseService
 
     public DatabaseService(string filePath)
     {
-        var connectionString = new SqliteConnectionStringBuilder(filePath)
+        var connectionString = new SqliteConnectionStringBuilder($"Data Source={filePath}")
         {
             Mode = SqliteOpenMode.ReadWriteCreate,
             ForeignKeys = true

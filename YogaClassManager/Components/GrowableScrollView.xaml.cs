@@ -18,7 +18,7 @@ public partial class GrowableScrollView : ContentView
 
     public static readonly BindableProperty GrowAmountProperty =
         BindableProperty.Create(nameof(GrowAmount), typeof(uint),
-            typeof(GrowableScrollView), 1);
+            typeof(GrowableScrollView), (uint)1);
 
     private bool isGrowing;
 

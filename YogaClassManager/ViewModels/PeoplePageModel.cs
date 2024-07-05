@@ -1,32 +1,55 @@
-﻿using CommunityToolkit.Mvvm.Input;
+﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using YogaClassManager.Database;
-using YogaClassManager.Models.People;
+using YogaClassManager.NewModels.People;
+using YogaClassManager.NewDatabase.People;
+using YogaClassManager.NewModels;
 using YogaClassManager.Services;
 using YogaClassManager.ViewModels.Base;
+using DatabaseService = YogaClassManager.NewDatabase.DatabaseService;
 
 namespace YogaClassManager.ViewModels;
 
-public class PeoplePageModel : SearchableCollectionPageModel<Person>
+public partial class PeoplePageModel : BasePageModel
 {
+    private readonly DatabaseService databaseService;
+    private readonly PopupService popupService;
     private bool showUnusedPeople;
+    [ObservableProperty] private Person? selectedPerson = null;
+    [ObservableProperty] private GrowableDbCollection<PersonDbModel, Person, PersonFilter> people;
+    private PersonDbModel dbModel;
 
-    public PeoplePageModel(DatabaseManager databaseManager, PopupService popupService) : base(databaseManager,
-        popupService, 50)
+    public PeoplePageModel(DatabaseService databaseService, PopupService popupService)
     {
+        dbModel = new PersonDbModel(new PersonFilter(), databaseService);
+
+        People = new GrowableDbCollection<PersonDbModel, Person, PersonFilter>(dbModel);
+        people.Add(new Person());
+        people.Add(new Person());
+        people.Add(new Person());
+        
+        this.databaseService = databaseService;
+        this.popupService = popupService;
         EditDetailsCommand = new Command(EditDetailsCommandExecute);
         AddPersonCommand = new Command(AddPersonCommandExecute);
         RemovePersonCommand = new RelayCommand(RemovePeopleCommandExecute, RemovePeopleCommandCanExecute);
+        
+        LoadData();
     }
 
-    private PeopleService peopleService => databaseManager.PeopleService;
-
+    private async void LoadData()
+    {
+        await People.GrowCollection(20);
+    }
+    
     public bool ShowInactivePeople
     {
         get => showUnusedPeople;
         set
         {
             showUnusedPeople = value;
-            RetrieveCollection();
+            //RetrieveCollection();
             OnPropertyChanged();
         }
     }
@@ -36,9 +59,9 @@ public class PeoplePageModel : SearchableCollectionPageModel<Person>
     public RelayCommand RemovePersonCommand { get; init; }
     public Command UpdateRemovePersonCommandCanExecuteCommand { get; init; }
 
-    protected override void ChangeSelectedItem(Person item)
+    protected void ChangeSelectedItem(Person item)
     {
-        base.ChangeSelectedItem(item);
+        // base.ChangeSelectedItem(item);
         RemovePersonCommand?.NotifyCanExecuteChanged();
     }
 
@@ -83,61 +106,30 @@ public class PeoplePageModel : SearchableCollectionPageModel<Person>
 
     private bool RemovePeopleCommandCanExecute()
     {
-        return Selection is not null;
+        return SelectedPerson is not null;
     }
 
     private async void AddPersonCommandExecute()
     {
-        await NavigationService.NavigateToAddPersonPage(personReturn: PersonAdded);
+        //await NavigationService.NavigateToAddPersonPage(personReturn: PersonAdded);
     }
 
     private async void PersonAdded(Person addedPerson)
     {
-        if (!retrievedCollection.Exists(person => person.Id == addedPerson.Id))
-        {
-            CurrentSearchQuery = addedPerson.FullName;
-            await SearchCollection();
-        }
-
-        var person = retrievedCollection.FirstOrDefault(person => person.Id == addedPerson.Id);
-
-        OnScrollToItem(person, false);
-        Selection = person;
+        // if (!retrievedCollection.Exists(person => person.Id == addedPerson.Id))
+        // {
+        //     CurrentSearchQuery = addedPerson.FullName;
+        //     await SearchCollection();
+        // }
+        //
+        // var person = retrievedCollection.FirstOrDefault(person => person.Id == addedPerson.Id);
+        //
+        // OnScrollToItem(person, false);
+        // Selection = person;
     }
 
     private async void EditDetailsCommandExecute()
     {
         //await NavigationService.NavigateTo(nameof(EditDetailsPage), Person.Copy(Selection));
-    }
-
-    protected override Task<List<Person>> RetrieveSearchedCollection(string query)
-    {
-        return peopleService.SearchPeopleAsync(cancellationToken.Token, query, ShowInactivePeople);
-    }
-
-    protected override Task<List<Person>> RetrieveUnsearchedCollection()
-    {
-        return peopleService.GetPeopleAsync(cancellationToken.Token, ShowInactivePeople);
-    }
-
-    protected override Task<List<Person>> GetSearchedUpdatedItems(string query)
-    {
-        return peopleService.GetUpdatedPeopleMatchingQuery(cancellationToken.Token, timeLastUpdated, query,
-            ShowInactivePeople);
-    }
-
-    protected override Task<List<Person>> GetUnsearchedUpdatedItems()
-    {
-        return peopleService.GetUpdatedPeople(cancellationToken.Token, timeLastUpdated, ShowInactivePeople);
-    }
-
-    protected override List<Person> SortCollection(List<Person> collection)
-    {
-        return collection.OrderBy(person => person.FullName).ToList();
-    }
-
-    protected override Task<List<int>> GetDeletedIds()
-    {
-        return peopleService.GetDeletedPeopleIds(cancellationToken.Token, timeLastUpdated);
     }
 }

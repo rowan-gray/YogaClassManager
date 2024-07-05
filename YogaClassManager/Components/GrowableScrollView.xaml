@@ -3,9 +3,9 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="YogaClassManager.Components.GrowableScrollView"
-             BindingContext="{x:Reference this}">
+             x:Name="This"
+             BindingContext="{x:Reference This}">
     <CollectionView x:Name="CollectionView"
-                    BindingContext="{x:Reference this}"
                     ItemsSource="{Binding ItemsSource}"
                     SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
                     ItemTemplate="{Binding ItemTemplate}"

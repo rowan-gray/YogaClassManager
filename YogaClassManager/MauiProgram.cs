@@ -9,6 +9,7 @@ using YogaClassManager.Views.Passes;
 using YogaClassManager.Views.People;
 using YogaClassManager.Views.Students;
 using YogaClassManager.Views.Terms;
+using DatabaseService = YogaClassManager.NewDatabase.DatabaseService;
 using PopupService = YogaClassManager.Services.PopupService;
 
 namespace YogaClassManager;
@@ -22,7 +23,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton(new DatabaseManager(dbFilePath));
         builder.Services.AddSingleton<PopupService>();
-        builder.Services.AddSingleton<NewDatabase.DatabaseService>();
+        builder.Services.AddSingleton(new DatabaseService(dbFilePath));
         builder.Services.AddTransient<MainPage>();
         builder.Services.AddTransient<MainPageModel>();
         builder.Services.AddTransient<StudentsPageModel>();

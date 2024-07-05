@@ -6,10 +6,14 @@
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              Title="PeoplePage"
              Style="{StaticResource PaddedContentPage}"
-             xmlns:views="clr-namespace:YogaClassManager.Views">
+             xmlns:views="clr-namespace:YogaClassManager.Views"
+             xmlns:components="clr-namespace:YogaClassManager.Components"
+             xmlns:viewModels="clr-namespace:YogaClassManager.ViewModels"
+             xmlns:people="clr-namespace:YogaClassManager.NewModels.People"
+             x:DataType="viewModels:PeoplePageModel">
     <ContentPage.Behaviors>
-        <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}" />
-        <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}" />
+        <!-- <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding ResetPageCommand}" /> -->
+        <!-- <toolkit:EventToCommandBehavior EventName="NavigatedFrom" Command="{Binding CancelTasks}" /> -->
     </ContentPage.Behaviors>
     <Grid>
         <Grid Style="{StaticResource ContentGrid}">
@@ -36,20 +40,21 @@
                                 <Button Text="Add" Command="{Binding AddPersonCommand}" />
                             </HorizontalStackLayout>
                         </Grid>
+                        <CheckBox IsChecked="{Binding ShowInactivePeople}"></CheckBox>
                         <SearchBar x:Name="SearchPeople"
-                                   Placeholder="Search people"
-                                   Text="{Binding CurrentSearchQuery}"
-                                   SearchCommand="{Binding SearchCollectionCommand}" />
+                                   Placeholder="Search people"/>
+                                   <!-- Text="{Binding CurrentSearchQuery}" -->
+                                   <!-- SearchCommand="{Binding SearchCollectionCommand}" /> -->
                     </VerticalStackLayout>
-                    <CollectionView x:Name="PeopleList"
-                                    ItemsSource="{Binding DisplayedCollection}"
-                                    SelectedItem="{Binding Selection, Mode=TwoWay}"
-                                    Grid.Row="1"
-                                    VerticalScrollBarVisibility="Default"
-                                    Scrolled="PeopleList_Scrolled"
-                                    SelectionMode="Single">
+                    <CollectionView
+                        x:Name="PeopleList"
+                        ItemsSource="{Binding People}"
+                        SelectedItem="{Binding SelectedPerson, Mode=TwoWay}"
+                        Grid.Row="1">
+                        
                         <CollectionView.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate 
+                                x:DataType="people:Person">
                                 <VerticalStackLayout Padding="5">
                                     <Label Text="{Binding FullName}" Style="{DynamicResource ActiveLabel}"
                                            FontAttributes="Bold">
@@ -96,7 +101,7 @@
                    IsVisible="False">
                 <Label.Triggers>
                     <DataTrigger TargetType="Label"
-                                 Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                 Binding="{Binding SelectedPerson, Converter={toolkit:IsNullConverter}}"
                                  Value="True">
                         <Setter Property="IsVisible" Value="True" />
                     </DataTrigger>
@@ -105,14 +110,14 @@
             <ScrollView Grid.Column="1" Margin="0,0,-10,0">
                 <ScrollView.Triggers>
                     <DataTrigger TargetType="ScrollView"
-                                 Binding="{Binding Selection, Converter={toolkit:IsNullConverter}}"
+                                 Binding="{Binding SelectedPerson, Converter={toolkit:IsNullConverter}}"
                                  Value="True">
                         <Setter Property="IsVisible" Value="False" />
                     </DataTrigger>
 
                 </ScrollView.Triggers>
                 <VerticalStackLayout Margin="0,0,10,0">
-                    <views:DetailsView Person="{Binding Selection}"
+                    <views:DetailsView Person="{Binding SelectedPerson}"
                                        EditCommand="{Binding EditDetailsCommand}" />
                 </VerticalStackLayout>
             </ScrollView>

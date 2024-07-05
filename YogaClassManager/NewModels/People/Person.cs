@@ -10,27 +10,55 @@ public partial class Person : ObservableObject
 
     [ObservableProperty] private bool isActive;
 
+    public Person() : this(-1, "", null, null, null, true)
+    {
+    }
+    
     public Person(int id, string firstName, string? lastName, string? phoneNumber, string? email, bool isActive)
     {
         Id = id;
-        FirstName = new ValidatableObject<string>(firstName, new List<IValidationRule<string>>(),
+        FirstNameValidation = new ValidatableObject<string>(firstName, new List<IValidationRule<string>>(),
             NotifyFullNameChanged);
-        LastName = new ValidatableObject<string?>(lastName, new List<IValidationRule<string?>>(),
+        LastNameValidation  = new ValidatableObject<string?>(lastName, new List<IValidationRule<string?>>(),
             NotifyFullNameChanged);
-        PhoneNumber = new ValidatableObject<string?>(phoneNumber);
-        Email = new ValidatableObject<string?>(email);
+        PhoneNumberValidation  = new ValidatableObject<string?>(phoneNumber);
+        EmailValidation  = new ValidatableObject<string?>(email);
         IsActive = isActive;
     }
 
     public string FullName => $"{FirstName} {LastName}";
 
-    public ValidatableObject<string> FirstName { get; init; }
+    public ValidatableObject<string> FirstNameValidation { get; init; }
+    
+    public string FirstName
+    {
+        set => FirstNameValidation.Value = value;
+        get => FirstNameValidation.Value;
+    }
 
-    public ValidatableObject<string?> LastName { get; init; }
+    public ValidatableObject<string?> LastNameValidation { get; init; }
+    
+    public string? LastName
+    {
+        set => LastNameValidation.Value = value;
+        get => LastNameValidation.Value;
+    }
 
-    private ValidatableObject<string?> PhoneNumber { get; }
+    private ValidatableObject<string?> PhoneNumberValidation { get; }
+    
+    public string? PhoneNumber
+    {
+        set => PhoneNumberValidation.Value = value;
+        get => PhoneNumberValidation.Value;
+    }
 
-    private ValidatableObject<string?> Email { get; }
+    private ValidatableObject<string?> EmailValidation { get; }
+    
+    public string? Email
+    {
+        set => EmailValidation.Value = value;
+        get => EmailValidation.Value;
+    }
 
     public void NotifyFullNameChanged()
     {
@@ -41,20 +69,4 @@ public partial class Person : ObservableObject
     {
         return new Person(person.Id, person.FirstName, person.LastName, person.PhoneNumber, person.Email, true);
     }
-
-    // internal virtual bool Validate()
-    // {
-    //     FirstName = FirstName.Trim();
-    //     LastName = LastName?.Trim();
-    //     LastName = LastName == "" ? null : LastName;
-    //     PhoneNumber = PhoneNumber?.Trim();
-    //     PhoneNumber = PhoneNumber == "" ? null : PhoneNumber;
-    //     Email = Email?.Trim();
-    //     Email = Email == "" ? null : Email;
-    //     return FirstName is not null && FirstName.Length > 0 && (PhoneNumber is null
-    //         || Regex.IsMatch(PhoneNumber is null ? "" : PhoneNumber, @"^\d{10}$|^\d{8}$"))
-    //         && (Email is null
-    //         || Regex.IsMatch(Email is null ? "" : Email, @"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$"))
-    //         && (Email is not null || PhoneNumber is not null);
-    // }
 }
