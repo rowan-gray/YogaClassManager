@@ -46,13 +46,14 @@
                                    <!-- Text="{Binding CurrentSearchQuery}" -->
                                    <!-- SearchCommand="{Binding SearchCollectionCommand}" /> -->
                     </VerticalStackLayout>
-                    <CollectionView
+                    <components:GrowableScrollView
                         x:Name="PeopleList"
                         ItemsSource="{Binding People}"
                         SelectedItem="{Binding SelectedPerson, Mode=TwoWay}"
+                        GrowAmount="10"
                         Grid.Row="1">
                         
-                        <CollectionView.ItemTemplate>
+                        <components:GrowableScrollView.ItemTemplate>
                             <DataTemplate 
                                 x:DataType="people:Person">
                                 <VerticalStackLayout Padding="5">
@@ -89,8 +90,8 @@
                                     </Label>
                                 </VerticalStackLayout>
                             </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                        </components:GrowableScrollView.ItemTemplate>
+                    </components:GrowableScrollView>
                 </Grid>
             </Frame>
             <Label Grid.Column="1"

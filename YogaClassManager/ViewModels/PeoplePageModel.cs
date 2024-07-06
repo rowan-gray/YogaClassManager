@@ -25,7 +25,7 @@ public partial class PeoplePageModel : BasePageModel
         dbModel = new PersonDbModel(new PersonFilter(), databaseService);
 
         People = new GrowableDbCollection<PersonDbModel, Person, PersonFilter>(dbModel);
-        people.Add(new Person());
+        people.Add(new Person(-1, "Rowan", "Gray", "0478570039",null, true));
         people.Add(new Person());
         people.Add(new Person());
         

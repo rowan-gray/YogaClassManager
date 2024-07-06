@@ -2,15 +2,37 @@
 
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:components="using:YogaClassManager.Components"
              x:Class="YogaClassManager.Components.GrowableScrollView"
-             x:Name="This"
-             BindingContext="{x:Reference This}">
-    <CollectionView x:Name="CollectionView"
+             x:Name="This">
+    <CollectionView x:Name="CollectionView" 
+                    BindingContext="{x:Reference This}"
                     ItemsSource="{Binding ItemsSource}"
                     SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
                     ItemTemplate="{Binding ItemTemplate}"
                     SelectionMode="Single"
-                    RemainingItemsThreshold="5"
-                    RemainingItemsThresholdReached="CollectionView_OnRemainingItemsThresholdReached"
-                    Footer="End of list" />
+                    ItemsUpdatingScrollMode="KeepScrollOffset"
+                    RemainingItemsThreshold="{Binding RemainingItemsThreshold}"
+                    RemainingItemsThresholdReached="CollectionView_OnRemainingItemsThresholdReached">
+        <CollectionView.Footer>
+            <components:OptionsLayout Option="{Binding Status}" 
+                                      VerticalOptions="Center" 
+                                      HorizontalOptions="Center"
+                                      Spacing="10"
+                                      Padding="10">
+                <Label components:OptionsLayout.VisibleOn="{x:Static components:GrowableScrollViewStatus.Full}"
+                       Text="Maximum items reached"/>
+                <Label components:OptionsLayout.VisibleOn="{x:Static components:GrowableScrollViewStatus.Exhausted}"
+                       Text="No more data"/>
+                <ActivityIndicator 
+                    components:OptionsLayout.VisibleOn="{x:Static components:GrowableScrollViewStatus.Growing}"
+                    IsRunning="True"
+                    HorizontalOptions="FillAndExpand"
+                    VerticalOptions="CenterAndExpand" />
+                <Label components:OptionsLayout.VisibleOn="{x:Static components:GrowableScrollViewStatus.Growing}"
+                       Text="Fetching more data..." 
+                       HorizontalOptions="Center" />
+            </components:OptionsLayout>
+        </CollectionView.Footer>
+    </CollectionView>
 </ContentView>

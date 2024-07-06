@@ -18,13 +18,27 @@ public partial class GrowableScrollView : ContentView
 
     public static readonly BindableProperty GrowAmountProperty =
         BindableProperty.Create(nameof(GrowAmount), typeof(uint),
-            typeof(GrowableScrollView), (uint)1);
+            typeof(GrowableScrollView), (uint)5);
 
-    private bool isGrowing;
+    public static readonly BindableProperty RemainingItemsThresholdProperty =
+        BindableProperty.Create(nameof(RemainingItemsThreshold), typeof(uint),
+            typeof(GrowableScrollView), (uint)5);
+    
+    private GrowableScrollViewStatus status;
 
     public GrowableScrollView()
     {
         InitializeComponent();
+    }
+
+    public GrowableScrollViewStatus Status
+    {
+        get => status;
+        set
+        {
+            status = value;
+            OnPropertyChanged();
+        }
     }
 
     public DataTemplate ItemTemplate
@@ -51,12 +65,29 @@ public partial class GrowableScrollView : ContentView
         set => SetValue(GrowAmountProperty, value);
     }
 
+    public uint RemainingItemsThreshold
+    {
+        get => (uint)GetValue(RemainingItemsThresholdProperty);
+        set => SetValue(RemainingItemsThresholdProperty, value);
+    }
+
     private async void CollectionView_OnRemainingItemsThresholdReached(object sender, EventArgs e)
     {
-        if (isGrowing) return;
+        if (Status is GrowableScrollViewStatus.Growing or GrowableScrollViewStatus.Exhausted) return;
 
-        isGrowing = true;
-        await ItemsSource.GrowCollection(GrowAmount);
-        isGrowing = false;
+        Status = GrowableScrollViewStatus.Growing;
+        
+        var count = await ItemsSource.GrowCollection(GrowAmount);
+        await Task.Delay(250);
+        
+        Status = count >= GrowAmount ? GrowableScrollViewStatus.None : GrowableScrollViewStatus.Exhausted;
     }
+}
+
+public enum GrowableScrollViewStatus
+{
+    None,
+    Growing,
+    Full,
+    Exhausted
 }
