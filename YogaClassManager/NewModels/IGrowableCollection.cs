@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 namespace YogaClassManager.NewModels;
 
-public interface IGrowableCollection : ICollection, INotifyCollectionChanged, INotifyPropertyChanged
+public interface IGrowableCollection : IEnumerable
 {
-    Task GrowCollection(uint amount);
+    Task<uint> GrowCollection(uint amount);
 }

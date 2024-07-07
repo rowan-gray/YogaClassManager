@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using YogaClassManager.NewDatabase;
 
 namespace YogaClassManager.NewModels;
@@ -14,19 +15,29 @@ public class GrowableDbCollection<T, TModel, TFilter>
         this.dbModel = dbModel;
     }
 
-    public async Task GrowCollection(uint amount)
+    public async Task<uint> GrowCollection(uint amount)
     {
         var models = await
             dbModel.LoadMultiple( amount, Convert.ToUInt32(Count));
 
-        InsertRange(models);
+        var enumerable = models.ToList();
+        InsertRange(enumerable);
+
+        return Convert.ToUInt32(enumerable.Count);
     }
 
     public void InsertRange(IEnumerable<TModel> items)
     {
         CheckReentrancy();
-        foreach (var item in items)
+
+        var startIndex = Count;
+
+        var enumerable = items.ToList();
+        foreach (var item in enumerable)
             Items.Add(item);
-        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, enumerable, startIndex));
+        OnPropertyChanged(new PropertyChangedEventArgs("Count")); 
+        OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
     }
 }
