@@ -56,8 +56,8 @@ public class PersonDbModel : IDbModel<Person, PersonFilter>
         if (Filter.SortBy is not null)
         {
             defaultSelectStatement +=
-                $" ORDER BY {EnumHelper.GetStringValue(Filter.SortBy.Value.Key)} " +
-                $"{EnumHelper.GetStringValue(Filter.SortBy.Value.Value)}";
+                $" ORDER BY {StringValueAttribute.GetStringValue(Filter.SortBy.Value.Key)} " +
+                $"{StringValueAttribute.GetStringValue(Filter.SortBy.Value.Value)}";
         }
 
         return defaultSelectStatement;

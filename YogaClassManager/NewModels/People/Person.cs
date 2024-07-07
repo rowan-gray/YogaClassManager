@@ -1,14 +1,30 @@
+using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
+using YogaClassManager.Models;
+
 
 namespace YogaClassManager.NewModels.People;
 #nullable enable
 
 
-public partial class Person : ObservableObject
+public partial class Person : ObservableValidatableObject
 {
+    [RegularExpression(@"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$")]
+    [ObservableProperty] [Required] private string? email;
+
+    [Required]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(FullName))]
+    private string firstName = "";
+
     [ObservableProperty] private int id;
 
     [ObservableProperty] private bool isActive;
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(FullName))]
+    private string? lastName;
+
+    [RegularExpression(@"^\d{10}$|^\d{8}$")]
+    [ObservableProperty] private string? phoneNumber;
 
     public Person() : this(-1, "", null, null, null, true)
     {
@@ -17,49 +33,15 @@ public partial class Person : ObservableObject
     public Person(int id, string firstName, string? lastName, string? phoneNumber, string? email, bool isActive)
     {
         Id = id;
-        FirstNameValidation = new ValidatableObject<string>(firstName, new List<IValidationRule<string>>(),
-            NotifyFullNameChanged);
-        LastNameValidation  = new ValidatableObject<string?>(lastName, new List<IValidationRule<string?>>(),
-            NotifyFullNameChanged);
-        PhoneNumberValidation  = new ValidatableObject<string?>(phoneNumber);
-        EmailValidation  = new ValidatableObject<string?>(email);
+        FirstName = firstName;
+        LastName = lastName;
+        PhoneNumber = phoneNumber;
+        Email = email;
         IsActive = isActive;
     }
 
     public string FullName => $"{FirstName} {LastName}";
-
-    public ValidatableObject<string> FirstNameValidation { get; init; }
     
-    public string FirstName
-    {
-        set => FirstNameValidation.Value = value;
-        get => FirstNameValidation.Value;
-    }
-
-    public ValidatableObject<string?> LastNameValidation { get; init; }
-    
-    public string? LastName
-    {
-        set => LastNameValidation.Value = value;
-        get => LastNameValidation.Value;
-    }
-
-    private ValidatableObject<string?> PhoneNumberValidation { get; }
-    
-    public string? PhoneNumber
-    {
-        set => PhoneNumberValidation.Value = value;
-        get => PhoneNumberValidation.Value;
-    }
-
-    private ValidatableObject<string?> EmailValidation { get; }
-    
-    public string? Email
-    {
-        set => EmailValidation.Value = value;
-        get => EmailValidation.Value;
-    }
-
     public void NotifyFullNameChanged()
     {
         OnPropertyChanged(FullName);

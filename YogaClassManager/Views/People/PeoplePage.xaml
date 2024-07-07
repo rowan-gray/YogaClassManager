@@ -100,25 +100,25 @@
                    TextColor="{StaticResource Gray300}"
                    IsVisible="False">
                 <Label.Triggers>
-                    <DataTrigger TargetType="Label"
-                                 Binding="{Binding SelectedPerson, Converter={toolkit:IsNullConverter}}"
-                                 Value="True">
-                        <Setter Property="IsVisible" Value="True" />
-                    </DataTrigger>
+                    <!-- <DataTrigger TargetType="Label" -->
+                    <!--              Binding="{Binding SelectedPerson, Converter={toolkit:IsNullConverter}}" -->
+                    <!--              Value="True"> -->
+                    <!--     <Setter Property="IsVisible" Value="True" /> -->
+                    <!-- </DataTrigger> -->
                 </Label.Triggers>
             </Label>
             <ScrollView Grid.Column="1" Margin="0,0,-10,0">
                 <ScrollView.Triggers>
-                    <DataTrigger TargetType="ScrollView"
-                                 Binding="{Binding SelectedPerson, Converter={toolkit:IsNullConverter}}"
-                                 Value="True">
-                        <Setter Property="IsVisible" Value="False" />
-                    </DataTrigger>
+                    <!-- <DataTrigger TargetType="ScrollView" -->
+                    <!--              Binding="{Binding SelectedPerson, Converter={toolkit:IsNullConverter}}" -->
+                    <!--              Value="True"> -->
+                    <!--     <Setter Property="IsVisible" Value="False" /> -->
+                    <!-- </DataTrigger> -->
 
                 </ScrollView.Triggers>
                 <VerticalStackLayout Margin="0,0,10,0">
-                    <views:DetailsView Person="{Binding SelectedPerson}"
-                                       EditCommand="{Binding EditDetailsCommand}" />
+                    <!-- <views:DetailsView Person="{Binding SelectedPerson}" -->
+                    <!--                    EditCommand="{Binding EditDetailsCommand}" /> -->
                 </VerticalStackLayout>
             </ScrollView>
 

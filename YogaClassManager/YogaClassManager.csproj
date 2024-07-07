@@ -47,10 +47,15 @@
 
     <ItemGroup>
         <PackageReference Include="Dapper" Version="2.1.35"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0-beta1.24225.1">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0-2.final" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.5.24306.3"/>
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)"/>
         <PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)"/>
-        <PackageReference Include="CommunityToolkit.Maui" Version="6.1.0"/>
+        <PackageReference Include="CommunityToolkit.Maui" Version="9.0.2" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0"/>
         <PackageReference Include="Plugin.Maui.Audio" Version="2.0.0"/>

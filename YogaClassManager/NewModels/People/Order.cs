@@ -37,10 +37,8 @@ public class StringValueAttribute : Attribute {
     }
 
     #endregion
-}
-
-public class EnumHelper
-{
+    
+    
     /// <summary>
     /// Will get the string value for a given enums value, this will
     /// only work if you assign the StringValue attribute to
