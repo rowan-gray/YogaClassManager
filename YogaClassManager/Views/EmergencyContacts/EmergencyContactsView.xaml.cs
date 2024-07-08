@@ -41,9 +41,9 @@ public partial class EmergencyContactsView : ContentView
         set => SetValue(EmergencyContactsProperty, value);
     }
 
-    public Command AddCommand
+    public Command? AddCommand
     {
-        get => (Command)GetValue(AddCommandProperty);
+        get => (Command?)GetValue(AddCommandProperty);
         set => SetValue(AddCommandProperty, value);
     }
 
@@ -53,9 +53,9 @@ public partial class EmergencyContactsView : ContentView
         set => SetValue(AddCommandParameterProperty, value);
     }
 
-    public Command EditCommand
+    public Command? EditCommand
     {
-        get => (Command)GetValue(EditCommandProperty);
+        get => (Command?)GetValue(EditCommandProperty);
         set => SetValue(EditCommandProperty, value);
     }
 
@@ -65,9 +65,9 @@ public partial class EmergencyContactsView : ContentView
         set => SetValue(EditCommandParameterProperty, value);
     }
 
-    public Command RemoveCommand
+    public Command? RemoveCommand
     {
-        get => (Command)GetValue(RemoveCommandProperty);
+        get => (Command?)GetValue(RemoveCommandProperty);
         set => SetValue(RemoveCommandProperty, value);
     }
 
@@ -81,20 +81,5 @@ public partial class EmergencyContactsView : ContentView
     {
         get => (EmergencyContact)GetValue(SelectedEmergencyContactProperty);
         set => SetValue(SelectedEmergencyContactProperty, value);
-    }
-
-    private void AddButtonClicked(object sender, EventArgs e)
-    {
-        AddCommand.Execute(AddCommandParameter);
-    }
-
-    private void EditButtonClicked(object sender, EventArgs e)
-    {
-        EditCommand.Execute(EditCommandParameter);
-    }
-
-    private void RemoveButtonClicked(object sender, EventArgs e)
-    {
-        RemoveCommand.Execute(RemoveCommandParameter);
     }
 }

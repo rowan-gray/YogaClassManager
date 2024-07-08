@@ -33,6 +33,10 @@
             Title="People"
             ContentTemplate="{DataTemplate people:PeoplePage}"
             Route="People" />
+        <ShellContent
+            Title="Students"
+            ContentTemplate="{DataTemplate views:StudentsPage}"
+            Route="Students" />
     </FlyoutItem>
     <FlyoutItem Title="Settings">
         <ShellContent

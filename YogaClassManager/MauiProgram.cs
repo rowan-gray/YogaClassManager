@@ -69,7 +69,10 @@ public static class MauiProgram
 
         builder
             .UseMauiApp<App>()
-            .UseMauiCommunityToolkit()
+            .UseMauiCommunityToolkit(options =>
+            {
+                options.SetShouldSuppressExceptionsInConverters(true);
+            })
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("MaterialDesignIcons.ttf", "MaterialDesignIcons");

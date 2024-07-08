@@ -16,9 +16,9 @@ public partial class ClassDetailsView : ContentView
         InitializeComponent();
     }
 
-    public ICommand EditCommand
+    public ICommand? EditCommand
     {
-        get => (ICommand)GetValue(EditCommandProperty);
+        get => (ICommand?)GetValue(EditCommandProperty);
         set => SetValue(EditCommandProperty, value);
     }
 
