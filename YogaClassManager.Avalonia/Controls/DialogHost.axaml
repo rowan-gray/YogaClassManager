@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="YogaClassManager.Avalonia.Controls.DialogHost"
+             x:Name="Control">
+
+    <!-- The dimmed backdrop + centered card that every in-app dialog renders into. Both MainWindow and
+         MarkRollWindow use one of these (bound to their respective IDialogService); the keyboard
+         behaviour - Escape/Enter, initial focus, and keeping Tab inside the card - lives in the
+         code-behind so neither host has to re-implement it. -->
+    <Border x:Name="PART_Overlay" Classes="DialogOverlay"
+            Classes.Open="{Binding DialogService.IsDialogOpen, ElementName=Control, FallbackValue=False}"
+            Background="{DynamicResource OverlayScrimBrush}"
+            PointerPressed="OnBackdropPressed">
+        <!--
+            TabNavigation="Cycle" is what makes the dialog actually modal to the keyboard: Tab wraps from
+            the last focusable control back to the first instead of walking out into the page behind.
+            It only holds while focus starts inside the card, which is why the code-behind also sets
+            initial focus (and blanks the sibling content's tab navigation as a second line of defence).
+        -->
+        <Border x:Name="PART_Card" Classes="Card" HorizontalAlignment="Center" VerticalAlignment="Center"
+                KeyboardNavigation.TabNavigation="Cycle"
+                MaxWidth="{Binding MaxDialogWidth, ElementName=Control}"
+                MaxHeight="{Binding MaxDialogHeight, ElementName=Control}">
+            <ContentControl Content="{Binding DialogService.ActiveDialog, ElementName=Control}" />
+        </Border>
+    </Border>
+
+</UserControl>

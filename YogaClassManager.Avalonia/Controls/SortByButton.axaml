@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
+             xmlns:data="using:YogaClassManager.Core.Data"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="YogaClassManager.Avalonia.Controls.SortByButton"
+             x:Name="Control">
+
+    <!-- "Sort by: field ↑/↓" - clicking opens a small Flyout with the field dropdown and an
+         ascending/descending radio pair, instead of inline ComboBoxes sitting in a filter bar. The
+         standard way to expose sort for any repository-backed list (see UI_STYLE_GUIDE.md) - only
+         omit this control where the filter's sort enum has no field beyond its internal fallback key
+         (e.g. today's PassSortOptions, which is Id-only). -->
+    <Button IsVisible="{Binding SortOptions, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}"
+            AutomationProperties.Name="{Binding SortDescription, ElementName=Control}"
+            ToolTip.Tip="{Binding SortDescription, ElementName=Control}">
+        <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="{Binding SelectedSort, ElementName=Control, StringFormat='Sort by: {0}'}" />
+            <materialIcons:MaterialIcon Kind="ArrowUp" Width="14" Height="14" VerticalAlignment="Center"
+                IsVisible="{Binding SelectedSortOrder, ElementName=Control, Converter={x:Static localConv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static data:Order.Ascending}}" />
+            <materialIcons:MaterialIcon Kind="ArrowDown" Width="14" Height="14" VerticalAlignment="Center"
+                IsVisible="{Binding SelectedSortOrder, ElementName=Control, Converter={x:Static localConv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static data:Order.Descending}}" />
+        </StackPanel>
+        <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedRight">
+                <StackPanel Spacing="8" MinWidth="200">
+                    <TextBlock Text="Sort by" FontWeight="{StaticResource FontWeightMedium}" />
+                    <ComboBox ItemsSource="{Binding SortOptions, ElementName=Control}"
+                              SelectedItem="{Binding SelectedSort, ElementName=Control, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch" />
+                    <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,4,0,0"
+                                IsVisible="{Binding SortOrderOptions, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+                        <!-- No explicit GroupName - Avalonia groups same-parent RadioButtons by
+                             default, which already scopes these two correctly per SortByButton
+                             instance. A literal GroupName string would risk cross-grouping if two
+                             instances of this control were ever visible at once. -->
+                        <RadioButton Content="Ascending"
+                            IsChecked="{Binding SelectedSortOrder, ElementName=Control, Converter={x:Static localConv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static data:Order.Ascending}}" />
+                        <RadioButton Content="Descending"
+                            IsChecked="{Binding SelectedSortOrder, ElementName=Control, Converter={x:Static localConv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static data:Order.Descending}}" />
+                    </StackPanel>
+                </StackPanel>
+            </Flyout>
+        </Button.Flyout>
+    </Button>
+
+</UserControl>

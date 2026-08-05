@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="YogaClassManager.Avalonia.Controls.ToastContent">
+
+    <Grid x:Name="Root" ColumnDefinitions="Auto,Auto" Margin="12" VerticalAlignment="Center">
+        <Border Grid.Column="0" Classes="ToastBadge" Width="32" Height="32" CornerRadius="16">
+            <materialIcons:MaterialIcon x:Name="Icon" Classes="ToastIcon" Width="18" Height="18"
+                                         Foreground="White" />
+        </Border>
+        <TextBlock x:Name="MessageText" Grid.Column="1" Classes="ToastMessage" Margin="12,0,0,0"
+                   MaxWidth="280" TextWrapping="Wrap" VerticalAlignment="Center" />
+    </Grid>
+
+</UserControl>

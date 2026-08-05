@@ -1,0 +1,193 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        App-wide design tokens: spacing, corner radius, semantic status colors (theme-aware,
+        WCAG AA >= 4.5:1 against their respective light/dark backgrounds), and a small typography
+        ramp applied via TextBlock Classes (PageTitle/SectionTitle/DialogTitle/Caption).
+    -->
+    <Styles.Resources>
+        <ResourceDictionary>
+            <Thickness x:Key="PagePadding">24</Thickness>
+            <x:Double x:Key="SpacingXs">4</x:Double>
+            <x:Double x:Key="SpacingSm">8</x:Double>
+            <x:Double x:Key="SpacingMd">16</x:Double>
+            <x:Double x:Key="SpacingLg">24</x:Double>
+            <x:Double x:Key="SpacingXl">32</x:Double>
+
+            <!--
+                Thickness counterparts for the margins that were repeated as literals across the app.
+                Margin/Padding genuinely can't take the x:Double resources above (Avalonia won't convert
+                a double resource to a Thickness-typed property), so a shared value has to be declared
+                as a Thickness to be bindable at all - Spacing, being a double property, binds to
+                SpacingXs/Sm/Md directly and needs no equivalent here.
+            -->
+            <Thickness x:Key="DialogButtonRowMargin">0,16,0,0</Thickness>
+            <!-- Deliberately off the 4/8/16/24/32 scale: a Tag is a badge sized to its own 11px text,
+                 and the smallest scale step (4) makes it read as a button rather than a label. The one
+                 sanctioned sub-scale value, kept here so it can't drift copy by copy. -->
+            <Thickness x:Key="TagPadding">6,2</Thickness>
+            <Thickness x:Key="GroupGapMargin">0,8,0,0</Thickness>
+            <Thickness x:Key="HeaderRowMargin">0,0,0,8</Thickness>
+
+            <!--
+                Font weights as tokens, because FontWeight was hand-written 20+ times with no shared
+                value. Three is the whole set the app uses - if a fourth looks necessary, it probably
+                means the type ramp below is missing an entry instead.
+            -->
+            <FontWeight x:Key="FontWeightMedium">Medium</FontWeight>
+            <FontWeight x:Key="FontWeightSemiBold">SemiBold</FontWeight>
+            <FontWeight x:Key="FontWeightBold">Bold</FontWeight>
+
+            <!-- One opacity for "secondary metadata beside a record name". Previously 0.5, 0.6 and 0.7
+                 were all in use for that same idea across 16 sites; prefer Classes="Muted" over binding
+                 this directly, and reach for the resource only where a Classes selector can't apply. -->
+            <x:Double x:Key="MutedOpacity">0.7</x:Double>
+
+            <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
+            <CornerRadius x:Key="RadiusMedium">8</CornerRadius>
+            <CornerRadius x:Key="RadiusLarge">12</CornerRadius>
+
+            <!--
+                Solid fills for Controls/Tag.axaml (rounded colored-background status badges), always
+                paired with white text. Deliberately fixed rather than ThemeDictionaries-scoped like the
+                StatusXxxBrush tokens below: those are tuned as *foreground* text color against the
+                page's own background (so they invert to a paler tone in dark mode to stay readable on
+                a dark page), but a tag's "background" is its own solid fill, not the page - inverting
+                it in dark mode would take it from the light-theme's dark, white-text-safe color to the
+                dark-theme's pale StatusXxxBrush tone, which fails contrast against white text. One
+                saturated value per status works in both themes.
+            -->
+            <SolidColorBrush x:Key="TagArchivedBrush" Color="#B34700" />
+            <SolidColorBrush x:Key="TagWarningBrush" Color="#9D5D00" />
+            <!-- A state that is neither a problem nor a warning, just no longer current (a completed
+                 term). Grey rather than a status hue so it doesn't read as something to act on;
+                 #5F6368 keeps white text at ~5.9:1, clear of AA in both themes. -->
+            <SolidColorBrush x:Key="TagNeutralBrush" Color="#5F6368" />
+
+            <!-- The dimmed backdrop behind a modal dialog (Controls/DialogHost). Fixed rather than
+                 theme-varying for the same reason as the Tag fills: a scrim's job is to darken whatever
+                 is behind it, which a light-theme page and a dark-theme page both need equally. -->
+            <SolidColorBrush x:Key="OverlayScrimBrush" Color="#80000000" />
+
+            <!--
+                ============================ Interactive state palette ============================
+
+                Every brush here is deliberately left at the default Opacity of 1, with any
+                translucency carried in the Color's alpha channel. That is not a stylistic choice -
+                it is the whole reason this palette exists.
+
+                Avalonia's SolidColorBrushAnimator (used by the BrushTransition on Button/ListBoxItem
+                in Controls.axaml) interpolates Color and Opacity as two *independent* factors, and
+                they multiply when rendered. FluentTheme's own ButtonBackgroundPointerOver is
+                `Color=Black, Opacity=0.1` while ButtonBackground is `Color=#33000000, Opacity=1`, so
+                animating between them runs alpha 0x33 -> 0xFF while opacity runs 1.0 -> 0.1: at the
+                midpoint the rendered result is ~0.33 alpha, *darker than either end*. That overshoot
+                is the grey flash on hover. Keep Opacity at 1 and only alpha moves, which is
+                monotonic and can't overshoot.
+
+                Accent-derived entries reference the SystemAccentColor* family rather than baking
+                hex, because those follow the OS accent colour and differ per machine. The values
+                match what FluentTheme itself resolves to, so this preserves the current look.
+            -->
+
+            <!-- Overlay tints for controls whose resting background is Transparent or a custom
+                 surface: nav rail items, overflow buttons, list rows. -->
+            <SolidColorBrush x:Key="InteractiveHoverBrush" Color="{DynamicResource SystemListLowColor}" />
+            <SolidColorBrush x:Key="InteractivePressedBrush" Color="{DynamicResource SystemListMediumColor}" />
+
+            <!-- Selection, used by list rows and the selected nav item. -->
+            <SolidColorBrush x:Key="InteractiveSelectedBrush" Color="{DynamicResource SystemAccentColorLight2}" />
+            <SolidColorBrush x:Key="InteractiveSelectedHoverBrush" Color="{DynamicResource SystemAccentColorLight1}" />
+            <!-- Same as hover: a press on an already-selected row previously fell through to the
+                 plain grey :pressed rule, which read as the selection briefly vanishing. -->
+            <SolidColorBrush x:Key="InteractiveSelectedPressedBrush" Color="{DynamicResource SystemAccentColorLight1}" />
+
+            <!-- The default, filled Button. Its resting fill is already a 0x33 overlay, so pressed has
+                 to go darker than the overlay set above to register at all. -->
+            <SolidColorBrush x:Key="ButtonFillHoverBrush" Color="{DynamicResource SystemListLowColor}" />
+            <SolidColorBrush x:Key="ButtonFillDisabledBrush" Color="{DynamicResource SystemListMediumColor}" />
+
+            <!-- Accent (primary action) buttons. FluentTheme's own accent brushes are already
+                 Opacity=1, so these preserve the existing look exactly; they are owned here so the
+                 palette is complete and a theme update can't reintroduce an Opacity-carrying brush. -->
+            <SolidColorBrush x:Key="AccentActionBrush" Color="{DynamicResource SystemAccentColor}" />
+            <SolidColorBrush x:Key="AccentActionHoverBrush" Color="{DynamicResource SystemAccentColorLight1}" />
+            <SolidColorBrush x:Key="AccentActionPressedBrush" Color="{DynamicResource SystemAccentColorDark1}" />
+            <SolidColorBrush x:Key="AccentActionDisabledBrush" Color="{DynamicResource SystemListMediumColor}" />
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <!-- The one interactive value with no System* equivalent: a filled Button's
+                         pressed state, which has to sit below its own 0x33 resting overlay.
+                         Matches FluentTheme's ButtonBackgroundPressed exactly. -->
+                    <SolidColorBrush x:Key="ButtonFillPressedBrush" Color="#66000000" />
+
+                    <SolidColorBrush x:Key="StatusErrorBrush" Color="#C42B1C" />
+                    <SolidColorBrush x:Key="StatusWarningBrush" Color="#9D5D00" />
+                    <SolidColorBrush x:Key="StatusArchivedBrush" Color="#B34700" />
+                    <SolidColorBrush x:Key="StatusSuccessBrush" Color="#0F7B0F" />
+                    <SolidColorBrush x:Key="StatusInfoBrush" Color="#0B57D0" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="ButtonFillPressedBrush" Color="#66FFFFFF" />
+
+                    <SolidColorBrush x:Key="StatusErrorBrush" Color="#FF8A80" />
+                    <SolidColorBrush x:Key="StatusWarningBrush" Color="#FFB74D" />
+                    <SolidColorBrush x:Key="StatusArchivedBrush" Color="#FFA766" />
+                    <SolidColorBrush x:Key="StatusSuccessBrush" Color="#81C995" />
+                    <SolidColorBrush x:Key="StatusInfoBrush" Color="#90CAF9" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <Style Selector="TextBlock.PageTitle">
+        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style Selector="TextBlock.SectionTitle">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style Selector="TextBlock.DialogTitle">
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+
+    <Style Selector="TextBlock.Caption">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Opacity" Value="{StaticResource MutedOpacity}" />
+    </Style>
+
+    <!-- The smallest step in the ramp, below Caption: inline flags and metadata on a dense list row
+         (an "Archived" marker beside a name, a Tag's own label). Was an undocumented literal
+         FontSize="11" at five sites. -->
+    <Style Selector="TextBlock.Micro">
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+
+    <!-- The product name in the nav rail's pane header - the one piece of chrome that isn't page
+         content, so it sits outside the PageTitle/SectionTitle/DialogTitle progression. -->
+    <Style Selector="TextBlock.AppTitle">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightBold}" />
+    </Style>
+
+    <!-- The single large number on a Dashboard stat tile. -->
+    <Style Selector="TextBlock.StatValue">
+        <Setter Property="FontSize" Value="32" />
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}" />
+    </Style>
+
+    <!-- Secondary text at whatever size the surrounding context already sets - Caption is the same idea
+         bundled with a size, so use Caption when the text is also meant to be small, and Muted alone
+         when it sits inline beside body text that should keep its size. -->
+    <Style Selector="TextBlock.Muted">
+        <Setter Property="Opacity" Value="{StaticResource MutedOpacity}" />
+    </Style>
+
+</Styles>

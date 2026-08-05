@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="260"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.AlterationEditView"
+        Width="360">
+
+    <StackPanel Spacing="{StaticResource SpacingSm}">
+        <TextBlock Text="Add alteration" Classes="DialogTitle" />
+
+        <controls:FormField Label="Amount (e.g. 2 or -1)">
+            <NumericUpDown Value="{Binding Amount}" Increment="1" FormatString="0" />
+        </controls:FormField>
+
+        <controls:FormField Label="Reason">
+            <TextBox Text="{Binding Reason}" />
+        </controls:FormField>
+
+        <TextBlock Text="{Binding ValidationError}" Classes="ValidationError"
+                   IsVisible="{Binding ValidationError, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+
+        <controls:DialogButtonRow ConfirmLabel="Save" />
+    </StackPanel>
+
+</UserControl>

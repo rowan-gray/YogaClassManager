@@ -1,0 +1,52 @@
+<reactiveui:ReactiveUserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Passes"
+             xmlns:classes="using:YogaClassManager.Core.Models.Classes"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
+             x:Class="YogaClassManager.Avalonia.Views.Passes.PassDetailView"
+             x:TypeArguments="vm:PassDetailViewModel"
+             x:Name="Root">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+            <Button Command="{Binding HostScreen.Router.NavigateBack}"
+                    AutomationProperties.Name="Back" ToolTip.Tip="Back">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <materialIcons:MaterialIcon Kind="ArrowLeft" Width="18" Height="18" />
+                    <TextBlock Text="Back" />
+                </StackPanel>
+            </Button>
+            <TextBlock Text="{Binding Pass.PassName}" Classes="PageTitle" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource SpacingSm}" Margin="0,0,0,16">
+            <TextBlock Text="{Binding Pass.ClassesRemaining, StringFormat='{}{0} remaining'}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Pass.NumberOfClasses, StringFormat='of {0} total'}" Classes="Muted"
+                       VerticalAlignment="Center" />
+            <controls:Tag Color="{DynamicResource TagArchivedBrush}" Label="EXPIRED"
+                           IsVisible="{Binding Pass.IsExpired}" />
+            <controls:Tag Color="{DynamicResource TagWarningBrush}" Label="DEPLETED"
+                           IsVisible="{Binding Pass.IsDepleted}" />
+        </StackPanel>
+
+        <controls:LinkedRecordsPanel Grid.Row="2" Header="Classes this pass was used for"
+                                      EmptyText="This pass hasn't been used for a class yet."
+                                      ItemsSource="{Binding UsageHistory}"
+                                      ViewCommand="{Binding ViewClassCommand}">
+            <controls:LinkedRecordsPanel.ItemTemplate>
+                <DataTemplate DataType="classes:ClassAttendanceRecord">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                        <TextBlock Text="{Binding Date, StringFormat='{}{0:dd/MM/yyyy}'}" />
+                        <TextBlock Text="{Binding ClassSchedule}" Classes="Muted" />
+                    </StackPanel>
+                </DataTemplate>
+            </controls:LinkedRecordsPanel.ItemTemplate>
+        </controls:LinkedRecordsPanel>
+    </Grid>
+
+</reactiveui:ReactiveUserControl>

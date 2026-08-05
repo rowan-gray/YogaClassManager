@@ -1,0 +1,295 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+
+    <!--
+        ======================= The interactive-state rule, in one place =======================
+
+        THE INVARIANT: a BrushTransition may only be attached where the app owns an Opacity=1 brush
+        for every state at both ends of the change. Exactly two control types carry a transition -
+        Button and ListBoxItem - and both have a complete app-owned palette below. If you give a
+        third control type a Background transition, give it a full state set from Styles/Tokens.axaml
+        at the same time; InteractiveStateTests enforces this and will fail if you don't.
+
+        WHY (measured, not guessed - see ThemeBrushProbe's output in UI_REVIEW.md): Avalonia's
+        SolidColorBrushAnimator interpolates a brush's Color and its Opacity as two independent
+        factors, and they multiply at render time. FluentTheme's ButtonBackgroundPointerOver is
+        `Color=Black, Opacity=0.1`; ButtonBackground is `Color=#33000000, Opacity=1`. Animating
+        between them runs alpha 0x33->0xFF while opacity runs 1.0->0.1, so the midpoint renders at
+        ~0.33 alpha - darker than *either* endpoint - then settles. That overshoot is the grey flash.
+
+        These rules assign only Background (the sole animated property); Foreground and BorderBrush
+        stay on FluentTheme, which keeps disabled/focus affordances intact.
+    -->
+    <Style Selector="Button">
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <!--
+        FluentTheme's :pointerover/:pressed states repaint the Button's own template ContentPresenter
+        directly rather than the Button's Background property, so the Transitions setter above (which
+        only animates Background changes on the Button element itself) never engages for hover -
+        this is what actually makes hover feedback fade smoothly instead of snapping.
+
+        Note this selector also matches Buttons inside *other* controls' templates - CalendarDatePicker's
+        drop-down glyph, TextBox's clear button, TimePicker's flyout button, Calendar's nav arrows.
+        That is exactly why the state rules below are on the bare `Button` selector rather than on
+        each Classes-based variant: those internal buttons get the transition whether we like it or
+        not, so they have to be covered by the palette too.
+    -->
+    <Style Selector="Button /template/ ContentPresenter">
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <!-- The default, filled Button - every button in the app that isn't accent/Overflow/NavItem,
+         plus every framework-internal one. This is the set that was flashing. -->
+    <Style Selector="Button:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ButtonFillHoverBrush}" />
+    </Style>
+    <Style Selector="Button:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ButtonFillPressedBrush}" />
+    </Style>
+    <Style Selector="Button:disabled /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ButtonFillDisabledBrush}" />
+    </Style>
+
+    <!-- Accent (primary action). FluentTheme's accent brushes are already Opacity=1 so these never
+         flashed, but leaving them unowned would mean a base-Button rule greys out every Save button,
+         and a future theme change could reintroduce an Opacity-carrying brush unnoticed. -->
+    <Style Selector="Button.accent /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentActionBrush}" />
+    </Style>
+    <Style Selector="Button.accent:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentActionHoverBrush}" />
+    </Style>
+    <Style Selector="Button.accent:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentActionPressedBrush}" />
+    </Style>
+    <Style Selector="Button.accent:disabled /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentActionDisabledBrush}" />
+    </Style>
+
+    <Style Selector="TextBox">
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    </Style>
+
+    <Style Selector="ComboBox">
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    </Style>
+
+    <Style Selector="CalendarDatePicker">
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    </Style>
+
+    <Style Selector="NumericUpDown">
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    </Style>
+
+    <Style Selector="ListBoxItem">
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <!-- Same reasoning as Button above - ListBoxItem's :pointerover/:selected repaint its own
+         template ContentPresenter, not the ListBoxItem's own Background. -->
+    <Style Selector="ListBoxItem /template/ ContentPresenter">
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <!-- A list row's resting background is Transparent (the Card behind it shows through), so it uses
+         the overlay half of the palette rather than the filled-Button half. -->
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem:disabled /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractiveSelectedBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractiveSelectedHoverBrush}" />
+    </Style>
+    <!-- Previously missing: pressing an already-selected row fell through to the plain grey :pressed
+         rule, so the selection appeared to blink out for the duration of the press. -->
+    <Style Selector="ListBoxItem:selected:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractiveSelectedPressedBrush}" />
+    </Style>
+
+    <!-- Card surface used for grouped content (dashboard stats, detail panes, dialog bodies). -->
+    <Style Selector="Border.Card">
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+        <Setter Property="Background" Value="{DynamicResource SystemAltHighColor}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SystemBaseLowColor}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="16" />
+    </Style>
+
+    <!-- Icon-only trigger for a MenuFlyout of secondary/item actions ("..." overflow menu). Chrome
+         only - each call site supplies its own icon content and MenuFlyout since the items/commands
+         differ per usage. Toolbar instances (detail-pane action rows) use the default Button
+         background; per-row instances inside a list (LinkedRecordsPanel) override back to
+         Background="Transparent" locally, since an opaque button per row reads as too busy sitting
+         inside a ListBoxItem that already has its own hover/selected background. -->
+    <!-- 36, up from 32: this is the sole affordance for every per-record action in the app, and 32
+         square was under the ~40px comfortable-target guidance. 36 rather than a full 40 because these
+         sit in a row beside ordinary Buttons, whose FluentTheme height is 32 - a 40px square next to
+         those reads as a mismatched, oversized control. -->
+    <Style Selector="Button.Overflow">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+
+        <!--
+            The dots icon and its accessible name are defaults, not fixtures: this exact block
+            (icon + AutomationProperties.Name + ToolTip.Tip) was repeated at seven call sites. A
+            <Template> setter, rather than a plain value, is what gives each button its own icon
+            instance instead of sharing one control across the whole app. A site that wants a different
+            icon or a row-specific name (MarkRollWindow's Plus/Close buttons, LinkedRecordsPanel's
+            per-row menu) just sets its own locally, which wins over these.
+        -->
+        <Setter Property="AutomationProperties.Name" Value="More actions" />
+        <Setter Property="ToolTip.Tip" Value="More actions" />
+        <Setter Property="Content">
+            <Template>
+                <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18" />
+            </Template>
+        </Setter>
+    </Style>
+
+    <!-- Overflow buttons sit on a Card, pane or list row rather than on the default button fill, so
+         they take the overlay half of the palette. This is the only reason they need their own rules
+         at all - the states themselves are owned by the base Button rules above. -->
+    <Style Selector="Button.Overflow:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.Overflow:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+
+    <!--
+        The nav-rail item (Views/MainWindow.axaml's SplitView pane). Lives here rather than in that
+        window's own Window.Styles so every interactive state in the app is decided in one file.
+
+        Padding is 10 (not a round "12") on purpose: CompactPaneLength (56) minus the ItemsControl's
+        8+8 horizontal margin leaves exactly 40px for a collapsed nav button, and (40 - 20px icon) / 2
+        = 10. That makes a single constant Padding center the icon exactly in collapsed mode with
+        HorizontalContentAlignment staying "Left" throughout - no state-dependent Padding/alignment
+        switch, which previously caused a visible jump because IsPaneOpen flips instantly while
+        SplitView's pane-width animation takes ~200ms, leaving the switched styling out of sync with
+        the still-animating width. If CompactPaneLength or the icon size ever changes, recompute this.
+    -->
+    <Style Selector="Button.NavItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+    </Style>
+
+    <!-- Transparent resting background over the pane's own fill, so the overlay half of the palette
+         again - same reasoning as Button.Overflow. -->
+    <Style Selector="Button.NavItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.NavItem:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+
+    <Style Selector="Button.NavItem.Selected">
+        <Setter Property="Background" Value="{DynamicResource InteractiveSelectedBrush}" />
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}" />
+    </Style>
+    <!-- More specific than the plain :pointerover rule above, so it wins when the currently selected
+         item is also being hovered. -->
+    <Style Selector="Button.NavItem.Selected:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractiveSelectedHoverBrush}" />
+    </Style>
+    <!-- Previously missing, so pressing the current page's nav item dropped it to the plain grey
+         :pressed overlay - the selection appeared to blink out mid-click. -->
+    <Style Selector="Button.NavItem.Selected:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource InteractiveSelectedPressedBrush}" />
+    </Style>
+
+    <!--
+        One labelled form input (Controls/FormField.cs). PART_Label is looked up by name in
+        OnApplyTemplate to wire AutomationProperties.LabeledBy from the input to it - renaming it here
+        silently drops that association, so keep the name in step with the code-behind.
+    -->
+    <Style Selector="controls|FormField">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <StackPanel Spacing="{StaticResource SpacingXs}">
+                    <TextBlock x:Name="PART_Label" Text="{TemplateBinding Label}"
+                               IsVisible="{TemplateBinding Label, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}" />
+                </StackPanel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- Validation/error text fades in rather than popping, per the animation-polish requirement. The
+         wrap and top margin live here too - they were repeated verbatim at all five dialog call sites,
+         which is exactly what this class exists to own. -->
+    <Style Selector="TextBlock.ValidationError">
+        <Setter Property="Foreground" Value="{DynamicResource StatusErrorBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="{StaticResource GroupGapMargin}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <!--
+        Dialog overlay: hidden (transparent, click-through) until a dialog is on an IDialogService's
+        stack, then fades in - same Classes.X-driven state + DoubleTransition pattern as
+        TextBlock.ValidationError above, not a bool-to-double value converter. IsHitTestVisible tracks
+        the same state so the invisible overlay doesn't eat clicks to the page underneath while closed.
+        Global (not scoped to MainWindow.axaml's own Window.Styles) because MarkRollWindow also has its
+        own local dialog overlay (see UI_STYLE_GUIDE.md's Dialogs section) bound to its own private
+        IDialogService instance - Window.Styles don't cross between separate top-level Windows, so this
+        has to live here to apply to both.
+    -->
+    <Style Selector="Border.DialogOverlay">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Border.DialogOverlay.Open">
+        <Setter Property="Opacity" Value="1" />
+        <Setter Property="IsHitTestVisible" Value="True" />
+    </Style>
+
+</Styles>

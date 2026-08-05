@@ -1,0 +1,183 @@
+<reactiveui:ReactiveUserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Students"
+             xmlns:people="using:YogaClassManager.Core.Models.People"
+             xmlns:passes="using:YogaClassManager.Core.Models.Passes"
+             xmlns:classes="using:YogaClassManager.Core.Models.Classes"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+             xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
+             xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
+             x:Class="YogaClassManager.Avalonia.Views.Students.StudentsView"
+             x:TypeArguments="vm:StudentsViewModel"
+             x:Name="Root">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
+        <TextBlock Grid.Row="0" Text="Students" Classes="PageTitle" Margin="0,0,0,16" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="{StaticResource HeaderRowMargin}">
+            <controls:FilterBar Grid.Column="0" SearchQuery="{Binding SearchQuery, Mode=TwoWay}"
+                                 SearchWatermark="Search by name..."
+                                 SortOptions="{Binding SortByOptions}" SelectedSort="{Binding SortBy, Mode=TwoWay}"
+                                 SortOrderOptions="{Binding SortOrderOptions}"
+                                 SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}"
+                                 FilterCount="{Binding ActiveFilterCount}"
+                                 ClearFiltersCommand="{Binding ClearFiltersCommand}">
+                <controls:FilterBar.AdvancedFilters>
+                    <WrapPanel>
+                        <CheckBox Content="Show archived" IsChecked="{Binding IncludeArchived}"
+                                  VerticalAlignment="Bottom" Margin="0,0,12,8" />
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="Last attended from" />
+                            <CalendarDatePicker
+                                SelectedDate="{Binding LastAttendedFrom, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Last attended to" />
+                            <CalendarDatePicker
+                                SelectedDate="{Binding LastAttendedTo, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
+                        </StackPanel>
+                    </WrapPanel>
+                </controls:FilterBar.AdvancedFilters>
+            </controls:FilterBar>
+            <Button Grid.Column="1" Content="Add student" Command="{Binding AddStudentCommand}"
+                    Margin="8,0,0,0" Classes="accent" VerticalAlignment="Top" />
+        </Grid>
+
+        <controls:MasterDetailView Grid.Row="2" Items="{Binding Items}" SelectedItem="{Binding Selection}"
+                                   IsBusy="{Binding IsBusy}" ErrorText="{Binding LastError}"
+                                   EmptyText="No students match this search."
+                                   NoSelectionText="Select a student to view their details.">
+            <controls:MasterDetailView.ListItemTemplate>
+                <DataTemplate DataType="people:Student">
+                    <controls:RecordListItem Title="{Binding FullName}" Subtitle="{Binding Email}"
+                                             FlagLabel="ARCHIVED" IsFlagged="{Binding !IsActive}"
+                                             FlagColor="{DynamicResource TagArchivedBrush}" />
+                </DataTemplate>
+            </controls:MasterDetailView.ListItemTemplate>
+
+            <controls:MasterDetailView.DetailTemplate>
+                <DataTemplate DataType="people:Student">
+                    <ScrollViewer behaviors:ScrollEdgeFade.IsEnabled="True">
+                        <StackPanel Spacing="16">
+                            <controls:RecordDetailsPanel Record="{Binding}">
+                                <controls:RecordDetailsPanel.RecordTemplate>
+                                    <DataTemplate DataType="people:Student">
+                                        <StackPanel Spacing="{StaticResource SpacingXs}">
+                                            <controls:DetailHeader Title="{Binding FullName}" PrimaryActionLabel="Edit"
+                                                    PrimaryActionCommand="{Binding DataContext.EditStudentCommand, ElementName=Root}">
+                                                <controls:DetailHeader.Actions>
+                                                    <Button Classes="Overflow">
+                                                        <Button.Flyout>
+                                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                                <MenuItem Header="View identity record"
+                                                                          Command="{Binding DataContext.ViewIdentityCommand, ElementName=Root}" />
+                                                                <MenuItem Header="Archive" IsVisible="{Binding IsActive}"
+                                                                          Command="{Binding DataContext.ToggleArchiveCommand, ElementName=Root}" />
+                                                                <MenuItem Header="Unarchive" IsVisible="{Binding !IsActive}"
+                                                                          Command="{Binding DataContext.ToggleArchiveCommand, ElementName=Root}" />
+                                                            </MenuFlyout>
+                                                        </Button.Flyout>
+                                                    </Button>
+                                                </controls:DetailHeader.Actions>
+                                            </controls:DetailHeader>
+                                            <TextBlock Text="{Binding PhoneNumber, StringFormat='Phone: {0}'}" />
+                                            <TextBlock Text="{Binding Email, StringFormat='Email: {0}'}" />
+                                            <TextBlock Text="Archived" Foreground="{DynamicResource StatusArchivedBrush}"
+                                                       IsVisible="{Binding !IsActive}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </controls:RecordDetailsPanel.RecordTemplate>
+                            </controls:RecordDetailsPanel>
+
+                            <controls:FillWrapPanel Spacing="16">
+                                <controls:LinkedRecordsPanel Header="Emergency contacts" MinWidth="400"
+                                    EmptyText="No emergency contacts recorded."
+                                    ItemsSource="{Binding DataContext.EmergencyContacts, ElementName=Root}"
+                                    AddCommand="{Binding DataContext.AddEmergencyContactCommand, ElementName=Root}"
+                                    RemoveCommand="{Binding DataContext.RemoveEmergencyContactCommand, ElementName=Root}">
+                                    <controls:LinkedRecordsPanel.ItemTemplate>
+                                        <DataTemplate DataType="people:EmergencyContact">
+                                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                                                <TextBlock Text="{Binding FullName}" />
+                                                <TextBlock Text="{Binding Relationship}" Classes="Muted" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </controls:LinkedRecordsPanel.ItemTemplate>
+                                </controls:LinkedRecordsPanel>
+
+                                <controls:LinkedRecordsPanel Header="Health concerns" MinWidth="400"
+                                    EmptyText="No health concerns recorded."
+                                    ItemsSource="{Binding DataContext.HealthConcerns, ElementName=Root}"
+                                    AddCommand="{Binding DataContext.AddHealthConcernCommand, ElementName=Root}"
+                                    RemoveCommand="{Binding DataContext.RemoveHealthConcernCommand, ElementName=Root}" />
+                            </controls:FillWrapPanel>
+
+                            <controls:LinkedRecordsPanel Header="Passes"
+                                EmptyText="No passes match these filters."
+                                ItemsSource="{Binding DataContext.Passes, ElementName=Root}"
+                                AddCommand="{Binding DataContext.AddPassCommand, ElementName=Root}"
+                                ViewCommand="{Binding DataContext.ViewPassCommand, ElementName=Root}"
+                                EditCommand="{Binding DataContext.EditPassCommand, ElementName=Root}"
+                                RemoveCommand="{Binding DataContext.RemovePassCommand, ElementName=Root}"
+                                FilterCount="{Binding DataContext.PassFilterCount, ElementName=Root}"
+                                ClearFiltersCommand="{Binding DataContext.ClearPassFiltersCommand, ElementName=Root}">
+                                <controls:LinkedRecordsPanel.Filters>
+                                    <StackPanel Spacing="8" MinWidth="200">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Pass type" />
+                                            <ComboBox ItemsSource="{Binding DataContext.PassKindFilterOptions, ElementName=Root}"
+                                                      SelectedItem="{Binding DataContext.PassKindFilter, ElementName=Root, Mode=TwoWay}"
+                                                      HorizontalAlignment="Stretch" />
+                                        </StackPanel>
+                                        <CheckBox Content="Include expired"
+                                                  IsChecked="{Binding DataContext.IncludeExpiredPasses, ElementName=Root}" />
+                                        <CheckBox Content="Include depleted"
+                                                  IsChecked="{Binding DataContext.IncludeDepletedPasses, ElementName=Root}" />
+                                    </StackPanel>
+                                </controls:LinkedRecordsPanel.Filters>
+                                <controls:LinkedRecordsPanel.ItemTemplate>
+                                    <DataTemplate DataType="passes:Pass">
+                                        <StackPanel Spacing="{StaticResource SpacingXs}">
+                                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                                                <TextBlock Text="{Binding PassName}"
+                                                           FontWeight="{StaticResource FontWeightMedium}" />
+                                                <TextBlock Text="{Binding ClassesRemaining, StringFormat='{}{0} remaining'}"
+                                                           Classes="Muted" />
+                                                <controls:Tag Color="{DynamicResource TagArchivedBrush}" Label="EXPIRED"
+                                                              IsVisible="{Binding IsExpired}" />
+                                                <controls:Tag Color="{DynamicResource TagWarningBrush}" Label="DEPLETED"
+                                                              IsVisible="{Binding IsDepleted}" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding DateRangeDisplay}" Classes="Muted"
+                                                    IsVisible="{Binding DateRangeDisplay, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </controls:LinkedRecordsPanel.ItemTemplate>
+                            </controls:LinkedRecordsPanel>
+
+                            <controls:LinkedRecordsPanel Header="Classes attended"
+                                EmptyText="This student hasn't attended any classes yet."
+                                ItemsSource="{Binding DataContext.AttendanceHistory, ElementName=Root}"
+                                ViewCommand="{Binding DataContext.ViewClassCommand, ElementName=Root}">
+                                <controls:LinkedRecordsPanel.ItemTemplate>
+                                    <DataTemplate DataType="classes:ClassAttendanceRecord">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                                            <TextBlock Text="{Binding Date, StringFormat='{}{0:dd/MM/yyyy}'}" />
+                                            <TextBlock Text="{Binding ClassSchedule}" Classes="Muted" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </controls:LinkedRecordsPanel.ItemTemplate>
+                            </controls:LinkedRecordsPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DataTemplate>
+            </controls:MasterDetailView.DetailTemplate>
+        </controls:MasterDetailView>
+    </Grid>
+
+</reactiveui:ReactiveUserControl>

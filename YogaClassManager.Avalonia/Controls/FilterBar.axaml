@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             x:Class="YogaClassManager.Avalonia.Controls.FilterBar"
+             x:Name="Control">
+
+    <!-- Search box + basic filters + the standard Sort/Filter dropdown buttons (Controls/SortByButton,
+         Controls/FilterButton - see UI_STYLE_GUIDE.md). FilterBar itself just composes those two plus
+         the search box/BasicFilters slot; a page/section that doesn't need a search box can use
+         SortByButton/FilterButton directly instead (e.g. the Student page's Passes list). -->
+    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+        <!-- The watermark doubles as the accessible name: it disappears the moment there's text in the
+             box, so on its own it names the field for sighted users only. -->
+        <TextBox Grid.Column="0" Watermark="{Binding SearchWatermark, ElementName=Control}"
+                 AutomationProperties.Name="{Binding SearchWatermark, ElementName=Control}"
+                 Text="{Binding SearchQuery, ElementName=Control, Mode=TwoWay}" />
+
+        <ContentPresenter Grid.Column="1" Content="{Binding BasicFilters, ElementName=Control}"
+                           Margin="8,0,0,0" VerticalAlignment="Center" />
+
+        <controls:SortByButton Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
+            SortOptions="{Binding SortOptions, ElementName=Control}"
+            SelectedSort="{Binding SelectedSort, ElementName=Control, Mode=TwoWay}"
+            SortOrderOptions="{Binding SortOrderOptions, ElementName=Control}"
+            SelectedSortOrder="{Binding SelectedSortOrder, ElementName=Control, Mode=TwoWay}" />
+
+        <controls:FilterButton Grid.Column="3" Margin="8,0,0,0" VerticalAlignment="Center"
+            Filters="{Binding AdvancedFilters, ElementName=Control}"
+            FilterCount="{Binding FilterCount, ElementName=Control}"
+            ClearFiltersCommand="{Binding ClearFiltersCommand, ElementName=Control}" />
+    </Grid>
+
+</UserControl>

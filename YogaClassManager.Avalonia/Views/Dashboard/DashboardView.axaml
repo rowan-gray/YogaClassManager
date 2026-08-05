@@ -1,0 +1,78 @@
+<reactiveui:ReactiveUserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Dashboard"
+             xmlns:classes="using:YogaClassManager.Core.Models.Classes"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="YogaClassManager.Avalonia.Views.Dashboard.DashboardView"
+             x:TypeArguments="vm:DashboardViewModel"
+             x:Name="Root">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
+        <StackPanel Grid.Row="0" Spacing="{StaticResource SpacingSm}">
+            <TextBlock Text="YogaClassManager" Classes="PageTitle" />
+            <TextBlock Text="Dashboard" Classes="Caption" />
+        </StackPanel>
+
+        <!-- FillWrapPanel, not a horizontal StackPanel with three fixed 180px tiles: those clipped off
+             the right edge on a narrow window. MinWidth lets them share a row while there's room and
+             stack once there isn't. -->
+        <controls:FillWrapPanel Grid.Row="1" Spacing="{StaticResource SpacingLg}" Margin="0,24,0,0"
+                                IsVisible="{Binding !IsBusy}">
+            <Border Classes="Card" Background="{DynamicResource SystemAccentColorLight2}" MinWidth="180">
+                <StackPanel Spacing="{StaticResource SpacingXs}">
+                    <TextBlock Text="{Binding StudentCount}" Classes="StatValue" />
+                    <TextBlock Text="Active students" />
+                </StackPanel>
+            </Border>
+            <Border Classes="Card" Background="{DynamicResource SystemAccentColorLight2}" MinWidth="180">
+                <StackPanel Spacing="{StaticResource SpacingXs}">
+                    <TextBlock Text="{Binding ClassScheduleCount}" Classes="StatValue" />
+                    <TextBlock Text="Class schedules" />
+                </StackPanel>
+            </Border>
+            <Border Classes="Card" Background="{DynamicResource SystemAccentColorLight2}" MinWidth="180">
+                <StackPanel Spacing="{StaticResource SpacingXs}">
+                    <TextBlock Text="{Binding TodaysClasses.Count}" Classes="StatValue" />
+                    <TextBlock Text="Classes today" />
+                </StackPanel>
+            </Border>
+        </controls:FillWrapPanel>
+
+        <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="{StaticResource SpacingSm}"
+                    IsVisible="{Binding !IsBusy}">
+            <TextBlock Text="Today's classes" Classes="SectionTitle" />
+
+            <TextBlock Text="No classes are scheduled for today." Classes="Caption"
+                       IsVisible="{Binding !TodaysClasses.Count}" />
+
+            <ItemsControl ItemsSource="{Binding TodaysClasses}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="classes:ClassRoll">
+                        <Border BorderBrush="{DynamicResource SystemBaseLowColor}" BorderThickness="0,0,0,1"
+                                Padding="0,8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding}" FontWeight="{StaticResource FontWeightMedium}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding StudentEntries.Count, StringFormat='{}{0} attendees'}"
+                                               Classes="Caption" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="Mark roll"
+                                        Command="{Binding DataContext.MarkRollCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <ProgressBar Grid.Row="2" IsIndeterminate="True" VerticalAlignment="Top"
+                     IsVisible="{Binding IsBusy}" />
+    </Grid>
+
+</reactiveui:ReactiveUserControl>

@@ -1,0 +1,98 @@
+<reactiveui:ReactiveUserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Terms"
+             xmlns:classes="using:YogaClassManager.Core.Models.Classes"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+             xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             x:Class="YogaClassManager.Avalonia.Views.Terms.TermsView"
+             x:TypeArguments="vm:TermsViewModel"
+             x:Name="Root">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
+        <TextBlock Grid.Row="0" Text="Terms" Classes="PageTitle" Margin="0,0,0,16" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="{StaticResource HeaderRowMargin}">
+            <controls:FilterBar Grid.Column="0" SearchQuery="{Binding SearchQuery, Mode=TwoWay}"
+                                 SearchWatermark="Search by name..."
+                                 SortOptions="{Binding SortByOptions}" SelectedSort="{Binding SortBy, Mode=TwoWay}"
+                                 SortOrderOptions="{Binding SortOrderOptions}"
+                                 SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}"
+                                 FilterCount="{Binding ActiveFilterCount}"
+                                 ClearFiltersCommand="{Binding ClearFiltersCommand}">
+                <controls:FilterBar.AdvancedFilters>
+                    <CheckBox Content="Show completed" IsChecked="{Binding IncludeCompleted}" />
+                </controls:FilterBar.AdvancedFilters>
+            </controls:FilterBar>
+            <Button Grid.Column="1" Content="Add term" Command="{Binding AddTermCommand}"
+                    Margin="8,0,0,0" Classes="accent" VerticalAlignment="Top" />
+        </Grid>
+
+        <controls:MasterDetailView Grid.Row="2" Items="{Binding Items}" SelectedItem="{Binding Selection}"
+                                   IsBusy="{Binding IsBusy}" ErrorText="{Binding LastError}"
+                                   EmptyText="No terms match this search."
+                                   NoSelectionText="Select a term to view its details.">
+            <controls:MasterDetailView.ListItemTemplate>
+                <DataTemplate DataType="classes:Term">
+                    <!-- Title="{Binding}" (Term.ToString(), "Name: start-end") preserves what this row
+                         showed before the extraction, rather than narrowing it to Name. -->
+                    <controls:RecordListItem Title="{Binding}"
+                                             FlagLabel="COMPLETED" IsFlagged="{Binding IsCompleted}"
+                                             FlagColor="{DynamicResource TagNeutralBrush}" />
+                </DataTemplate>
+            </controls:MasterDetailView.ListItemTemplate>
+
+            <controls:MasterDetailView.DetailTemplate>
+                <DataTemplate DataType="classes:Term">
+                    <ScrollViewer behaviors:ScrollEdgeFade.IsEnabled="True">
+                        <StackPanel Spacing="{StaticResource SpacingMd}">
+                            <StackPanel Spacing="{StaticResource SpacingXs}">
+                                <controls:DetailHeader Title="{Binding Name}" PrimaryActionLabel="Edit"
+                                        PrimaryActionCommand="{Binding DataContext.EditTermCommand, ElementName=Root}">
+                                    <controls:DetailHeader.Actions>
+                                        <Button Classes="Overflow">
+                                            <Button.Flyout>
+                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                    <MenuItem Header="Delete"
+                                                              Command="{Binding DataContext.DeleteTermCommand, ElementName=Root}" />
+                                                </MenuFlyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                    </controls:DetailHeader.Actions>
+                                </controls:DetailHeader>
+                                <TextBlock Text="{Binding StartDate, StringFormat='Start: {0:dd/MM/yyyy}'}" />
+                                <TextBlock Text="{Binding EndDate, StringFormat='End: {0:dd/MM/yyyy}'}" />
+                                <TextBlock Text="Completed" Classes="Muted" IsVisible="{Binding IsCompleted}" />
+                            </StackPanel>
+
+                            <!-- No Height: this sits inside the pane's own fading ScrollViewer, so it
+                                 grows to fit rather than nesting a second scrollbar. -->
+                            <controls:LinkedRecordsPanel Header="Linked classes"
+                                    EmptyText="No classes are linked to this term yet."
+                                    ItemsSource="{Binding Classes}"
+                                    AddCommand="{Binding DataContext.AddClassLinkCommand, ElementName=Root}"
+                                    RemoveCommand="{Binding DataContext.RemoveClassLinkCommand, ElementName=Root}">
+                                <controls:LinkedRecordsPanel.ItemTemplate>
+                                    <DataTemplate DataType="classes:TermClassSchedule">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                                            <TextBlock Text="{Binding ClassSchedule}"
+                                                       FontWeight="{StaticResource FontWeightMedium}" />
+                                            <TextBlock Text="{Binding ClassCount, StringFormat='{}{0} classes'}"
+                                                       Classes="Muted" />
+                                            <TextBlock Text="{Binding Uses, StringFormat='{}{0} used'}"
+                                                       Classes="Muted" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </controls:LinkedRecordsPanel.ItemTemplate>
+                            </controls:LinkedRecordsPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DataTemplate>
+            </controls:MasterDetailView.DetailTemplate>
+        </controls:MasterDetailView>
+    </Grid>
+
+</reactiveui:ReactiveUserControl>

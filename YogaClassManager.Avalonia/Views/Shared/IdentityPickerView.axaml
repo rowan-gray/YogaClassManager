@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Shared"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="520"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.IdentityPickerView"
+        Width="480" Height="520">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <TextBlock Grid.Row="0" Text="{Binding Title}" Classes="DialogTitle" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="{StaticResource HeaderRowMargin}">
+            <TextBox Grid.Column="0" Watermark="Search by name..." Text="{Binding SearchQuery}"
+                     AutomationProperties.Name="Search identities by name" />
+            <CheckBox Grid.Column="1" Content="Show archived" IsChecked="{Binding ShowArchived}"
+                      Margin="8,0,0,0" />
+        </Grid>
+
+        <Panel Grid.Row="2">
+            <TextBlock Text="No identities match this search." Classes="Caption"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       TextWrapping="Wrap" TextAlignment="Center" Margin="12"
+                       IsVisible="{Binding HasNoResults}" />
+
+            <!-- Enter here runs the dialog's DefaultCommand (SelectCommand) via DialogHost, so a
+                 keyboard user can Tab in, arrow to a row, and press Enter without touching the mouse. -->
+            <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedItem}"
+                     behaviors:ScrollEdgeFade.IsEnabled="True">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Panel>
+
+        <StackPanel Grid.Row="3">
+            <TextBlock Text="{Binding ValidationError}" Classes="ValidationError"
+                       IsVisible="{Binding ValidationError, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+            <controls:DialogButtonRow ConfirmLabel="Select" />
+        </StackPanel>
+    </Grid>
+
+</UserControl>

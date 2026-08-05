@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="YogaClassManager.Avalonia.Controls.FilterButton"
+             x:Name="Control">
+
+    <!-- Filter icon alone when nothing's active; "icon N filters" once FilterCount > 0. Clicking opens
+         a Flyout with the page-supplied Filters content plus a Clear button. The standard way to
+         expose filters for any repository-backed list (see UI_STYLE_GUIDE.md). FilterCount and
+         ClearFiltersCommand are computed/implemented by whoever hosts this control (it has no way to
+         introspect an arbitrary Filters control tree itself). -->
+    <Button AutomationProperties.Name="Filters" ToolTip.Tip="Filters"
+            IsVisible="{Binding Filters, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+        <StackPanel Orientation="Horizontal" Spacing="4">
+            <materialIcons:MaterialIcon Kind="FilterVariant" Width="16" Height="16" VerticalAlignment="Center" />
+            <TextBlock x:Name="FilterCountText"
+                       Text="{Binding FilterCount, ElementName=Control, Converter={x:Static localConv:FilterCountTextConverter.Instance}}"
+                       IsVisible="{Binding Text, ElementName=FilterCountText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+        <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedRight">
+                <StackPanel Spacing="{StaticResource SpacingMd}" MinWidth="260">
+                    <TextBlock Text="Filters" Classes="DialogTitle" />
+                    <ContentPresenter Content="{Binding Filters, ElementName=Control}" />
+                    <Border BorderBrush="{DynamicResource SystemBaseLowColor}" BorderThickness="0,1,0,0"
+                            Padding="0,8,0,0"
+                            IsVisible="{Binding ClearFiltersCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+                        <Button Content="Clear filters" HorizontalAlignment="Right"
+                                Command="{Binding ClearFiltersCommand, ElementName=Control}"
+                                IsEnabled="{Binding Text, ElementName=FilterCountText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+                    </Border>
+                </StackPanel>
+            </Flyout>
+        </Button.Flyout>
+    </Button>
+
+</UserControl>

@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+             x:Class="YogaClassManager.Avalonia.Controls.MasterDetailView"
+             x:Name="Control">
+
+    <Grid ColumnDefinitions="320,16,*">
+        <Border Grid.Column="0" Classes="Card" Padding="4">
+            <DockPanel>
+                <!-- A load failure otherwise leaves an empty list with no explanation once the error
+                     toast has faded, so LastError gets a persistent home here too. -->
+                <TextBlock DockPanel.Dock="Top" Text="{Binding ErrorText, ElementName=Control}"
+                           Classes="ValidationError" TextWrapping="Wrap" Margin="8,8,8,4"
+                           IsVisible="{Binding ErrorText, ElementName=Control, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+
+                <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" Margin="8,4"
+                             IsVisible="{Binding IsBusy, ElementName=Control}" />
+
+                <Panel>
+                    <!-- Empty text only once loading has finished: mid-load the list is legitimately
+                         empty, and saying "no results" then would be wrong. -->
+                    <TextBlock Text="{Binding EmptyText, ElementName=Control}" Classes="Caption"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               TextWrapping="Wrap" TextAlignment="Center" Margin="12">
+                        <TextBlock.IsVisible>
+                            <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                <Binding Path="IsEmpty" ElementName="Control" />
+                                <Binding Path="!IsBusy" ElementName="Control" />
+                                <Binding Path="EmptyText" ElementName="Control"
+                                         Converter="{x:Static conv:StringConverters.IsNotNullOrEmpty}" />
+                            </MultiBinding>
+                        </TextBlock.IsVisible>
+                    </TextBlock>
+
+                    <ListBox ItemsSource="{Binding Items, ElementName=Control}"
+                             SelectedItem="{Binding SelectedItem, ElementName=Control, Mode=TwoWay}"
+                             ItemTemplate="{Binding ListItemTemplate, ElementName=Control}"
+                             Background="Transparent" BorderThickness="0"
+                             behaviors:ScrollEdgeFade.IsEnabled="True" />
+                </Panel>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Column="2" Margin="0,16">
+            <ContentControl Content="{Binding SelectedItem, ElementName=Control}"
+                             ContentTemplate="{Binding DetailTemplate, ElementName=Control}"
+                             IsVisible="{Binding SelectedItem, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+            <TextBlock Text="{Binding NoSelectionText, ElementName=Control}" Classes="Caption"
+                       IsVisible="{Binding SelectedItem, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNull}}" />
+        </Grid>
+    </Grid>
+
+</UserControl>

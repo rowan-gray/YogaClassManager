@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="180"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.ConfirmView"
+        Width="400">
+
+    <StackPanel Spacing="{StaticResource SpacingSm}">
+        <TextBlock Text="{Binding Title}" Classes="DialogTitle" />
+        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+
+        <controls:DialogButtonRow ConfirmLabel="{Binding ConfirmLabel}" CancelLabel="{Binding CancelLabel}" />
+    </StackPanel>
+
+</UserControl>

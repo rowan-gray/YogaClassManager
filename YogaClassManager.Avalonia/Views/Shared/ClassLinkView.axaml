@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="280"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.ClassLinkView"
+        Width="360">
+
+    <StackPanel Spacing="{StaticResource SpacingSm}">
+        <TextBlock Text="{Binding TermName, StringFormat='Link a class to {0}'}" Classes="DialogTitle" />
+
+        <controls:FormField Label="Class">
+            <ComboBox ItemsSource="{Binding AvailableSchedules}" SelectedItem="{Binding SelectedSchedule}"
+                      HorizontalAlignment="Stretch" />
+        </controls:FormField>
+
+        <controls:FormField Label="Number of classes this term">
+            <NumericUpDown Value="{Binding ClassCount}" Minimum="1" Increment="1" FormatString="0" />
+        </controls:FormField>
+
+        <TextBlock Text="{Binding ValidationError}" Classes="ValidationError"
+                   IsVisible="{Binding ValidationError, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+
+        <controls:DialogButtonRow ConfirmLabel="Link" />
+    </StackPanel>
+
+</UserControl>

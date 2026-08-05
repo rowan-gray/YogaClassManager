@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="360"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.IdentityEditView"
+        Width="420">
+
+    <StackPanel Spacing="{StaticResource SpacingSm}">
+        <TextBlock Text="{Binding Title}" Classes="DialogTitle" />
+
+        <controls:FormField Label="First name">
+            <TextBox Text="{Binding FirstName}" />
+        </controls:FormField>
+
+        <controls:FormField Label="Last name">
+            <TextBox Text="{Binding LastName}" />
+        </controls:FormField>
+
+        <controls:FormField Label="Phone number">
+            <TextBox Text="{Binding PhoneNumber}" />
+        </controls:FormField>
+
+        <controls:FormField Label="Email">
+            <TextBox Text="{Binding Email}" />
+        </controls:FormField>
+
+        <TextBlock Text="{Binding ValidationError}" Classes="ValidationError"
+                   IsVisible="{Binding ValidationError, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+
+        <controls:DialogButtonRow ConfirmLabel="Save" />
+    </StackPanel>
+
+</UserControl>

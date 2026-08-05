@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="YogaClassManager.Avalonia.Controls.LinkedRecordsPanel"
+             x:Name="Control">
+
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+              Margin="{StaticResource HeaderRowMargin}">
+            <TextBlock Grid.Column="0" Text="{Binding Header, ElementName=Control}"
+                       FontWeight="{StaticResource FontWeightSemiBold}" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+            <controls:SortByButton Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
+                SortOptions="{Binding SortOptions, ElementName=Control}"
+                SelectedSort="{Binding SelectedSort, ElementName=Control, Mode=TwoWay}"
+                SortOrderOptions="{Binding SortOrderOptions, ElementName=Control}"
+                SelectedSortOrder="{Binding SelectedSortOrder, ElementName=Control, Mode=TwoWay}" />
+            <controls:FilterButton Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
+                Filters="{Binding Filters, ElementName=Control}"
+                FilterCount="{Binding FilterCount, ElementName=Control}"
+                ClearFiltersCommand="{Binding ClearFiltersCommand, ElementName=Control}" />
+            <ContentPresenter Grid.Column="3" Content="{Binding HeaderContent, ElementName=Control}"
+                              Margin="8,0,0,0" VerticalAlignment="Center" />
+            <Button Grid.Column="4" Content="Add" Margin="8,0,0,0" Classes="accent"
+                    Command="{Binding AddCommand, ElementName=Control}"
+                    AutomationProperties.Name="{Binding Header, ElementName=Control, StringFormat='Add {0}'}"
+                    IsVisible="{Binding AddCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+        </Grid>
+
+        <Border Classes="Card" Padding="4">
+          <Panel>
+            <!-- Empty state sits behind the list rather than replacing it, so an empty list is still a
+                 valid drop of the same size and the Add button above stays in place. -->
+            <TextBlock Text="{Binding EmptyText, ElementName=Control}" Classes="Caption"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       TextWrapping="Wrap" TextAlignment="Center" Margin="12">
+                <TextBlock.IsVisible>
+                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                        <Binding Path="IsEmpty" ElementName="Control" />
+                        <Binding Path="EmptyText" ElementName="Control"
+                                 Converter="{x:Static conv:StringConverters.IsNotNullOrEmpty}" />
+                    </MultiBinding>
+                </TextBlock.IsVisible>
+            </TextBlock>
+
+            <ListBox ItemsSource="{Binding ItemsSource, ElementName=Control}"
+                     SelectedItem="{Binding SelectedItem, ElementName=Control, Mode=TwoWay}"
+                     Background="Transparent" BorderThickness="0"
+                     behaviors:ScrollEdgeFade.IsEnabled="True">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <ContentControl Grid.Column="0" Content="{Binding}"
+                                            ContentTemplate="{Binding ItemTemplate, ElementName=Control}" />
+                            <Button Grid.Column="1" Classes="Overflow" Margin="4,0,0,0" Background="Transparent"
+                                    AutomationProperties.Name="{Binding Header, ElementName=Control, StringFormat='{}{0} item actions'}">
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="View"
+                                                  Command="{Binding ViewCommand, ElementName=Control}"
+                                                  CommandParameter="{Binding}"
+                                                  IsVisible="{Binding ViewCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+                                        <MenuItem Header="Edit"
+                                                  Command="{Binding EditCommand, ElementName=Control}"
+                                                  CommandParameter="{Binding}"
+                                                  IsVisible="{Binding EditCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+                                        <MenuItem Header="Remove"
+                                                  Command="{Binding RemoveCommand, ElementName=Control}"
+                                                  CommandParameter="{Binding}"
+                                                  IsVisible="{Binding RemoveCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+          </Panel>
+        </Border>
+    </DockPanel>
+
+</UserControl>

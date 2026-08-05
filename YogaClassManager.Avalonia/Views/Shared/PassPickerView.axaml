@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Shared"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="440" d:DesignHeight="420"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.PassPickerView"
+        Width="440">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Row="0" Text="{Binding StudentName, StringFormat='Select a pass for {0}'}"
+                   Classes="DialogTitle" />
+
+        <Panel Grid.Row="1">
+            <TextBlock Text="No eligible passes." Classes="Caption"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12"
+                       IsVisible="{Binding HasNoResults}" />
+
+            <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedRow}"
+                     behaviors:ScrollEdgeFade.IsEnabled="True" MaxHeight="360">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:PassPickerRow">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                            <TextBlock Text="{Binding Pass.PassName}"
+                                       FontWeight="{StaticResource FontWeightMedium}" />
+                            <TextBlock Text="{Binding Pass.ClassesRemaining, StringFormat='{}{0} remaining'}"
+                                       Classes="Muted" />
+                            <controls:Tag Color="{DynamicResource TagArchivedBrush}" Label="EXPIRED"
+                                          IsVisible="{Binding IsExpired}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Panel>
+
+        <controls:DialogButtonRow Grid.Row="2" ConfirmLabel="Select" />
+    </Grid>
+
+</UserControl>

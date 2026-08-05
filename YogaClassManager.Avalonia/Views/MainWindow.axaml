@@ -1,0 +1,98 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:YogaClassManager.Avalonia"
+        xmlns:rxui="http://reactiveui.net"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="YogaClassManager.Avalonia.Views.MainWindow"
+        x:DataType="local:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="1200" Height="800"
+        Title="YogaClassManager">
+
+    <Window.Resources>
+        <DataTemplate x:Key="NavItemTemplate" DataType="local:NavItemViewModel">
+            <Button Classes="NavItem" Classes.Selected="{Binding IsSelected}"
+                    Command="{Binding Command}"
+                    HorizontalAlignment="Stretch"
+                    ToolTip.Tip="{Binding Label}"
+                    AutomationProperties.Name="{Binding Label}">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                    <materialIcons:MaterialIcon Kind="{Binding Icon}" Width="20" Height="20" />
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center"
+                               IsVisible="{Binding $parent[SplitView].IsPaneOpen}" />
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+    </Window.Resources>
+
+    <!-- Button.NavItem's styles (including the padding-geometry note) live in Styles/Controls.axaml
+         alongside the rest of the interactive palette, so there is exactly one place that decides what
+         an interactive state looks like - and so InteractiveStateTests can reach them without booting
+         this window. Border.DialogOverlay moved there earlier for a related reason. -->
+
+    <Panel>
+        <SplitView IsPaneOpen="{Binding IsPaneOpen}"
+                   DisplayMode="CompactInline"
+                   OpenPaneLength="220"
+                   CompactPaneLength="56"
+                   PanePlacement="Left">
+            <SplitView.Pane>
+                <DockPanel Background="{DynamicResource SystemAltMediumLowColor}">
+                    <!--
+                        Grid, not a centered StackPanel: the toggle button sits in a fixed Auto column so
+                        it never moves (matching the nav items below it, which are always left-anchored,
+                        and never jumping when the pane animates - a centered shrink-wrapped row jumps the
+                        instant the title's IsVisible flips, since that changes the centered block's
+                        content width instantly while the pane width is still animating). The trailing
+                        Border mirrors the button's own footprint (10 padding + 20 icon + 10 padding = 40,
+                        matching Button.NavItem's Padding below) as blank space, so the gap after the
+                        title matches the gap around the icon exactly. Both the title and the spacer
+                        collapse to 0 width together in compact mode (via IsVisible, which Grid excludes
+                        from Auto-column measurement), so the two fixed 40px columns never have to compete
+                        for space with each other in the 56px compact pane.
+                    -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="8">
+                        <Button Grid.Column="0" Classes="NavItem" Command="{Binding ToggleNavCommand}"
+                                ToolTip.Tip="Toggle navigation"
+                                AutomationProperties.Name="Toggle navigation">
+                            <materialIcons:MaterialIcon Kind="Menu" Width="20" Height="20" />
+                        </Button>
+                        <TextBlock Grid.Column="1" Text="YogaClassManager" Classes="AppTitle"
+                                   VerticalAlignment="Center" Margin="8,0,0,0"
+                                   IsVisible="{Binding $parent[SplitView].IsPaneOpen}" />
+                        <Border Grid.Column="2" Width="40" IsVisible="{Binding $parent[SplitView].IsPaneOpen}" />
+                    </Grid>
+
+                    <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0"
+                            BorderBrush="{DynamicResource SystemBaseLowColor}"
+                            Margin="8,8,8,8" Padding="0,8,0,0">
+                        <ContentControl Content="{Binding SettingsNavItem}" ContentTemplate="{StaticResource NavItemTemplate}" />
+                    </Border>
+
+                    <ItemsControl Margin="8,0" ItemsSource="{Binding NavItems}" ItemTemplate="{StaticResource NavItemTemplate}" />
+                </DockPanel>
+            </SplitView.Pane>
+
+            <SplitView.Content>
+                <rxui:RoutedViewHost Router="{Binding Router}">
+                    <rxui:RoutedViewHost.DefaultContent>
+                        <TextBlock Text="Loading..." HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </rxui:RoutedViewHost.DefaultContent>
+                    <rxui:RoutedViewHost.PageTransition>
+                        <CrossFade Duration="0:0:0.15" />
+                    </rxui:RoutedViewHost.PageTransition>
+                </rxui:RoutedViewHost>
+            </SplitView.Content>
+        </SplitView>
+
+        <!-- Dialog overlay: centered card over a dimmed backdrop, on top of the SplitView content.
+             Toasts (see MainWindow.axaml.cs's Opened handler) render via WindowNotificationManager's
+             AdornerLayer, which paints above this regular-content layer automatically. -->
+        <controls:DialogHost DialogService="{Binding Dialogs}" />
+    </Panel>
+
+</Window>

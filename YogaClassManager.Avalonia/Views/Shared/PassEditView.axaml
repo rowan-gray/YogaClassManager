@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:filters="using:YogaClassManager.Core.Filters"
+        xmlns:passes="using:YogaClassManager.Core.Models.Passes"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
+        xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="440" d:DesignHeight="560"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.PassEditView"
+        Width="440">
+
+    <ScrollViewer MaxHeight="700" behaviors:ScrollEdgeFade.IsEnabled="True">
+        <StackPanel Spacing="{StaticResource SpacingSm}">
+            <TextBlock Text="{Binding Title}" Classes="DialogTitle" />
+
+            <controls:FormField Label="Pass type">
+                <ComboBox ItemsSource="{Binding KindOptions}" SelectedItem="{Binding Kind}"
+                          HorizontalAlignment="Stretch" />
+            </controls:FormField>
+
+            <controls:OptionSwitchPanel SelectedOption="{Binding Kind}" Margin="{StaticResource GroupGapMargin}">
+                <StackPanel controls:OptionSwitchPanel.Option="{x:Static filters:PassKind.Casual}"
+                            Spacing="{StaticResource SpacingSm}">
+                    <controls:FormField Label="Number of classes (use 1 for a single-use pass)">
+                        <NumericUpDown Value="{Binding ClassCount}" Minimum="1" Increment="1" FormatString="0" />
+                    </controls:FormField>
+                </StackPanel>
+
+                <StackPanel controls:OptionSwitchPanel.Option="{x:Static filters:PassKind.Dated}"
+                            Spacing="{StaticResource SpacingSm}">
+                    <controls:FormField Label="Number of classes">
+                        <NumericUpDown Value="{Binding ClassCount}" Minimum="1" Increment="1" FormatString="0" />
+                    </controls:FormField>
+                    <controls:FormField Label="Start date">
+                        <CalendarDatePicker
+                            SelectedDate="{Binding StartDate, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}"
+                            HorizontalAlignment="Stretch" />
+                    </controls:FormField>
+                    <controls:FormField Label="End date">
+                        <CalendarDatePicker
+                            SelectedDate="{Binding EndDate, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}"
+                            HorizontalAlignment="Stretch" />
+                    </controls:FormField>
+                </StackPanel>
+
+                <StackPanel controls:OptionSwitchPanel.Option="{x:Static filters:PassKind.Term}"
+                            Spacing="{StaticResource SpacingSm}">
+                    <controls:FormField Label="Term">
+                        <ComboBox ItemsSource="{Binding Terms}" SelectedItem="{Binding SelectedTerm}"
+                                  HorizontalAlignment="Stretch" />
+                    </controls:FormField>
+                    <controls:FormField Label="Class">
+                        <ComboBox ItemsSource="{Binding AvailableTermClasses}"
+                                  SelectedItem="{Binding SelectedTermClass}" HorizontalAlignment="Stretch" />
+                    </controls:FormField>
+                </StackPanel>
+            </controls:OptionSwitchPanel>
+
+            <controls:FormField Label="Classes used" Margin="{StaticResource GroupGapMargin}">
+                <NumericUpDown Value="{Binding ClassesUsed}" Minimum="0" Increment="1" FormatString="0" />
+            </controls:FormField>
+
+            <TextBlock Text="{Binding ClassesRemainingPreview, StringFormat='Classes remaining: {0}'}"
+                       FontWeight="{StaticResource FontWeightMedium}" Margin="0,4,0,0" />
+
+            <!-- No Height: this panel sits inside the dialog's own fading ScrollViewer, so it grows to
+                 fit rather than nesting a second scroll region (UI_STYLE_GUIDE.md's scroll exception). -->
+            <controls:LinkedRecordsPanel Header="Alterations" Margin="{StaticResource GroupGapMargin}"
+                                         EmptyText="No alterations."
+                    ItemsSource="{Binding Alterations}"
+                    AddCommand="{Binding AddAlterationCommand}" RemoveCommand="{Binding RemoveAlterationCommand}">
+                <controls:LinkedRecordsPanel.ItemTemplate>
+                    <DataTemplate DataType="passes:PassAlteration">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                            <TextBlock Text="{Binding Amount, StringFormat='{}{0:+#;-#;0}'}"
+                                       FontWeight="{StaticResource FontWeightBold}" />
+                            <TextBlock Text="{Binding Reason}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </controls:LinkedRecordsPanel.ItemTemplate>
+            </controls:LinkedRecordsPanel>
+
+            <TextBlock Text="{Binding ValidationError}" Classes="ValidationError"
+                       IsVisible="{Binding ValidationError, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+
+            <controls:DialogButtonRow ConfirmLabel="Save" />
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

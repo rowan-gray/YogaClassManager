@@ -3,5 +3,5 @@
 
 .DS_Store
 
-/YogaClassManager/obj
-/YogaClassManager/bin
+/**/obj
+/**/bin

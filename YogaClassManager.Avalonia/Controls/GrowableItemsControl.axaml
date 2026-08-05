@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+             x:Class="YogaClassManager.Avalonia.Controls.GrowableItemsControl"
+             x:Name="Control">
+
+    <ScrollViewer x:Name="Scroller" ScrollChanged="OnScrollChanged" behaviors:ScrollEdgeFade.IsEnabled="True">
+        <StackPanel>
+            <ItemsControl ItemsSource="{Binding ItemsSource, ElementName=Control}"
+                          ItemTemplate="{Binding ItemTemplate, ElementName=Control}" />
+            <TextBlock Text="Loading more..." HorizontalAlignment="Center" Margin="0,8,0,8"
+                       IsVisible="{Binding IsGrowing, ElementName=Control}" />
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

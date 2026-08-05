@@ -1,0 +1,22 @@
+<reactiveui:ReactiveUserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Settings"
+             xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="400"
+             x:Class="YogaClassManager.Avalonia.Views.Settings.SettingsView"
+             x:TypeArguments="vm:SettingsViewModel"
+             x:DataType="vm:SettingsViewModel">
+
+    <StackPanel Margin="{StaticResource PagePadding}" Spacing="{StaticResource SpacingMd}" MaxWidth="500"
+                HorizontalAlignment="Left">
+        <TextBlock Text="Settings" Classes="PageTitle" Margin="{StaticResource HeaderRowMargin}" />
+
+        <TextBlock Text="Dummy data" Classes="SectionTitle" />
+        <TextBlock TextWrapping="Wrap" Classes="Muted"
+                   Text="This build runs entirely against in-memory sample data - there is no real database yet. Use this to discard any changes you've made and start over with the original seeded data (people, students, passes, classes, terms and attendance history)." />
+        <Button Content="Reset dummy data" Command="{Binding ResetDummyDataCommand}" HorizontalAlignment="Left" />
+    </StackPanel>
+
+</reactiveui:ReactiveUserControl>

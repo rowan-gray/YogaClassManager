@@ -1,0 +1,117 @@
+<reactiveui:ReactiveUserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Identities"
+             xmlns:people="using:YogaClassManager.Core.Models.People"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             x:Class="YogaClassManager.Avalonia.Views.Identities.IdentitiesView"
+             x:TypeArguments="vm:IdentitiesViewModel"
+             x:Name="Root">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
+        <TextBlock Grid.Row="0" Text="Identities" Classes="PageTitle" Margin="0,0,0,16" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="{StaticResource HeaderRowMargin}">
+            <controls:FilterBar Grid.Column="0" SearchQuery="{Binding SearchQuery, Mode=TwoWay}"
+                                 SearchWatermark="Search by name..."
+                                 SortOptions="{Binding SortByOptions}" SelectedSort="{Binding SortBy, Mode=TwoWay}"
+                                 SortOrderOptions="{Binding SortOrderOptions}"
+                                 SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}"
+                                 FilterCount="{Binding ActiveFilterCount}"
+                                 ClearFiltersCommand="{Binding ClearFiltersCommand}">
+                <controls:FilterBar.AdvancedFilters>
+                    <CheckBox Content="Show archived" IsChecked="{Binding IncludeArchived}" />
+                </controls:FilterBar.AdvancedFilters>
+            </controls:FilterBar>
+            <Button Grid.Column="1" Content="Add identity" Command="{Binding AddIdentityCommand}"
+                    Margin="8,0,0,0" Classes="accent" VerticalAlignment="Top" />
+        </Grid>
+
+        <controls:MasterDetailView Grid.Row="2" Items="{Binding Items}" SelectedItem="{Binding Selection}"
+                                   IsBusy="{Binding IsBusy}" ErrorText="{Binding LastError}"
+                                   EmptyText="No identities match this search."
+                                   NoSelectionText="Select an identity to view their details.">
+            <controls:MasterDetailView.ListItemTemplate>
+                <DataTemplate DataType="people:Identity">
+                    <controls:RecordListItem Title="{Binding FullName}" Subtitle="{Binding Email}"
+                                             FlagLabel="ARCHIVED" IsFlagged="{Binding !IsActive}"
+                                             FlagColor="{DynamicResource TagArchivedBrush}" />
+                </DataTemplate>
+            </controls:MasterDetailView.ListItemTemplate>
+
+            <controls:MasterDetailView.DetailTemplate>
+                <DataTemplate DataType="people:Identity">
+                    <StackPanel Spacing="{StaticResource SpacingMd}">
+                        <controls:RecordDetailsPanel Record="{Binding}">
+                            <controls:RecordDetailsPanel.RecordTemplate>
+                                <DataTemplate DataType="people:Identity">
+                                    <StackPanel Spacing="{StaticResource SpacingXs}">
+                                        <controls:DetailHeader Title="{Binding FullName}" PrimaryActionLabel="Edit"
+                                                PrimaryActionCommand="{Binding DataContext.EditIdentityCommand, ElementName=Root}">
+                                            <controls:DetailHeader.Actions>
+                                                <Button Classes="Overflow">
+                                                    <Button.Flyout>
+                                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                            <MenuItem Header="Merge duplicate into this..."
+                                                                      Command="{Binding DataContext.MergeDuplicatesCommand, ElementName=Root}" />
+                                                            <MenuItem Header="Archive" IsVisible="{Binding IsActive}"
+                                                                      Command="{Binding DataContext.ToggleArchiveCommand, ElementName=Root}" />
+                                                            <MenuItem Header="Unarchive" IsVisible="{Binding !IsActive}"
+                                                                      Command="{Binding DataContext.ToggleArchiveCommand, ElementName=Root}" />
+                                                        </MenuFlyout>
+                                                    </Button.Flyout>
+                                                </Button>
+                                            </controls:DetailHeader.Actions>
+                                        </controls:DetailHeader>
+                                        <TextBlock Text="{Binding PhoneNumber, StringFormat='Phone: {0}'}" />
+                                        <TextBlock Text="{Binding Email, StringFormat='Email: {0}'}" />
+                                        <TextBlock Text="Archived" Foreground="{DynamicResource StatusArchivedBrush}"
+                                                   IsVisible="{Binding !IsActive}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </controls:RecordDetailsPanel.RecordTemplate>
+                        </controls:RecordDetailsPanel>
+
+                        <Border Classes="Card"
+                                IsVisible="{Binding DataContext.LinkedStudent, ElementName=Root, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Student" Classes="Caption" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding DataContext.LinkedStudent.FullName, ElementName=Root}"
+                                               VerticalAlignment="Center" />
+                                    <Button Content="View student"
+                                            Command="{Binding DataContext.NavigateToStudentCommand, ElementName=Root}"
+                                            CommandParameter="{Binding DataContext.LinkedStudent, ElementName=Root}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="Card" IsVisible="{Binding DataContext.HasEmergencyContactLinks, ElementName=Root}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Emergency contact for" Classes="Caption" />
+                                <ItemsControl ItemsSource="{Binding DataContext.EmergencyContactForStudents, ElementName=Root}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="people:Student">
+                                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}"
+                                                        Margin="0,4">
+                                                <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" />
+                                                <Button Content="View"
+                                                        Command="{Binding DataContext.NavigateToStudentCommand, ElementName=Root}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </DataTemplate>
+            </controls:MasterDetailView.DetailTemplate>
+        </controls:MasterDetailView>
+    </Grid>
+
+</reactiveui:ReactiveUserControl>

@@ -1,0 +1,161 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:people="using:YogaClassManager.Core.Models.People"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
+        xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="820" d:DesignHeight="600"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.MarkRollWindow"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="820" Height="600" MinWidth="480" MinHeight="420"
+        Title="{Binding ClassScheduleDescription}"
+        x:Name="Root">
+
+    <Panel>
+        <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="16">
+            <TextBlock Grid.Row="0" Text="{Binding ClassScheduleDescription}" Classes="SectionTitle"
+                       Margin="0,0,0,16" />
+
+            <StackPanel Grid.Row="1" Spacing="{StaticResource SpacingXs}" Margin="0,0,0,16">
+                <CalendarDatePicker
+                    AutomationProperties.Name="Roll date"
+                    SelectedDate="{Binding Date, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}"
+                    HorizontalAlignment="Stretch" />
+                <!-- Resolving which pass a student should use hits the repository (StartBusy in
+                     AddStudentAsync/ChangePassAsync); without this the window just sat there. -->
+                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+            </StackPanel>
+
+            <controls:FillWrapPanel Grid.Row="2" Spacing="16">
+                <Grid MinWidth="300" RowDefinitions="Auto,Auto,*">
+                    <TextBlock Grid.Row="0" Text="Add a student" FontWeight="{StaticResource FontWeightMedium}"
+                               Margin="{StaticResource HeaderRowMargin}" />
+                    <!-- Enter adds the top match without leaving the box - this is the most-repeated
+                         action in the app and used to require typing, then reaching for the mouse. -->
+                    <TextBox Grid.Row="1" Watermark="Search by name..." Text="{Binding SearchQuery}"
+                             AutomationProperties.Name="Search students by name"
+                             Margin="{StaticResource HeaderRowMargin}">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding AddSelectedStudentCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <Border Grid.Row="2" Classes="Card" Padding="4">
+                        <Panel>
+                            <TextBlock Text="{Binding SearchEmptyText}" Classes="Caption"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" TextAlignment="Center" Margin="12"
+                                       IsVisible="{Binding !HasSearchResults}" />
+
+                            <!-- Same gesture once the keyboard has moved into the list, so arrowing to a
+                                 row and pressing Enter adds that row rather than the first one. -->
+                            <ListBox ItemsSource="{Binding SearchResults}"
+                                     SelectedItem="{Binding SelectedSearchResult}"
+                                     Background="Transparent" BorderThickness="0"
+                                     behaviors:ScrollEdgeFade.IsEnabled="True">
+                                <ListBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding AddSelectedStudentCommand}" />
+                                </ListBox.KeyBindings>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="people:Student">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Grid.Column="0" Text="{Binding FullName}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                            <Button Grid.Column="1" Classes="Overflow" Margin="4,0,0,0"
+                                                    Background="Transparent"
+                                                    Command="{Binding DataContext.AddStudentCommand, ElementName=Root}"
+                                                    CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="{Binding FullName, StringFormat='Add {0} to roll'}"
+                                                    ToolTip.Tip="Add to roll">
+                                                <materialIcons:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Panel>
+                    </Border>
+                </Grid>
+
+                <Grid MinWidth="300" RowDefinitions="Auto,*">
+                    <TextBlock Grid.Row="0" Text="Attendees" FontWeight="{StaticResource FontWeightMedium}"
+                               Margin="{StaticResource HeaderRowMargin}" />
+                    <Border Grid.Row="1" Classes="Card" Padding="4">
+                      <Panel>
+                        <TextBlock Text="No attendees yet." Classes="Caption"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12"
+                                   IsVisible="{Binding !Entries.Count}" />
+
+                        <ListBox ItemsSource="{Binding Entries}" Background="Transparent" BorderThickness="0"
+                                 behaviors:ScrollEdgeFade.IsEnabled="True">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="people:ClassRollEntry">
+                                    <Grid ColumnDefinitions="*,Auto,Auto">
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                                    Spacing="{StaticResource SpacingSm}">
+                                            <TextBlock Text="{Binding Student.FullName}"
+                                                       FontWeight="{StaticResource FontWeightMedium}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Pass.PassName}" Classes="Muted"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Text="(no pass)" Classes="Muted" VerticalAlignment="Center"
+                                                       IsVisible="{Binding Pass, Converter={x:Static conv:ObjectConverters.IsNull}}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1" Classes="Overflow" Margin="4,0,0,0"
+                                                Background="Transparent"
+                                                AutomationProperties.Name="{Binding Student.FullName, StringFormat='{}{0} actions'}"
+                                                ToolTip.Tip="More actions">
+                                            <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18" />
+                                            <Button.Flyout>
+                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                    <MenuItem Header="Change pass"
+                                                              Command="{Binding DataContext.ChangePassCommand, ElementName=Root}"
+                                                              CommandParameter="{Binding}" />
+                                                </MenuFlyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                        <Button Grid.Column="2" Classes="Overflow" Margin="4,0,0,0"
+                                                Background="Transparent"
+                                                Command="{Binding DataContext.RemoveStudentCommand, ElementName=Root}"
+                                                CommandParameter="{Binding}"
+                                                AutomationProperties.Name="{Binding Student.FullName, StringFormat='Remove {0} from roll'}"
+                                                ToolTip.Tip="Remove from roll">
+                                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18" />
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                      </Panel>
+                    </Border>
+                </Grid>
+            </controls:FillWrapPanel>
+
+            <!-- Not a DialogButtonRow: this is a real Window, not an IDialogViewModel, so there's no
+                 CancelCommand/DefaultCommand pair for that control to bind to. Escape and Ctrl+S are
+                 wired in the code-behind instead. -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right"
+                        Spacing="{StaticResource SpacingSm}"
+                        Margin="{StaticResource DialogButtonRowMargin}">
+                <Button Content="Cancel" Click="OnCancelClick" />
+                <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}"
+                        ToolTip.Tip="Save (Ctrl+S)" />
+            </StackPanel>
+        </Grid>
+
+        <!--
+            Local dialog overlay, scoped to this window only - the same DialogHost control MainWindow
+            uses, but bound to this ViewModel's own private Dialogs instance (not the shared app-wide
+            one), since MarkRollWindow is a real, independent Window and the shared overlay only renders
+            inside MainWindow. See UI_STYLE_GUIDE.md's Dialogs section for why this is the one exception
+            to "dialogs are in-app overlays with a single shared host".
+        -->
+        <controls:DialogHost DialogService="{Binding Dialogs}" />
+    </Panel>
+
+</Window>

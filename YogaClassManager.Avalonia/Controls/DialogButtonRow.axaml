@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="YogaClassManager.Avalonia.Controls.DialogButtonRow"
+             x:Name="Control">
+
+    <!-- Commands come from the inherited DataContext (the dialog's own IDialogViewModel), not from
+         properties on this control: every dialog cancels the same way, and binding the accent button to
+         DefaultCommand is what keeps "the primary button" and "what Enter does" the same action by
+         construction rather than by each dialog remembering to keep them in step. Only the two labels
+         vary per dialog. -->
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"
+                Margin="{StaticResource DialogButtonRowMargin}">
+        <Button Content="{Binding CancelLabel, ElementName=Control}" Command="{Binding CancelCommand}" />
+        <Button Content="{Binding ConfirmLabel, ElementName=Control}" Command="{Binding DefaultCommand}"
+                Classes="accent" />
+    </StackPanel>
+
+</UserControl>

@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="480"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.TermEditView"
+        Width="420">
+
+    <StackPanel Spacing="{StaticResource SpacingSm}">
+        <TextBlock Text="{Binding Title}" Classes="DialogTitle" />
+
+        <controls:FormField Label="Name">
+            <TextBox Text="{Binding Name}" />
+        </controls:FormField>
+
+        <controls:FormField Label="Start date">
+            <CalendarDatePicker
+                SelectedDate="{Binding StartDate, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}"
+                HorizontalAlignment="Stretch" />
+        </controls:FormField>
+
+        <controls:FormField Label="End date">
+            <CalendarDatePicker
+                SelectedDate="{Binding EndDate, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}"
+                HorizontalAlignment="Stretch" />
+        </controls:FormField>
+
+        <CheckBox Content="Allow catchup classes" IsChecked="{Binding HasCatchup}"
+                  Margin="{StaticResource GroupGapMargin}" />
+
+        <StackPanel IsVisible="{Binding HasCatchup}" Spacing="{StaticResource SpacingSm}">
+            <controls:FormField Label="Catchup start date">
+                <CalendarDatePicker
+                    SelectedDate="{Binding CatchupStartDate, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}"
+                    HorizontalAlignment="Stretch" />
+            </controls:FormField>
+            <controls:FormField Label="Catchup end date">
+                <CalendarDatePicker
+                    SelectedDate="{Binding CatchupEndDate, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}"
+                    HorizontalAlignment="Stretch" />
+            </controls:FormField>
+        </StackPanel>
+
+        <TextBlock Text="{Binding ValidationError}" Classes="ValidationError"
+                   IsVisible="{Binding ValidationError, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+
+        <controls:DialogButtonRow ConfirmLabel="Save" />
+    </StackPanel>
+
+</UserControl>

@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="180"
+        x:Class="YogaClassManager.Avalonia.Views.Shared.RelationshipPickerView"
+        Width="360">
+
+    <StackPanel Spacing="{StaticResource SpacingSm}">
+        <TextBlock Text="{Binding IdentityName, StringFormat='Relationship to {0}'}" Classes="DialogTitle" />
+
+        <controls:FormField Label="Relationship">
+            <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}"
+                      HorizontalAlignment="Stretch" />
+        </controls:FormField>
+
+        <controls:DialogButtonRow ConfirmLabel="Save" />
+    </StackPanel>
+
+</UserControl>

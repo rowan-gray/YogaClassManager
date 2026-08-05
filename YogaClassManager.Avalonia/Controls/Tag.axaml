@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="YogaClassManager.Avalonia.Controls.Tag"
+             x:Name="Control"
+             HorizontalAlignment="Left" VerticalAlignment="Center">
+
+    <Border Background="{Binding Color, ElementName=Control}" CornerRadius="{StaticResource RadiusSmall}"
+            Padding="{StaticResource TagPadding}">
+        <TextBlock Text="{Binding Label, ElementName=Control}" Foreground="White" Classes="Micro"
+                    FontWeight="{StaticResource FontWeightBold}" />
+    </Border>
+
+</UserControl>

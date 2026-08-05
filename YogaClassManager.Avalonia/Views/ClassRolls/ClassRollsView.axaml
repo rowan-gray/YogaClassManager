@@ -1,0 +1,101 @@
+<reactiveui:ReactiveUserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.ClassRolls"
+             xmlns:classes="using:YogaClassManager.Core.Models.Classes"
+             xmlns:people="using:YogaClassManager.Core.Models.People"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+             xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
+             xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
+             x:Class="YogaClassManager.Avalonia.Views.ClassRolls.ClassRollsView"
+             x:TypeArguments="vm:ClassRollsViewModel"
+             x:Name="Root">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
+        <TextBlock Grid.Row="0" Text="Class Rolls" Classes="PageTitle" Margin="0,0,0,16" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="0" Margin="{StaticResource HeaderRowMargin}">
+            <controls:SortByButton
+                SortOptions="{Binding SortByOptions}" SelectedSort="{Binding SortBy, Mode=TwoWay}"
+                SortOrderOptions="{Binding SortOrderOptions}" SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}" />
+            <controls:FilterButton Margin="8,0,0,0"
+                FilterCount="{Binding ActiveFilterCount}" ClearFiltersCommand="{Binding ClearFiltersCommand}">
+                <controls:FilterButton.Filters>
+                    <StackPanel Spacing="8" MinWidth="200">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="From" />
+                            <CalendarDatePicker
+                                SelectedDate="{Binding DateFrom, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="To" />
+                            <CalendarDatePicker
+                                SelectedDate="{Binding DateTo, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Day of week" />
+                            <ComboBox ItemsSource="{Binding DayOfWeekOptions}" SelectedItem="{Binding DayOfWeek}"
+                                      HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                    </StackPanel>
+                </controls:FilterButton.Filters>
+            </controls:FilterButton>
+        </StackPanel>
+
+        <controls:MasterDetailView Grid.Row="2" Items="{Binding Items}" SelectedItem="{Binding Selection}"
+                                   IsBusy="{Binding IsBusy}" ErrorText="{Binding LastError}"
+                                   EmptyText="No class rolls match these filters."
+                                   NoSelectionText="Select a class roll to view its attendees.">
+            <controls:MasterDetailView.ListItemTemplate>
+                <DataTemplate DataType="classes:ClassRoll">
+                    <controls:RecordListItem Title="{Binding}"
+                                             Subtitle="{Binding StudentEntries.Count, StringFormat='{}{0} attendees'}" />
+                </DataTemplate>
+            </controls:MasterDetailView.ListItemTemplate>
+
+            <controls:MasterDetailView.DetailTemplate>
+                <DataTemplate DataType="classes:ClassRoll">
+                    <ScrollViewer behaviors:ScrollEdgeFade.IsEnabled="True">
+                        <StackPanel Spacing="16">
+                            <controls:DetailHeader Title="{Binding}" PrimaryActionLabel="Edit roll"
+                                    PrimaryActionCommand="{Binding DataContext.EditRollCommand, ElementName=Root}">
+                                <controls:DetailHeader.Actions>
+                                    <Button Classes="Overflow">
+                                        <Button.Flyout>
+                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                <MenuItem Header="Delete"
+                                                          Command="{Binding DataContext.DeleteRollCommand, ElementName=Root}" />
+                                            </MenuFlyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                </controls:DetailHeader.Actions>
+                            </controls:DetailHeader>
+
+                            <controls:LinkedRecordsPanel Header="Attendees"
+                                EmptyText="Nobody was marked present for this roll."
+                                ItemsSource="{Binding StudentEntries}">
+                                <controls:LinkedRecordsPanel.ItemTemplate>
+                                    <DataTemplate DataType="people:ClassRollEntry">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                                            <TextBlock Text="{Binding Student.FullName}"
+                                                       FontWeight="{StaticResource FontWeightMedium}" />
+                                            <TextBlock Text="{Binding Pass.PassName}" Classes="Muted"
+                                                       IsVisible="{Binding Pass, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+                                            <TextBlock Text="No pass" Classes="Muted"
+                                                       IsVisible="{Binding Pass, Converter={x:Static conv:ObjectConverters.IsNull}}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </controls:LinkedRecordsPanel.ItemTemplate>
+                            </controls:LinkedRecordsPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DataTemplate>
+            </controls:MasterDetailView.DetailTemplate>
+        </controls:MasterDetailView>
+    </Grid>
+
+</reactiveui:ReactiveUserControl>

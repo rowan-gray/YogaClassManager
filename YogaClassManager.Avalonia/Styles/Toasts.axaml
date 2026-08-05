@@ -1,0 +1,78 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+
+    <!--
+        Fixed (non-theme-varying) badge colors for the toast icon - a white icon sits directly on
+        these, so they're chosen for icon (3:1) contrast against white rather than pulled from the
+        theme-aware Status*Brush tokens (those are tuned for text on a surface, not white-on-solid).
+        Warning intentionally isn't pure/bright yellow: white-on-bright-yellow fails contrast, so this
+        is a deeper gold that still reads as "yellow" while staying legible.
+    -->
+    <Styles.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="ToastErrorBadgeBrush" Color="#D32F2F" />
+            <SolidColorBrush x:Key="ToastWarningBadgeBrush" Color="#A67C00" />
+            <SolidColorBrush x:Key="ToastInfoBadgeBrush" Color="#1976D2" />
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <!--
+        Chrome only - severity is entirely conveyed by ToastContent's icon badge + muted message
+        text below, not by the outer card.
+
+        FluentTheme's NotificationCard template (Avalonia.Themes.Fluent/Controls/NotificationCard.xaml)
+        has no Padding anywhere - it hardcodes ContentPresenter#PART_ContentPresenter's MinHeight to
+        64 and shows a 4px colored Panel#PART_HeaderBar above the content, neither exposed as a
+        settable property, so both have to be overridden by targeting the named template parts
+        directly (same /template/ pattern as the Button.Overflow hover-color gotcha above). Without
+        this, a short single-line toast gets centered inside that fixed 64px area - all the "top and
+        bottom padding" comes from that empty space, not from any Padding value, while left/right had
+        none at all (the card supplies zero padding of its own - see ToastContent.axaml's Margin for
+        where the actual left/right/top/bottom spacing now comes from instead).
+    -->
+    <Style Selector="NotificationCard">
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+    </Style>
+    <Style Selector="NotificationCard /template/ Panel#PART_HeaderBar">
+        <Setter Property="Height" Value="0" />
+    </Style>
+    <Style Selector="NotificationCard /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+
+    <!-- Controls/ToastContent.axaml: white icon on a solid severity-colored badge, muted
+         severity-colored message text. Severity is applied once as a Classes value in
+         ToastContent's constructor (see that file), not a bindable property - toasts are
+         fire-and-forget and never change severity after being shown. -->
+    <Style Selector="Grid.Error Border.ToastBadge">
+        <Setter Property="Background" Value="{StaticResource ToastErrorBadgeBrush}" />
+    </Style>
+    <Style Selector="Grid.Error materialIcons|MaterialIcon.ToastIcon">
+        <Setter Property="Kind" Value="AlertCircle" />
+    </Style>
+    <Style Selector="Grid.Error TextBlock.ToastMessage">
+        <Setter Property="Foreground" Value="{DynamicResource StatusErrorBrush}" />
+    </Style>
+
+    <Style Selector="Grid.Warning Border.ToastBadge">
+        <Setter Property="Background" Value="{StaticResource ToastWarningBadgeBrush}" />
+    </Style>
+    <Style Selector="Grid.Warning materialIcons|MaterialIcon.ToastIcon">
+        <Setter Property="Kind" Value="Alert" />
+    </Style>
+    <Style Selector="Grid.Warning TextBlock.ToastMessage">
+        <Setter Property="Foreground" Value="{DynamicResource StatusWarningBrush}" />
+    </Style>
+
+    <Style Selector="Grid.Information Border.ToastBadge">
+        <Setter Property="Background" Value="{StaticResource ToastInfoBadgeBrush}" />
+    </Style>
+    <Style Selector="Grid.Information materialIcons|MaterialIcon.ToastIcon">
+        <Setter Property="Kind" Value="InformationOutline" />
+    </Style>
+    <Style Selector="Grid.Information TextBlock.ToastMessage">
+        <Setter Property="Foreground" Value="{DynamicResource StatusInfoBrush}" />
+    </Style>
+
+</Styles>
