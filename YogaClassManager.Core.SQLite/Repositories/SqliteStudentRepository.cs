@@ -11,15 +11,15 @@ namespace YogaClassManager.Core.SQLite.Repositories;
 
 public class SqliteStudentRepository : IStudentRepository
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
     private readonly IIdentityRepository identityRepository;
     private readonly IPassRepository passRepository;
     private readonly IEmergencyContactRepository emergencyContactRepository;
 
-    public SqliteStudentRepository(SqliteDataStore store, IIdentityRepository identityRepository,
+    public SqliteStudentRepository(IDataStoreProvider dataStoreProvider, IIdentityRepository identityRepository,
         IPassRepository passRepository, IEmergencyContactRepository emergencyContactRepository)
     {
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
         this.identityRepository = identityRepository;
         this.passRepository = passRepository;
         this.emergencyContactRepository = emergencyContactRepository;
@@ -27,11 +27,12 @@ public class SqliteStudentRepository : IStudentRepository
 
     public IDbModel<Student, StudentFilter> Query(StudentFilter filter)
     {
-        return new SqliteStudentDbModel(filter, store, passRepository, emergencyContactRepository);
+        return new SqliteStudentDbModel(filter, dataStoreProvider, passRepository, emergencyContactRepository);
     }
 
     public Task<int> AddAsync(Student student, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var personExists = student.Id > 0 && await connection.ExecuteScalarAsync<long>(
@@ -63,6 +64,7 @@ public class SqliteStudentRepository : IStudentRepository
 
     public Task UpdateAsync(Student student, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync(
                 """
@@ -79,6 +81,7 @@ public class SqliteStudentRepository : IStudentRepository
 
     public Task<int> PromoteToStudentAsync(Student student, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var personExists = await connection.ExecuteScalarAsync<long>(
@@ -112,6 +115,7 @@ public class SqliteStudentRepository : IStudentRepository
     public Task LinkEmergencyContactAsync(int studentId, int identityId, Relationship relationship,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync(
                 """
@@ -124,6 +128,7 @@ public class SqliteStudentRepository : IStudentRepository
 
     public Task UnlinkEmergencyContactAsync(int studentId, int identityId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM StudentEmergencyContacts WHERE StudentId=$studentId AND EmergencyContactId=$identityId",
                 new { studentId, identityId }, transaction), cancellationToken);
@@ -138,6 +143,7 @@ public class SqliteStudentRepository : IStudentRepository
 
     public Task AddHealthConcernAsync(int studentId, string concern, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("INSERT OR IGNORE INTO StudentHealthConcerns(StudentId, HealthConcern) VALUES ($studentId, $concern)",
                 new { studentId, concern }, transaction), cancellationToken);
@@ -145,6 +151,7 @@ public class SqliteStudentRepository : IStudentRepository
 
     public Task RemoveHealthConcernAsync(int studentId, string concern, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM StudentHealthConcerns WHERE StudentId=$studentId AND HealthConcern=$concern",
                 new { studentId, concern }, transaction), cancellationToken);
@@ -153,6 +160,7 @@ public class SqliteStudentRepository : IStudentRepository
     public async Task<IReadOnlyList<string>> GetHealthConcernsAsync(int studentId,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var concerns = await store.QueryAsync(connection => connection.QueryAsync<string>(
             "SELECT HealthConcern FROM StudentHealthConcerns WHERE StudentId=$studentId", new { studentId }),
             cancellationToken);
@@ -185,15 +193,15 @@ internal sealed class StudentRow
 
 internal class SqliteStudentDbModel : IDbModel<Student, StudentFilter>
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
     private readonly IPassRepository passRepository;
     private readonly IEmergencyContactRepository emergencyContactRepository;
 
-    public SqliteStudentDbModel(StudentFilter filter, SqliteDataStore store, IPassRepository passRepository,
-        IEmergencyContactRepository emergencyContactRepository)
+    public SqliteStudentDbModel(StudentFilter filter, IDataStoreProvider dataStoreProvider,
+        IPassRepository passRepository, IEmergencyContactRepository emergencyContactRepository)
     {
         Filter = filter;
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
         this.passRepository = passRepository;
         this.emergencyContactRepository = emergencyContactRepository;
     }
@@ -209,6 +217,7 @@ internal class SqliteStudentDbModel : IDbModel<Student, StudentFilter>
     public async Task<IReadOnlyList<Student>> LoadMultiple(uint count = uint.MaxValue, uint skip = 0,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var filter = Filter;
         var take = count > int.MaxValue ? int.MaxValue : (int)count;
 
@@ -307,6 +316,7 @@ internal class SqliteStudentDbModel : IDbModel<Student, StudentFilter>
 
     public async Task<bool> Refresh(Student model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var row = await store.QueryAsync(connection => connection.QuerySingleOrDefaultAsync<StudentRow>(
             """
             SELECT Person.PersonId AS PersonId, Person.FirstName AS FirstName, Person.LastName AS LastName,
@@ -329,6 +339,7 @@ internal class SqliteStudentDbModel : IDbModel<Student, StudentFilter>
     public Task Save(Student model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
@@ -382,6 +393,7 @@ internal class SqliteStudentDbModel : IDbModel<Student, StudentFilter>
 
     public Task Delete(Student model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM Person WHERE PersonId=$id", new { id = model.Id }, transaction),
             cancellationToken);

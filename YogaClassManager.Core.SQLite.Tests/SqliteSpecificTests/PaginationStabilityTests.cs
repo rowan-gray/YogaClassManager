@@ -1,5 +1,6 @@
 using YogaClassManager.Core.Filters;
 using YogaClassManager.Core.Models.Classes;
+using YogaClassManager.Core.SQLite.Data;
 using YogaClassManager.Core.SQLite.Repositories;
 
 namespace YogaClassManager.Core.SQLite.Tests.SqliteSpecificTests;
@@ -15,8 +16,9 @@ public class PaginationStabilityTests
     public async Task LoadMultiple_PagesStably_WithDuplicateSortKeysAndRowsInsertedMidSequence()
     {
         await using var store = await SqliteTestDatabaseFactory.CreateAsync();
-        var scheduleRepo = new SqliteClassScheduleRepository(store);
-        var rollRepo = new SqliteClassRollRepository(store);
+        var dataStoreProvider = new FixedDataStoreProvider(store);
+        var scheduleRepo = new SqliteClassScheduleRepository(dataStoreProvider);
+        var rollRepo = new SqliteClassRollRepository(dataStoreProvider);
 
         var scheduleId = await scheduleRepo.AddAsync(new ClassSchedule(0, DayOfWeek.Monday, new TimeOnly(9, 0), false));
         var schedule = (await scheduleRepo.Query(new ClassScheduleFilter { Id = (uint)scheduleId }).LoadSingle())!;

@@ -61,4 +61,13 @@ public class RollWindowService : IRollWindowService
         else
             window.Show();
     }
+
+    public void CloseAll()
+    {
+        foreach (var window in openWindows.Values.ToList())
+            if (window is MarkRollWindow markRollWindow)
+                markRollWindow.CloseForced();
+
+        openWindows.Clear();
+    }
 }

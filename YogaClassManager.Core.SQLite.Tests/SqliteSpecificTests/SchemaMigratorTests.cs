@@ -1,5 +1,6 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
+using YogaClassManager.Core.SQLite.Data;
 using YogaClassManager.Core.SQLite.Schema;
 
 namespace YogaClassManager.Core.SQLite.Tests.SqliteSpecificTests;
@@ -88,5 +89,39 @@ public class SchemaMigratorTests
         Assert.Equal(2, migrations.Count);
         Assert.Contains(migrations, m => m.Version == 1 && m.Sql.Contains("CREATE TABLE IF NOT EXISTS \"Person\""));
         Assert.Contains(migrations, m => m.Version == 2 && m.Sql.Contains("CREATE TABLE IF NOT EXISTS \"CasualPass\""));
+    }
+
+    [Fact]
+    public async Task HasPendingMigrationsAsync_ReturnsFalse_OnAFreshlyMigratedDatabase()
+    {
+        var dataSource = $"Data Source=file:{Guid.NewGuid():N}?mode=memory&cache=shared";
+        // A second, independent connection to the same shared-cache in-memory database - kept open for
+        // the test's lifetime so the in-memory db itself isn't dropped once OpenAsync's own connection
+        // (inside SqliteDataStore) would otherwise be the only thing keeping it alive alongside this one.
+        await using var keepAlive = new SqliteConnection(dataSource);
+        await keepAlive.OpenAsync();
+
+        await using var store = await SqliteDataStore.OpenAsync(dataSource);
+
+        Assert.False(await SchemaMigrator.HasPendingMigrationsAsync(dataSource));
+    }
+
+    [Fact]
+    public async Task HasPendingMigrationsAsync_ReturnsTrue_WhenOnlyAnOlderMigrationHasBeenApplied()
+    {
+        var dataSource = $"Data Source=file:{Guid.NewGuid():N}?mode=memory&cache=shared";
+        await using var connection = new SqliteConnection(dataSource);
+        await connection.OpenAsync();
+
+        // Only apply migration 001, never 002 - simulates a database that's behind the latest schema.
+        var migration001 = SchemaMigrator.LoadEmbeddedMigrations().Single(m => m.Version == 1).Sql;
+        await connection.ExecuteAsync(migration001);
+        await connection.ExecuteAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "SchemaVersion" ("Version" INTEGER NOT NULL PRIMARY KEY, "AppliedAt" TEXT NOT NULL DEFAULT (datetime('now')));
+            INSERT INTO SchemaVersion(Version) VALUES (1);
+            """);
+
+        Assert.True(await SchemaMigrator.HasPendingMigrationsAsync(dataSource));
     }
 }

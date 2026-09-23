@@ -9,20 +9,21 @@ namespace YogaClassManager.Core.SQLite.Repositories;
 
 public class SqliteTermRepository : ITermRepository
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteTermRepository(SqliteDataStore store)
+    public SqliteTermRepository(IDataStoreProvider dataStoreProvider)
     {
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public IDbModel<Term, TermFilter> Query(TermFilter filter)
     {
-        return new SqliteTermDbModel(filter, store);
+        return new SqliteTermDbModel(filter, dataStoreProvider);
     }
 
     public Task<int> AddAsync(Term term, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var id = await connection.ExecuteScalarAsync<long>(
@@ -56,6 +57,7 @@ public class SqliteTermRepository : ITermRepository
     /// is a deliberate, documented choice rather than a constraint carried over from elsewhere).</summary>
     public Task UpdateAsync(Term term, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync(
                 """
@@ -72,6 +74,7 @@ public class SqliteTermRepository : ITermRepository
 
     public Task<bool> TryDeleteAsync(int termId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var hasLinkedClasses = await connection.ExecuteScalarAsync<long>(
@@ -88,6 +91,7 @@ public class SqliteTermRepository : ITermRepository
     public Task LinkClassAsync(int termId, int classScheduleId, int classCount,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var termExists = await connection.ExecuteScalarAsync<long>(
@@ -110,6 +114,7 @@ public class SqliteTermRepository : ITermRepository
 
     public Task<bool> UnlinkClassAsync(int termId, int classScheduleId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var uses = await connection.QuerySingleOrDefaultAsync<int?>(
@@ -156,12 +161,12 @@ internal sealed class TermClassRow
 
 internal class SqliteTermDbModel : IDbModel<Term, TermFilter>
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteTermDbModel(TermFilter filter, SqliteDataStore store)
+    public SqliteTermDbModel(TermFilter filter, IDataStoreProvider dataStoreProvider)
     {
         Filter = filter;
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public TermFilter Filter { get; init; }
@@ -175,6 +180,7 @@ internal class SqliteTermDbModel : IDbModel<Term, TermFilter>
     public async Task<IReadOnlyList<Term>> LoadMultiple(uint count = uint.MaxValue, uint skip = 0,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var filter = Filter;
         var take = count > int.MaxValue ? int.MaxValue : (int)count;
         var orderBy = BuildOrderBy(filter.SortBy);
@@ -242,8 +248,8 @@ internal class SqliteTermDbModel : IDbModel<Term, TermFilter>
 
     public async Task<bool> Refresh(Term model, CancellationToken cancellationToken = default)
     {
-        var fresh = await new SqliteTermDbModel(new TermFilter { Id = (uint)model.Id, IncludeCompleted = true }, store)
-            .LoadSingle(cancellationToken);
+        var fresh = await new SqliteTermDbModel(new TermFilter { Id = (uint)model.Id, IncludeCompleted = true },
+            dataStoreProvider).LoadSingle(cancellationToken);
 
         if (fresh is null)
             return false;
@@ -262,6 +268,7 @@ internal class SqliteTermDbModel : IDbModel<Term, TermFilter>
     public Task Save(Term model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
@@ -306,6 +313,7 @@ internal class SqliteTermDbModel : IDbModel<Term, TermFilter>
 
     public Task Delete(Term model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM Term WHERE TermId=$id", new { id = model.Id }, transaction),
             cancellationToken);

@@ -12,32 +12,35 @@ namespace YogaClassManager.Core.SQLite.Repositories;
 
 public class SqlitePassRepository : IPassRepository
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqlitePassRepository(SqliteDataStore store)
+    public SqlitePassRepository(IDataStoreProvider dataStoreProvider)
     {
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public IDbModel<Pass, PassFilter> Query(PassFilter filter)
     {
-        return new SqlitePassDbModel(filter, store);
+        return new SqlitePassDbModel(filter, dataStoreProvider);
     }
 
     public Task<int> AddAsync(Pass pass, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) => InsertAsync(connection, transaction, pass),
             cancellationToken);
     }
 
     public Task UpdateAsync(Pass pass, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(
             (connection, transaction) => UpdateInternalAsync(connection, transaction, pass), cancellationToken);
     }
 
     public Task DeleteAsync(int passId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             // ClassStudents.PassId's FK has no ON DELETE action, so with foreign_keys=ON a bare
@@ -53,6 +56,7 @@ public class SqlitePassRepository : IPassRepository
 
     public Task AddAlterationAsync(PassAlteration alteration, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var id = await connection.ExecuteScalarAsync<long>(
@@ -68,6 +72,7 @@ public class SqlitePassRepository : IPassRepository
 
     public Task RemoveAlterationAsync(int alterationId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM PassAlterations WHERE PassAlterationId=$id", new { id = alterationId },
                 transaction), cancellationToken);
@@ -82,6 +87,7 @@ public class SqlitePassRepository : IPassRepository
     public async Task<IReadOnlyList<ClassAttendanceRecord>> GetUsageHistoryAsync(int passId,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var rows = await store.QueryAsync(connection => connection.QueryAsync<ClassAttendanceRow>(
             """
             SELECT cr.ClassId AS ClassRollId, cr.Date AS Date, cs.ClassScheduleId AS ClassScheduleId,
@@ -242,12 +248,12 @@ public class SqlitePassRepository : IPassRepository
 
 internal class SqlitePassDbModel : IDbModel<Pass, PassFilter>
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqlitePassDbModel(PassFilter filter, SqliteDataStore store)
+    public SqlitePassDbModel(PassFilter filter, IDataStoreProvider dataStoreProvider)
     {
         Filter = filter;
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public PassFilter Filter { get; init; }
@@ -261,6 +267,7 @@ internal class SqlitePassDbModel : IDbModel<Pass, PassFilter>
     public async Task<IReadOnlyList<Pass>> LoadMultiple(uint count = uint.MaxValue, uint skip = 0,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var filter = Filter;
         var take = count > int.MaxValue ? int.MaxValue : (int)count;
 
@@ -300,6 +307,7 @@ internal class SqlitePassDbModel : IDbModel<Pass, PassFilter>
 
     public async Task<bool> Refresh(Pass model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var statusRow = await store.QueryAsync(connection => connection.QuerySingleOrDefaultAsync<PassStatusRow>(
             "SELECT * FROM PassStatus WHERE PassId=$id", new { id = model.Id }), cancellationToken);
 
@@ -336,6 +344,7 @@ internal class SqlitePassDbModel : IDbModel<Pass, PassFilter>
     public Task Save(Pass model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
@@ -355,6 +364,7 @@ internal class SqlitePassDbModel : IDbModel<Pass, PassFilter>
 
     public Task Delete(Pass model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             await connection.ExecuteAsync("UPDATE ClassStudents SET PassId=NULL WHERE PassId=$id", new { id = model.Id },

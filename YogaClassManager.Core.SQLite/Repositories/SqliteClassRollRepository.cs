@@ -11,20 +11,21 @@ namespace YogaClassManager.Core.SQLite.Repositories;
 
 public class SqliteClassRollRepository : IClassRollRepository
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteClassRollRepository(SqliteDataStore store)
+    public SqliteClassRollRepository(IDataStoreProvider dataStoreProvider)
     {
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public IDbModel<ClassRoll, ClassRollFilter> Query(ClassRollFilter filter)
     {
-        return new SqliteClassRollDbModel(filter, store);
+        return new SqliteClassRollDbModel(filter, dataStoreProvider);
     }
 
     public async Task<int> AddAsync(ClassRoll roll, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return await store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var id = await connection.ExecuteScalarAsync<long>(
@@ -46,6 +47,7 @@ public class SqliteClassRollRepository : IClassRollRepository
     {
         // Deliberately touches only ClassRoll's own columns, never ClassStudents - StudentEntries are
         // managed via AddStudentEntryAsync/RemoveStudentEntryAsync/UpdateStudentEntryPassAsync.
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("UPDATE ClassRoll SET ClassScheduleId=$scheduleId, Date=$date WHERE ClassId=$id",
                 new { id = roll.Id, scheduleId = roll.ClassSchedule.Id, date = roll.Date }, transaction), cancellationToken);
@@ -54,6 +56,7 @@ public class SqliteClassRollRepository : IClassRollRepository
     public Task DeleteAsync(int classRollId, CancellationToken cancellationToken = default)
     {
         // ClassStudents cascades via its existing ON DELETE CASCADE FK to ClassRoll - no manual cleanup needed.
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM ClassRoll WHERE ClassId=$id", new { id = classRollId }, transaction),
             cancellationToken);
@@ -62,6 +65,7 @@ public class SqliteClassRollRepository : IClassRollRepository
     public Task AddStudentEntryAsync(int classRollId, ClassRollEntry entry, CancellationToken cancellationToken = default)
     {
         // Upsert-by-student: a student can't have two entries in one roll.
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync(
                 """
@@ -74,6 +78,7 @@ public class SqliteClassRollRepository : IClassRollRepository
 
     public Task RemoveStudentEntryAsync(int classRollId, int studentId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM ClassStudents WHERE ClassId=$classId AND StudentId=$studentId",
                 new { classId = classRollId, studentId }, transaction), cancellationToken);
@@ -82,6 +87,7 @@ public class SqliteClassRollRepository : IClassRollRepository
     public Task UpdateStudentEntryPassAsync(int classRollId, int studentId, int? passId,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync(
                 "UPDATE ClassStudents SET PassId=$passId WHERE ClassId=$classId AND StudentId=$studentId",
@@ -91,6 +97,7 @@ public class SqliteClassRollRepository : IClassRollRepository
     public async Task<IReadOnlyList<ClassAttendanceRecord>> GetAttendanceHistoryAsync(int studentId,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var rows = await store.QueryAsync(connection => connection.QueryAsync<ClassAttendanceRow>(
             """
             SELECT cr.ClassId AS ClassRollId, cr.Date AS Date, cs.ClassScheduleId AS ClassScheduleId,
@@ -137,12 +144,12 @@ internal sealed class ClassRollEntryRow
 
 internal class SqliteClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteClassRollDbModel(ClassRollFilter filter, SqliteDataStore store)
+    public SqliteClassRollDbModel(ClassRollFilter filter, IDataStoreProvider dataStoreProvider)
     {
         Filter = filter;
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public ClassRollFilter Filter { get; init; }
@@ -156,6 +163,7 @@ internal class SqliteClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
     public async Task<IReadOnlyList<ClassRoll>> LoadMultiple(uint count = uint.MaxValue, uint skip = 0,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var filter = Filter;
         var take = count > int.MaxValue ? int.MaxValue : (int)count;
         var orderBy = BuildOrderBy(filter.SortBy);
@@ -238,7 +246,7 @@ internal class SqliteClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
 
     public async Task<bool> Refresh(ClassRoll model, CancellationToken cancellationToken = default)
     {
-        var fresh = await new SqliteClassRollDbModel(new ClassRollFilter { Id = (uint)model.Id }, store)
+        var fresh = await new SqliteClassRollDbModel(new ClassRollFilter { Id = (uint)model.Id }, dataStoreProvider)
             .LoadSingle(cancellationToken);
 
         if (fresh is null)
@@ -253,6 +261,7 @@ internal class SqliteClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
     public Task Save(ClassRoll model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
@@ -280,6 +289,7 @@ internal class SqliteClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
 
     public Task Delete(ClassRoll model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM ClassRoll WHERE ClassId=$id", new { id = model.Id }, transaction),
             cancellationToken);

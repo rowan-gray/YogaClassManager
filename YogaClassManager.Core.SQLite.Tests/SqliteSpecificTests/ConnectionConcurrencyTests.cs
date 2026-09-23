@@ -1,5 +1,6 @@
 using YogaClassManager.Core.Filters;
 using YogaClassManager.Core.Models.Classes;
+using YogaClassManager.Core.SQLite.Data;
 using YogaClassManager.Core.SQLite.Repositories;
 
 namespace YogaClassManager.Core.SQLite.Tests.SqliteSpecificTests;
@@ -13,7 +14,7 @@ public class ConnectionConcurrencyTests
     public async Task ConcurrentReadsAndWrites_ThroughOneSharedStore_DoNotThrowOrCorruptState()
     {
         await using var store = await SqliteTestDatabaseFactory.CreateAsync();
-        var repo = new SqliteClassScheduleRepository(store);
+        var repo = new SqliteClassScheduleRepository(new FixedDataStoreProvider(store));
 
         var writeTasks = Enumerable.Range(0, 20)
             .Select(i => repo.AddAsync(new ClassSchedule(0, DayOfWeek.Monday, new TimeOnly(0, i), false)))

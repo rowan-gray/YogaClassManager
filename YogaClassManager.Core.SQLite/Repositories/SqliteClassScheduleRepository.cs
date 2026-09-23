@@ -9,20 +9,21 @@ namespace YogaClassManager.Core.SQLite.Repositories;
 
 public class SqliteClassScheduleRepository : IClassScheduleRepository
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteClassScheduleRepository(SqliteDataStore store)
+    public SqliteClassScheduleRepository(IDataStoreProvider dataStoreProvider)
     {
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public IDbModel<ClassSchedule, ClassScheduleFilter> Query(ClassScheduleFilter filter)
     {
-        return new SqliteClassScheduleDbModel(filter, store);
+        return new SqliteClassScheduleDbModel(filter, dataStoreProvider);
     }
 
     public async Task<int> AddAsync(ClassSchedule schedule, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return await store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             await EnsureNoDayTimeCollisionAsync(connection, transaction, schedule.Day, schedule.Time, excludeId: null);
@@ -46,6 +47,7 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
 
     public Task UpdateAsync(ClassSchedule schedule, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             await EnsureNoDayTimeCollisionAsync(connection, transaction, schedule.Day, schedule.Time, schedule.Id);
@@ -80,6 +82,7 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
 
     public Task ArchiveAsync(int scheduleId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("UPDATE ClassSchedule SET IsActive=0 WHERE ClassScheduleId=$id", new { id = scheduleId },
                 transaction), cancellationToken);
@@ -87,6 +90,7 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
 
     public Task UnarchiveAsync(int scheduleId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("UPDATE ClassSchedule SET IsActive=1 WHERE ClassScheduleId=$id", new { id = scheduleId },
                 transaction), cancellationToken);
@@ -94,6 +98,7 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
 
     public Task<bool> TryDeleteAsync(int scheduleId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var referenced = await connection.ExecuteScalarAsync<long>(
@@ -129,12 +134,12 @@ internal sealed class ClassScheduleRow
 
 internal class SqliteClassScheduleDbModel : IDbModel<ClassSchedule, ClassScheduleFilter>
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteClassScheduleDbModel(ClassScheduleFilter filter, SqliteDataStore store)
+    public SqliteClassScheduleDbModel(ClassScheduleFilter filter, IDataStoreProvider dataStoreProvider)
     {
         Filter = filter;
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public ClassScheduleFilter Filter { get; init; }
@@ -148,6 +153,7 @@ internal class SqliteClassScheduleDbModel : IDbModel<ClassSchedule, ClassSchedul
     public async Task<IReadOnlyList<ClassSchedule>> LoadMultiple(uint count = uint.MaxValue, uint skip = 0,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var filter = Filter;
         var take = count > int.MaxValue ? int.MaxValue : (int)count;
 
@@ -199,6 +205,7 @@ internal class SqliteClassScheduleDbModel : IDbModel<ClassSchedule, ClassSchedul
 
     public async Task<bool> Refresh(ClassSchedule model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var row = await store.QueryAsync(connection => connection.QuerySingleOrDefaultAsync<ClassScheduleRow>(
             "SELECT ClassScheduleId, Day, Time, IsActive FROM ClassSchedule WHERE ClassScheduleId=$id",
             new { id = model.Id }), cancellationToken);
@@ -215,6 +222,7 @@ internal class SqliteClassScheduleDbModel : IDbModel<ClassSchedule, ClassSchedul
     public Task Save(ClassSchedule model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
@@ -251,6 +259,7 @@ internal class SqliteClassScheduleDbModel : IDbModel<ClassSchedule, ClassSchedul
 
     public Task Delete(ClassSchedule model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM ClassSchedule WHERE ClassScheduleId=$id", new { id = model.Id },
                 transaction), cancellationToken);

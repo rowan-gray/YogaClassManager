@@ -19,24 +19,7 @@ public static class SchemaMigrator
 
     public static async Task EnsureUpToDateAsync(SqliteConnection connection, CancellationToken cancellationToken = default)
     {
-        await using (var bootstrap = connection.CreateCommand())
-        {
-            bootstrap.CommandText =
-                """
-                CREATE TABLE IF NOT EXISTS "SchemaVersion" (
-                    "Version"   INTEGER NOT NULL PRIMARY KEY,
-                    "AppliedAt" TEXT NOT NULL DEFAULT (datetime('now'))
-                );
-                """;
-            await bootstrap.ExecuteNonQueryAsync(cancellationToken);
-        }
-
-        int currentVersion;
-        await using (var versionCommand = connection.CreateCommand())
-        {
-            versionCommand.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM SchemaVersion";
-            currentVersion = Convert.ToInt32(await versionCommand.ExecuteScalarAsync(cancellationToken));
-        }
+        var currentVersion = await EnsureSchemaVersionTableAndGetCurrentVersionAsync(connection, cancellationToken);
 
         foreach (var migration in LoadEmbeddedMigrations().OrderBy(m => m.Version))
         {
@@ -73,6 +56,52 @@ public static class SchemaMigrator
                 await transaction.DisposeAsync();
             }
         }
+    }
+
+    /// <summary>
+    ///     Reports whether <paramref name="dataSource" /> has any migration pending, without applying
+    ///     anything - for callers (e.g. an app-level "back up before migrating" policy) that need to
+    ///     decide something before <see cref="EnsureUpToDateAsync" /> actually runs.
+    ///     <para>
+    ///         <b>Gotcha:</b> opening a <see cref="SqliteConnection" /> against a path that doesn't
+    ///         exist yet silently creates a zero-byte file as a side effect of connecting. Only call
+    ///         this when <c>File.Exists(dataSource)</c> is already true - never speculatively, or
+    ///         you've created a junk file just by asking "does this need a backup".
+    ///     </para>
+    /// </summary>
+    public static async Task<bool> HasPendingMigrationsAsync(string dataSource, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqliteConnection(dataSource);
+        await connection.OpenAsync(cancellationToken);
+
+        var currentVersion = await EnsureSchemaVersionTableAndGetCurrentVersionAsync(connection, cancellationToken);
+        var latestVersion = LoadEmbeddedMigrations().Max(m => m.Version);
+
+        return currentVersion < latestVersion;
+    }
+
+    /// <summary>Ensures the SchemaVersion bootstrap table exists (creating it if this is a brand-new
+    /// database) and returns the currently tracked version, without applying any migration bodies.
+    /// Shared by EnsureUpToDateAsync (which then applies whatever's pending) and
+    /// HasPendingMigrationsAsync (which only wants to know if anything's pending).</summary>
+    private static async Task<int> EnsureSchemaVersionTableAndGetCurrentVersionAsync(SqliteConnection connection,
+        CancellationToken cancellationToken)
+    {
+        await using (var bootstrap = connection.CreateCommand())
+        {
+            bootstrap.CommandText =
+                """
+                CREATE TABLE IF NOT EXISTS "SchemaVersion" (
+                    "Version"   INTEGER NOT NULL PRIMARY KEY,
+                    "AppliedAt" TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+                """;
+            await bootstrap.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using var versionCommand = connection.CreateCommand();
+        versionCommand.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM SchemaVersion";
+        return Convert.ToInt32(await versionCommand.ExecuteScalarAsync(cancellationToken));
     }
 
     internal static IReadOnlyList<(int Version, string Sql)> LoadEmbeddedMigrations()

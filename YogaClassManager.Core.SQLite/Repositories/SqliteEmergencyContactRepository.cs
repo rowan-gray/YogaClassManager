@@ -9,16 +9,16 @@ namespace YogaClassManager.Core.SQLite.Repositories;
 
 public class SqliteEmergencyContactRepository : IEmergencyContactRepository
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteEmergencyContactRepository(SqliteDataStore store)
+    public SqliteEmergencyContactRepository(IDataStoreProvider dataStoreProvider)
     {
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public IDbModel<EmergencyContact, EmergencyContactFilter> Query(EmergencyContactFilter filter)
     {
-        return new SqliteEmergencyContactDbModel(filter, store);
+        return new SqliteEmergencyContactDbModel(filter, dataStoreProvider);
     }
 }
 
@@ -43,12 +43,12 @@ internal sealed class EmergencyContactRow
 
 internal class SqliteEmergencyContactDbModel : IDbModel<EmergencyContact, EmergencyContactFilter>
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteEmergencyContactDbModel(EmergencyContactFilter filter, SqliteDataStore store)
+    public SqliteEmergencyContactDbModel(EmergencyContactFilter filter, IDataStoreProvider dataStoreProvider)
     {
         Filter = filter;
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public EmergencyContactFilter Filter { get; init; }
@@ -62,6 +62,7 @@ internal class SqliteEmergencyContactDbModel : IDbModel<EmergencyContact, Emerge
     public async Task<IReadOnlyList<EmergencyContact>> LoadMultiple(uint count = uint.MaxValue, uint skip = 0,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var filter = Filter;
         var take = count > int.MaxValue ? int.MaxValue : (int)count;
         var orderBy = BuildOrderBy(filter.SortBy);
@@ -106,6 +107,7 @@ internal class SqliteEmergencyContactDbModel : IDbModel<EmergencyContact, Emerge
 
     public async Task<bool> Refresh(EmergencyContact model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var exists = await store.QueryAsync(connection => connection.ExecuteScalarAsync<long>(
             "SELECT EXISTS(SELECT 1 FROM StudentEmergencyContacts WHERE StudentId=$studentId AND EmergencyContactId=$id)",
             new { studentId = model.StudentId, id = model.Id }), cancellationToken);
@@ -121,6 +123,7 @@ internal class SqliteEmergencyContactDbModel : IDbModel<EmergencyContact, Emerge
     public Task Save(EmergencyContact model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var exists = await connection.ExecuteScalarAsync<long>(
@@ -144,6 +147,7 @@ internal class SqliteEmergencyContactDbModel : IDbModel<EmergencyContact, Emerge
 
     public Task Delete(EmergencyContact model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync(
                 "DELETE FROM StudentEmergencyContacts WHERE StudentId=$studentId AND EmergencyContactId=$id",

@@ -27,6 +27,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\YogaClassManager.Core\YogaClassManager.Core.csproj" />
-    <ProjectReference Include="..\YogaClassManager.Core.Dummy\YogaClassManager.Core.Dummy.csproj" />
+    <ProjectReference Include="..\YogaClassManager.Core.SQLite\YogaClassManager.Core.SQLite.csproj" />
   </ItemGroup>
 </Project>

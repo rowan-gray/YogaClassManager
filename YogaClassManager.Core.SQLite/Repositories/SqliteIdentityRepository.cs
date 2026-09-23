@@ -11,20 +11,21 @@ namespace YogaClassManager.Core.SQLite.Repositories;
 
 public class SqliteIdentityRepository : IIdentityRepository
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteIdentityRepository(SqliteDataStore store)
+    public SqliteIdentityRepository(IDataStoreProvider dataStoreProvider)
     {
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public IDbModel<Identity, IdentityFilter> Query(IdentityFilter filter)
     {
-        return new SqliteIdentityDbModel(filter, store);
+        return new SqliteIdentityDbModel(filter, dataStoreProvider);
     }
 
     public Task<int> AddAsync(Identity identity, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var id = await connection.ExecuteScalarAsync<long>(
@@ -46,6 +47,7 @@ public class SqliteIdentityRepository : IIdentityRepository
 
     public Task UpdateAsync(Identity identity, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync(
                 """
@@ -63,6 +65,7 @@ public class SqliteIdentityRepository : IIdentityRepository
     public async Task<IdentityLinkageSummary> GetLinkageSummaryAsync(int identityId,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var row = await store.QueryAsync(connection => connection.QuerySingleOrDefaultAsync<IdentityLinkageRow>(
             "SELECT IsStudent, EmergencyContactLinkCount, PassCount, AttendanceCount FROM IdentityLinkage WHERE PersonId=$id",
             new { id = identityId }), cancellationToken);
@@ -75,6 +78,7 @@ public class SqliteIdentityRepository : IIdentityRepository
 
     public Task<ArchiveResult> ArchiveOrDeleteAsync(int identityId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(
             (connection, transaction) => ArchiveOrDeleteInternalAsync(connection, transaction, identityId),
             cancellationToken);
@@ -82,6 +86,7 @@ public class SqliteIdentityRepository : IIdentityRepository
 
     public Task UnarchiveAsync(int identityId, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("UPDATE Person SET IsActive=1 WHERE PersonId=$id", new { id = identityId },
                 transaction), cancellationToken);
@@ -90,6 +95,7 @@ public class SqliteIdentityRepository : IIdentityRepository
     public Task<MergeResult> MergeAsync(int survivingIdentityId, int duplicateIdentityId,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var survivorExists = await connection.ExecuteScalarAsync<long>(
@@ -259,12 +265,12 @@ internal sealed class IdentityRow
 
 internal class SqliteIdentityDbModel : IDbModel<Identity, IdentityFilter>
 {
-    private readonly SqliteDataStore store;
+    private readonly IDataStoreProvider dataStoreProvider;
 
-    public SqliteIdentityDbModel(IdentityFilter filter, SqliteDataStore store)
+    public SqliteIdentityDbModel(IdentityFilter filter, IDataStoreProvider dataStoreProvider)
     {
         Filter = filter;
-        this.store = store;
+        this.dataStoreProvider = dataStoreProvider;
     }
 
     public IdentityFilter Filter { get; init; }
@@ -278,6 +284,7 @@ internal class SqliteIdentityDbModel : IDbModel<Identity, IdentityFilter>
     public async Task<IReadOnlyList<Identity>> LoadMultiple(uint count = uint.MaxValue, uint skip = 0,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var filter = Filter;
         var take = count > int.MaxValue ? int.MaxValue : (int)count;
         var orderBy = BuildOrderBy(filter.SortBy);
@@ -345,6 +352,7 @@ internal class SqliteIdentityDbModel : IDbModel<Identity, IdentityFilter>
 
     public async Task<bool> Refresh(Identity model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         var row = await store.QueryAsync(connection => connection.QuerySingleOrDefaultAsync<IdentityRow>(
             "SELECT PersonId, FirstName, LastName, PhoneNumber, Email, IsActive FROM Person WHERE PersonId=$id",
             new { id = model.Id }), cancellationToken);
@@ -363,6 +371,7 @@ internal class SqliteIdentityDbModel : IDbModel<Identity, IdentityFilter>
     public Task Save(Identity model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
         CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync(async (connection, transaction) =>
         {
             var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
@@ -407,6 +416,7 @@ internal class SqliteIdentityDbModel : IDbModel<Identity, IdentityFilter>
 
     public Task Delete(Identity model, CancellationToken cancellationToken = default)
     {
+        var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
             connection.ExecuteAsync("DELETE FROM Person WHERE PersonId=$id", new { id = model.Id }, transaction),
             cancellationToken);

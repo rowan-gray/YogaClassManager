@@ -1,0 +1,58 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Bootstrap"
+        xmlns:conv="using:YogaClassManager.Avalonia.Converters"
+        xmlns:objConv="using:Avalonia.Data.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="440" d:DesignHeight="280"
+        x:Class="YogaClassManager.Avalonia.Views.Bootstrap.DatabaseGateWindow"
+        x:DataType="vm:DatabaseGateViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="YogaClassManager"
+        Width="440" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True">
+
+    <StackPanel Margin="24" Spacing="{StaticResource SpacingMd}">
+
+        <!-- Loading: briefly shown on every launch while the configured file (if any) is opened and
+             migrated - resolves near-instantly for an already-current file. -->
+        <StackPanel Spacing="{StaticResource SpacingSm}"
+                    IsVisible="{Binding State, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:GateState.Loading}}">
+            <TextBlock Text="Opening database..." Classes="SectionTitle" />
+            <ProgressBar IsIndeterminate="True" />
+        </StackPanel>
+
+        <!-- NeedsSelection: first launch (no ErrorMessage), or the configured/attempted file could not
+             be opened (ErrorMessage set) - the window cannot be dismissed until one of these succeeds. -->
+        <StackPanel Spacing="{StaticResource SpacingMd}"
+                    IsVisible="{Binding State, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:GateState.NeedsSelection}}">
+            <TextBlock Text="Select a database file" Classes="SectionTitle" />
+            <TextBlock TextWrapping="Wrap" Classes="Muted"
+                       Text="YogaClassManager needs a database file to store your data in. Choose an existing file or create a new one to get started." />
+
+            <TextBlock Text="{Binding ErrorMessage}" Classes="ValidationError" TextWrapping="Wrap"
+                       IsVisible="{Binding ErrorMessage, Converter={x:Static objConv:ObjectConverters.IsNotNull}}" />
+
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource SpacingSm}">
+                <Button Content="Use an existing file..." Command="{Binding BrowseExistingCommand}"
+                        IsEnabled="{Binding !IsBusy}" />
+                <Button Content="Create a new file..." Command="{Binding CreateNewCommand}" Classes="accent"
+                        IsEnabled="{Binding !IsBusy}" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Completing: transient - the window force-closes almost immediately after entering this
+             state, once MainWindow is shown. -->
+        <StackPanel Spacing="{StaticResource SpacingSm}"
+                    IsVisible="{Binding State, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:GateState.Completing}}">
+            <TextBlock Text="Starting up..." Classes="SectionTitle" />
+            <ProgressBar IsIndeterminate="True" />
+        </StackPanel>
+
+    </StackPanel>
+
+</Window>

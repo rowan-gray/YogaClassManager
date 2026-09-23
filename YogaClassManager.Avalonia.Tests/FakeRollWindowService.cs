@@ -13,6 +13,12 @@ public class FakeRollWindowService : IRollWindowService
     public List<ClassRoll> Opened { get; } = [];
     public List<Action> OnClosedCallbacks { get; } = [];
 
+    public void CloseAll()
+    {
+        throw new NotImplementedException();
+    }
+
+
     public void OpenOrActivate(ClassRoll roll, Action onClosed)
     {
         Opened.Add(roll);

@@ -625,6 +625,13 @@ layout controls" above. A dialog taller than the Card's `MaxHeight` should wrap 
 in a `ScrollViewer` (see `PassEditView.axaml`) rather than relying on the Card
 to scroll — the Card sizes to its content, it doesn't scroll itself.
 
+`FormField`'s label convention and a `DialogButtonRow`-styled button row are also reused outside actual
+`DialogViewModelBase` dialogs where the same "labeled input(s) + a row of actions" shape applies — e.g.
+`DatabaseGateWindow`'s file-selection buttons and the Settings page's database-file section (see the
+Dialogs section's `DatabaseGateWindow` callout below, and `Views/Settings/SettingsView.axaml`). Their
+reuse isn't strictly tied to the dialog-overlay pattern, just to the visual/accessibility convention
+those two controls encode.
+
 **Every dialog ViewModel derives from `DialogViewModelBase<TResult>`, which owns `CancelCommand`**
 (previously re-declared byte-identically in all twelve) and exposes `DefaultCommand`. Set
 `DefaultCommand` in the constructor to whatever the accent button does — `SaveCommand`,
@@ -673,6 +680,19 @@ handler calling `Close()`), it doesn't need the `RequestClose`/`TaskCompletionSo
 shared-overlay dialog needs to signal an awaiting caller. This is the one exception to "dialogs are
 in-app overlays with a single shared host" in this app — don't use it as precedent for turning another
 dialog into a `Window` without the same "runs long, user needs to do other things meanwhile" justification.
+
+**Second exception: `Views/Bootstrap/DatabaseGateWindow` is also a real, separate OS `Window`, for the
+opposite reason.** It's the startup gate `App.axaml.cs` shows before `MainWindow`/`DialogHost` exist at
+all — no repository can be constructed until a database file is resolved (see
+`Services/Database/IAppDataStoreProvider.cs`), so it structurally *cannot* be a `DialogHost` overlay
+(there's no host to render into yet). Where `MarkRollWindow` is deliberately **non-modal** (the rest of
+the app stays usable while it's open), `DatabaseGateWindow` is deliberately **fully modal and
+uncancellable**: its `Closing` handler always sets `e.Cancel = true` unless `App.axaml.cs` has called
+its own `CloseForced()` after `IAppDataStoreProvider.InitializeAsync` has actually succeeded — no
+Escape, no title-bar close, no Alt+F4. It has no `DialogViewModelBase<TResult>`/`CancelCommand` at all
+(there's nothing to cancel to). Don't treat either of these two exceptions as precedent for a third —
+they cover opposite, narrowly-justified structural needs, not a general "some dialogs can be windows"
+allowance.
 
 ## Toasts (`Services/IToastService.cs`)
 

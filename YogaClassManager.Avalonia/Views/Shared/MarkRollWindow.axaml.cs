@@ -84,7 +84,11 @@ public partial class MarkRollWindow : Window
         CloseForced();
     }
 
-    private void CloseForced()
+    /// <summary>Public so IRollWindowService.CloseAll() can force-close this window from the outside
+    /// (e.g. when the app's database is about to be hot-swapped) without going through the normal
+    /// discard-changes confirmation OnClosing owns - a database swap discards in-progress roll marking
+    /// unconditionally, there's no "keep editing against the old database" option.</summary>
+    public void CloseForced()
     {
         forceClose = true;
         saveSubscription?.Dispose();

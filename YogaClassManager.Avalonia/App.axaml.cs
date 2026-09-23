@@ -8,6 +8,8 @@ using Avalonia.Markup.Xaml;
 using ReactiveUI;
 using Splat;
 using YogaClassManager.Avalonia.Services;
+using YogaClassManager.Avalonia.Services.Database;
+using YogaClassManager.Avalonia.ViewModels.Bootstrap;
 using YogaClassManager.Avalonia.ViewModels.ClassRolls;
 using YogaClassManager.Avalonia.ViewModels.ClassSchedules;
 using YogaClassManager.Avalonia.ViewModels.Dashboard;
@@ -17,8 +19,10 @@ using YogaClassManager.Avalonia.ViewModels.Settings;
 using YogaClassManager.Avalonia.ViewModels.Students;
 using YogaClassManager.Avalonia.ViewModels.Terms;
 using YogaClassManager.Avalonia.Views;
-using YogaClassManager.Core.Dummy;
+using YogaClassManager.Avalonia.Views.Bootstrap;
 using YogaClassManager.Core.Repositories;
+using YogaClassManager.Core.SQLite.Data;
+using YogaClassManager.Core.SQLite.Repositories;
 using ClassRollsView = YogaClassManager.Avalonia.Views.ClassRolls.ClassRollsView;
 using ClassSchedulesView = YogaClassManager.Avalonia.Views.ClassSchedules.ClassSchedulesView;
 using DashboardView = YogaClassManager.Avalonia.Views.Dashboard.DashboardView;
@@ -46,12 +50,18 @@ public partial class App : Application
 #if DEBUG
             this.AttachDevTools();
 #endif
-            var mainWindowViewModel = Locator.Current.GetService<MainWindowViewModel>()!;
+            // The startup gate runs before MainWindow (and therefore before any page/repository) is
+            // touched: no database file is resolved yet, so nothing that depends on one can safely be
+            // constructed. The gate becomes the temporary MainWindow itself (so the desktop lifetime
+            // doesn't consider the app "done" the instant this method returns), and OnDatabaseReady
+            // swaps in the real MainWindow once IAppDataStoreProvider has a bound store.
+            var gateViewModel = Locator.Current.GetService<DatabaseGateViewModel>()!;
+            var gateWindow = new DatabaseGateWindow { DataContext = gateViewModel };
 
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = mainWindowViewModel
-            };
+            gateViewModel.Completed += (_, _) => OnDatabaseReady(desktop, gateWindow);
+            gateWindow.Opened += async (_, _) => await gateViewModel.RunAsync();
+
+            desktop.MainWindow = gateWindow;
 
             // Default is OnLastWindowClose - with a Mark Roll window able to stay open independently
             // (see IRollWindowService), that would leave the app running headless (no nav rail, no way
@@ -63,26 +73,52 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    private static void OnDatabaseReady(IClassicDesktopStyleApplicationLifetime desktop, DatabaseGateWindow gateWindow)
+    {
+        var mainWindowViewModel = Locator.Current.GetService<MainWindowViewModel>()!;
+        var mainWindow = new MainWindow { DataContext = mainWindowViewModel };
+
+        // Reassign desktop.MainWindow to the REAL window *before* force-closing the gate window -
+        // ShutdownMode.OnMainWindowClose tracks whichever window is currently desktop.MainWindow;
+        // closing the gate while it's still the tracked MainWindow would shut the whole app down
+        // instead of handing off to the real window.
+        desktop.MainWindow = mainWindow;
+        mainWindow.Show();
+        gateWindow.CloseForced();
+    }
+
     private static void ConfigureServices()
     {
-        var store = new InMemoryDataStore();
-        DummyDataSeeder.Seed(store);
-
         var locator = Locator.CurrentMutable;
 
-        locator.RegisterConstant(store);
+        locator.RegisterLazySingleton<IAppSettingsService>(() => new AppSettingsService());
+        locator.RegisterLazySingleton<IDatabaseProvisioningService>(() => new DatabaseProvisioningService());
+        locator.RegisterLazySingleton<IAppDataStoreProvider>(() =>
+            new AppDataStoreProvider(Locator.Current.GetService<IDatabaseProvisioningService>()!));
+        locator.RegisterLazySingleton<IFilePickerService>(() => new FilePickerService());
 
-        locator.RegisterLazySingleton<IIdentityRepository>(() => new InMemoryIdentityRepository(store));
-        locator.RegisterLazySingleton<IPassRepository>(() => new InMemoryPassRepository(store));
+        // Each SqliteXxxRepository takes IDataStoreProvider and resolves the current store fresh on
+        // every operation rather than caching it - so these registrations, resolved once here, keep
+        // working transparently after IAppDataStoreProvider.SwapToAsync rebinds to a different
+        // database (see the Settings page's "change database file" flow) with no re-registration
+        // needed and no already-injected ViewModel reference going stale.
+        locator.RegisterLazySingleton<IIdentityRepository>(() =>
+            new SqliteIdentityRepository(Locator.Current.GetService<IAppDataStoreProvider>()!));
+        locator.RegisterLazySingleton<IPassRepository>(() =>
+            new SqlitePassRepository(Locator.Current.GetService<IAppDataStoreProvider>()!));
         locator.RegisterLazySingleton<IEmergencyContactRepository>(() =>
-            new InMemoryEmergencyContactRepository(store));
+            new SqliteEmergencyContactRepository(Locator.Current.GetService<IAppDataStoreProvider>()!));
         locator.RegisterLazySingleton<IStudentRepository>(() =>
-            new InMemoryStudentRepository(store, Locator.Current.GetService<IIdentityRepository>()!,
+            new SqliteStudentRepository(Locator.Current.GetService<IAppDataStoreProvider>()!,
+                Locator.Current.GetService<IIdentityRepository>()!,
                 Locator.Current.GetService<IPassRepository>()!,
                 Locator.Current.GetService<IEmergencyContactRepository>()!));
-        locator.RegisterLazySingleton<IClassScheduleRepository>(() => new InMemoryClassScheduleRepository(store));
-        locator.RegisterLazySingleton<IClassRollRepository>(() => new InMemoryClassRollRepository(store));
-        locator.RegisterLazySingleton<ITermRepository>(() => new InMemoryTermRepository(store));
+        locator.RegisterLazySingleton<IClassScheduleRepository>(() =>
+            new SqliteClassScheduleRepository(Locator.Current.GetService<IAppDataStoreProvider>()!));
+        locator.RegisterLazySingleton<IClassRollRepository>(() =>
+            new SqliteClassRollRepository(Locator.Current.GetService<IAppDataStoreProvider>()!));
+        locator.RegisterLazySingleton<ITermRepository>(() =>
+            new SqliteTermRepository(Locator.Current.GetService<IAppDataStoreProvider>()!));
 
         locator.RegisterLazySingleton<AppScreen>(() => new AppScreen());
         locator.RegisterLazySingleton<IDialogService>(() => new DialogService());
@@ -101,6 +137,11 @@ public partial class App : Application
             Locator.Current.GetService<IPassRepository>()!,
             Locator.Current.GetService<ITermRepository>()!,
             Locator.Current.GetService<IToastService>()!));
+
+        locator.RegisterLazySingleton<DatabaseGateViewModel>(() => new DatabaseGateViewModel(
+            Locator.Current.GetService<IAppSettingsService>()!,
+            Locator.Current.GetService<IAppDataStoreProvider>()!,
+            Locator.Current.GetService<IFilePickerService>()!));
 
         locator.Register<DashboardViewModel>(() => new DashboardViewModel(
             Locator.Current.GetService<AppScreen>()!,
@@ -156,7 +197,10 @@ public partial class App : Application
 
         locator.Register<SettingsViewModel>(() => new SettingsViewModel(
             Locator.Current.GetService<AppScreen>()!,
-            Locator.Current.GetService<InMemoryDataStore>()!,
+            Locator.Current.GetService<IAppSettingsService>()!,
+            Locator.Current.GetService<IAppDataStoreProvider>()!,
+            Locator.Current.GetService<IFilePickerService>()!,
+            Locator.Current.GetService<IRollWindowService>()!,
             Locator.Current.GetService<IDialogService>()!,
             Locator.Current.GetService<IToastService>()!));
 

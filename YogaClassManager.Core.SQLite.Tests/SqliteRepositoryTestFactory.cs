@@ -19,18 +19,19 @@ public sealed class SqliteRepositoryTestFactory : IRepositoryTestFactory
     public async Task InitializeAsync()
     {
         store = await SqliteTestDatabaseFactory.CreateAsync();
+        var dataStoreProvider = new FixedDataStoreProvider(store);
 
-        var identityRepository = new SqliteIdentityRepository(store);
-        var passRepository = new SqlitePassRepository(store);
-        var emergencyContactRepository = new SqliteEmergencyContactRepository(store);
+        var identityRepository = new SqliteIdentityRepository(dataStoreProvider);
+        var passRepository = new SqlitePassRepository(dataStoreProvider);
+        var emergencyContactRepository = new SqliteEmergencyContactRepository(dataStoreProvider);
 
         Identities = identityRepository;
         Passes = passRepository;
         EmergencyContacts = emergencyContactRepository;
-        Students = new SqliteStudentRepository(store, identityRepository, passRepository, emergencyContactRepository);
-        ClassSchedules = new SqliteClassScheduleRepository(store);
-        ClassRolls = new SqliteClassRollRepository(store);
-        Terms = new SqliteTermRepository(store);
+        Students = new SqliteStudentRepository(dataStoreProvider, identityRepository, passRepository, emergencyContactRepository);
+        ClassSchedules = new SqliteClassScheduleRepository(dataStoreProvider);
+        ClassRolls = new SqliteClassRollRepository(dataStoreProvider);
+        Terms = new SqliteTermRepository(dataStoreProvider);
     }
 
     public IClassRollRepository ClassRolls { get; private set; } = null!;

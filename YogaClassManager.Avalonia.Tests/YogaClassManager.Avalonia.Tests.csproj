@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\YogaClassManager.Avalonia\YogaClassManager.Avalonia.csproj" />
+    <ProjectReference Include="..\YogaClassManager.Core.Dummy\YogaClassManager.Core.Dummy.csproj" />
   </ItemGroup>
 
 </Project>
