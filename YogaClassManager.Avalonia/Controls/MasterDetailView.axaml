@@ -2,22 +2,38 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="using:Avalonia.Data.Converters"
              xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
              x:Class="YogaClassManager.Avalonia.Controls.MasterDetailView"
              x:Name="Control">
 
-    <Grid ColumnDefinitions="320,16,*">
+    <!-- Master list: up to 320px, but never wider than the details pane - two equal star columns, the
+         list's capped at 320 (any width beyond that goes to the details). In a narrow window they split
+         the space evenly rather than the list keeping a fixed 320 and squeezing the details. -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MaxWidth="320" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
         <Border Grid.Column="0" Classes="Card" Padding="4">
             <DockPanel>
+                <!-- The page's search box / sort / filter / Add (ListHeader) live inside the list's own
+                     card, directly above the list they act on. -->
+                <ContentPresenter DockPanel.Dock="Top" Content="{Binding ListHeader, ElementName=Control}"
+                                  Margin="4,4,4,8"
+                                  IsVisible="{Binding ListHeader, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+
                 <!-- A load failure otherwise leaves an empty list with no explanation once the error
                      toast has faded, so LastError gets a persistent home here too. -->
                 <TextBlock DockPanel.Dock="Top" Text="{Binding ErrorText, ElementName=Control}"
                            Classes="ValidationError" TextWrapping="Wrap" Margin="8,8,8,4"
                            IsVisible="{Binding ErrorText, ElementName=Control, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
 
-                <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" Margin="8,4"
-                             IsVisible="{Binding IsBusy, ElementName=Control}" />
-
-                <Panel>
+                <!-- Same 4px inset as the ListHeader above (card padding 4 + 4 here = 8, matching the
+                     header's 4 + 4) on the left, right and bottom, so the rows - and the selection
+                     highlight - line up exactly with the search box and buttons, and the gap below the
+                     list matches the gap above the header. -->
+                <Panel Margin="4,0,4,4">
                     <!-- Empty text only once loading has finished: mid-load the list is legitimately
                          empty, and saying "no results" then would be wrong. -->
                     <TextBlock Text="{Binding EmptyText, ElementName=Control}" Classes="Caption"
@@ -33,21 +49,62 @@
                         </TextBlock.IsVisible>
                     </TextBlock>
 
+                    <!-- Skeleton rows while the list loads and has nothing to show yet - a refresh
+                         of an already-populated list keeps its rows rather than swapping them out. -->
+                    <controls:SkeletonList VerticalAlignment="Top">
+                        <controls:SkeletonList.IsVisible>
+                            <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                <Binding Path="IsBusy" ElementName="Control" />
+                                <Binding Path="IsEmpty" ElementName="Control" />
+                            </MultiBinding>
+                        </controls:SkeletonList.IsVisible>
+                    </controls:SkeletonList>
+
                     <ListBox ItemsSource="{Binding Items, ElementName=Control}"
                              SelectedItem="{Binding SelectedItem, ElementName=Control, Mode=TwoWay}"
                              ItemTemplate="{Binding ListItemTemplate, ElementName=Control}"
                              Background="Transparent" BorderThickness="0"
-                             behaviors:ScrollEdgeFade.IsEnabled="True" />
+                             behaviors:ScrollEdgeShadow.IsEnabled="True" />
                 </Panel>
             </DockPanel>
         </Border>
 
-        <Grid Grid.Column="2" Margin="0,16">
+        <Grid Grid.Column="2">
             <ContentControl Content="{Binding SelectedItem, ElementName=Control}"
                              ContentTemplate="{Binding DetailTemplate, ElementName=Control}"
                              IsVisible="{Binding SelectedItem, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+            <!-- "Nothing selected" only once the list has finished loading: while it loads, the first
+                 record is about to be auto-selected, so the details skeleton below shows instead. -->
             <TextBlock Text="{Binding NoSelectionText, ElementName=Control}" Classes="Caption"
-                       IsVisible="{Binding SelectedItem, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNull}}" />
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       TextAlignment="Center" TextWrapping="Wrap" Margin="24">
+                <TextBlock.IsVisible>
+                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                        <Binding Path="SelectedItem" ElementName="Control" Converter="{x:Static conv:ObjectConverters.IsNull}" />
+                        <Binding Path="!IsBusy" ElementName="Control" />
+                    </MultiBinding>
+                </TextBlock.IsVisible>
+            </TextBlock>
+
+            <!-- Details skeleton while the list loads with nothing selected yet - the shape of a typical
+                 detail pane (title, a couple of detail lines, a linked list) - so the pane doesn't flash
+                 "Select a ..." before the auto-selected record's details arrive. -->
+            <StackPanel x:Name="DetailSkeleton" Spacing="{StaticResource SpacingMd}">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                        <Binding Path="SelectedItem" ElementName="Control" Converter="{x:Static conv:ObjectConverters.IsNull}" />
+                        <Binding Path="IsBusy" ElementName="Control" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <StackPanel Spacing="{StaticResource SpacingSm}">
+                    <Border Classes="Skeleton" Width="220" Height="26" HorizontalAlignment="Left" />
+                    <Border Classes="Skeleton" Width="170" Height="14" HorizontalAlignment="Left" />
+                    <Border Classes="Skeleton" Width="230" Height="14" HorizontalAlignment="Left" />
+                </StackPanel>
+                <Border Classes="Card" Padding="4">
+                    <controls:SkeletonList Rows="3" />
+                </Border>
+            </StackPanel>
         </Grid>
     </Grid>
 

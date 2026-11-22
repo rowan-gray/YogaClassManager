@@ -32,7 +32,7 @@ CREATE VIEW "PassesTotalClasses" AS
 SELECT Pass.PassId AS PassId,
        COALESCE(DatedPass.ClassCount, 0)
          + COALESCE(CasualPass.ClassCount, 0)
-         + SUM(COALESCE(PassAlterations.AlerationCount, 0))
+         + SUM(COALESCE(PassAlterations.AlterationCount, 0))
          + COALESCE(TermClasses.ClassCount, 0) AS NumberOfClasses
 FROM Pass
 LEFT JOIN PassAlterations ON Pass.PassId = PassAlterations.PassId

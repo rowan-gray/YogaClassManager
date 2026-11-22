@@ -8,7 +8,7 @@ namespace YogaClassManager.Core.Repositories;
 
 public interface IStudentRepository
 {
-    IDbModel<Student, StudentFilter> Query(StudentFilter filter);
+    IReadOnlyDbModel<Student, StudentFilter> Query(StudentFilter filter);
 
     /// <summary>Transactionally creates the backing Identity row (if needed) and the Student row.</summary>
     Task<int> AddAsync(Student student, CancellationToken cancellationToken = default);

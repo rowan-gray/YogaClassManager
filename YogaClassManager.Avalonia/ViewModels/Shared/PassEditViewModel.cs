@@ -31,10 +31,14 @@ public class PassEditViewModel : DialogViewModelBase<Pass>
     private TermClassSchedule? selectedTermClass;
     private string? validationError;
 
-    public PassEditViewModel(int studentId, IDialogService dialogService, ITermRepository termRepository,
-        Pass? editingPass = null)
+    /// <param name="studentName">Who the pass is for - shown in the title ("Add pass for Judi Dench"),
+    /// since the dialog is opened from places (Dashboard, Mark Roll) where the student isn't otherwise
+    /// on screen.</param>
+    public PassEditViewModel(int studentId, string studentName, IDialogService dialogService,
+        ITermRepository termRepository, Pass? editingPass = null)
     {
         this.studentId = studentId;
+        StudentName = studentName;
         this.dialogService = dialogService;
         this.termRepository = termRepository;
         IsNew = editingPass is null;
@@ -99,7 +103,9 @@ public class PassEditViewModel : DialogViewModelBase<Pass>
     }
 
     public bool IsNew { get; }
-    public string Title => IsNew ? "Add pass" : "Edit pass";
+    public string StudentName { get; }
+
+    public string Title => IsNew ? $"Add pass for {StudentName}" : $"Edit pass for {StudentName}";
     public IReadOnlyList<PassKind> KindOptions { get; } = [PassKind.Casual, PassKind.Dated, PassKind.Term];
 
     public PassKind Kind

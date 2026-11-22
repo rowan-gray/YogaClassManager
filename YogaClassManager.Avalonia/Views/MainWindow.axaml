@@ -9,8 +9,9 @@
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="YogaClassManager.Avalonia.Views.MainWindow"
         x:DataType="local:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/appicon.ico"
         Width="1200" Height="800"
+        MinWidth="720" MinHeight="520"
         Title="YogaClassManager">
 
     <Window.Resources>
@@ -35,59 +36,53 @@
          this window. Border.DialogOverlay moved there earlier for a related reason. -->
 
     <Panel>
-        <SplitView IsPaneOpen="{Binding IsPaneOpen}"
-                   DisplayMode="CompactInline"
-                   OpenPaneLength="220"
-                   CompactPaneLength="56"
-                   PanePlacement="Left">
-            <SplitView.Pane>
-                <DockPanel Background="{DynamicResource SystemAltMediumLowColor}">
-                    <!--
-                        Grid, not a centered StackPanel: the toggle button sits in a fixed Auto column so
-                        it never moves (matching the nav items below it, which are always left-anchored,
-                        and never jumping when the pane animates - a centered shrink-wrapped row jumps the
-                        instant the title's IsVisible flips, since that changes the centered block's
-                        content width instantly while the pane width is still animating). The trailing
-                        Border mirrors the button's own footprint (10 padding + 20 icon + 10 padding = 40,
-                        matching Button.NavItem's Padding below) as blank space, so the gap after the
-                        title matches the gap around the icon exactly. Both the title and the spacer
-                        collapse to 0 width together in compact mode (via IsVisible, which Grid excludes
-                        from Auto-column measurement), so the two fixed 40px columns never have to compete
-                        for space with each other in the 56px compact pane.
-                    -->
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="8">
-                        <Button Grid.Column="0" Classes="NavItem" Command="{Binding ToggleNavCommand}"
+        <!-- The page content gets its own VisualLayerManager, so adorners inside it - notably the
+             ScrollEdgeShadow bars (Behaviors/ScrollEdgeShadow.cs) - draw in a layer that belongs to the page
+             and is painted *underneath* the DialogHost below. Without it they used the window's top-level
+             AdornerLayer, which paints above all regular content and showed the shadows through open dialogs.
+             Adorners inside a dialog still use the window's layer (above everything), which is correct. -->
+        <VisualLayerManager>
+            <!-- DisplayMode follows the window width (MainWindowViewModel.IsNarrow): inline normally, an
+                 overlay over the page when the window is too narrow to give the menu room. -->
+            <SplitView IsPaneOpen="{Binding IsPaneOpen}"
+                       DisplayMode="{Binding PaneDisplayMode}"
+                       OpenPaneLength="220"
+                       CompactPaneLength="56"
+                       PanePlacement="Left">
+                <SplitView.Pane>
+                    <DockPanel Background="{DynamicResource SystemAltMediumLowColor}">
+                        <!-- Pane header: just the toggle, left-anchored at the same position as the nav items'
+                             icons below it, so it never moves as the pane opens/closes. (No product-name
+                             title: the Dashboard's banner and the window title already carry it.) -->
+                        <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="8"
+                                Classes="NavItem" Command="{Binding ToggleNavCommand}"
                                 ToolTip.Tip="Toggle navigation"
                                 AutomationProperties.Name="Toggle navigation">
                             <materialIcons:MaterialIcon Kind="Menu" Width="20" Height="20" />
                         </Button>
-                        <TextBlock Grid.Column="1" Text="YogaClassManager" Classes="AppTitle"
-                                   VerticalAlignment="Center" Margin="8,0,0,0"
-                                   IsVisible="{Binding $parent[SplitView].IsPaneOpen}" />
-                        <Border Grid.Column="2" Width="40" IsVisible="{Binding $parent[SplitView].IsPaneOpen}" />
-                    </Grid>
 
-                    <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0"
-                            BorderBrush="{DynamicResource SystemBaseLowColor}"
-                            Margin="8,8,8,8" Padding="0,8,0,0">
-                        <ContentControl Content="{Binding SettingsNavItem}" ContentTemplate="{StaticResource NavItemTemplate}" />
-                    </Border>
+                        <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0"
+                                BorderBrush="{DynamicResource SystemBaseLowColor}"
+                                Margin="8,8,8,8" Padding="0,8,0,0">
+                            <ContentControl Content="{Binding SettingsNavItem}" ContentTemplate="{StaticResource NavItemTemplate}" />
+                        </Border>
 
-                    <ItemsControl Margin="8,0" ItemsSource="{Binding NavItems}" ItemTemplate="{StaticResource NavItemTemplate}" />
-                </DockPanel>
-            </SplitView.Pane>
+                        <ItemsControl Margin="8,0" ItemsSource="{Binding NavItems}" ItemTemplate="{StaticResource NavItemTemplate}" />
+                    </DockPanel>
+                </SplitView.Pane>
 
-            <SplitView.Content>
-                <rxui:RoutedViewHost Router="{Binding Router}">
-                    <rxui:RoutedViewHost.DefaultContent>
-                        <TextBlock Text="Loading..." HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </rxui:RoutedViewHost.DefaultContent>
-                    <rxui:RoutedViewHost.PageTransition>
-                        <CrossFade Duration="0:0:0.15" />
-                    </rxui:RoutedViewHost.PageTransition>
-                </rxui:RoutedViewHost>
-            </SplitView.Content>
-        </SplitView>
+                <SplitView.Content>
+                    <rxui:RoutedViewHost Router="{Binding Router}">
+                        <rxui:RoutedViewHost.DefaultContent>
+                            <TextBlock Text="Loading..." HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </rxui:RoutedViewHost.DefaultContent>
+                        <rxui:RoutedViewHost.PageTransition>
+                            <CrossFade Duration="0:0:0.15" />
+                        </rxui:RoutedViewHost.PageTransition>
+                    </rxui:RoutedViewHost>
+                </SplitView.Content>
+            </SplitView>
+        </VisualLayerManager>
 
         <!-- Dialog overlay: centered card over a dimmed backdrop, on top of the SplitView content.
              Toasts (see MainWindow.axaml.cs's Opened handler) render via WindowNotificationManager's

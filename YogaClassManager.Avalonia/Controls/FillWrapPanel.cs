@@ -4,17 +4,30 @@ using Avalonia.Controls;
 namespace YogaClassManager.Avalonia.Controls;
 
 /// <summary>
-///     Lays out children in rows, packing as many as fit per row using each child's own MinWidth (a
-///     child with no MinWidth set always fits), then stretches every child in a row to share the
-///     available width equally - unlike a plain WrapPanel, which shrinks each child to its own
-///     desired size instead of filling the row. Used for the Emergency contacts/Health concerns
-///     panels on the Student detail page: side-by-side, evenly filling the available width, when
-///     there's room for both at their MinWidth; stacked full-width otherwise.
+///     Lays out children in rows, packing as many as fit per row using each child's
+///     <see cref="WrapWidthProperty" /> (a child with none always fits), then stretches every child in a
+///     row to share the available width equally - unlike a plain WrapPanel, which shrinks each child to
+///     its own desired size instead of filling the row. Used for the Emergency contacts/Health concerns
+///     panels on the Student detail page (and Mark Roll's columns, the Dashboard's stat cards):
+///     side-by-side, evenly filling the available width, when there's room for both at their wrap
+///     width; stacked full-width otherwise.
+///     <para>
+///         Set <c>controls:FillWrapPanel.WrapWidth</c> on a child, <b>not MinWidth</b>. MinWidth is
+///         also a hard layout minimum, so a child alone in a column narrower than it overflowed the
+///         panel instead of shrinking. WrapWidth only decides when to wrap: a child alone on its row
+///         always gets exactly the available width, however narrow. (A child without WrapWidth still
+///         falls back to its MinWidth, for compatibility.)
+///     </para>
 /// </summary>
 public class FillWrapPanel : Panel
 {
     public static readonly StyledProperty<double> SpacingProperty =
         AvaloniaProperty.Register<FillWrapPanel, double>(nameof(Spacing));
+
+    /// <summary>The width a child wants before it will share a row with others - a packing hint only,
+    /// never a layout minimum (see the class remarks).</summary>
+    public static readonly AttachedProperty<double> WrapWidthProperty =
+        AvaloniaProperty.RegisterAttached<FillWrapPanel, Control, double>("WrapWidth", double.NaN);
 
     // Remembered from Measure - Arrange's finalSize is always a concrete rect (Avalonia never calls
     // ArrangeOverride with an infinite size), so this is the only place "was I given a bounded height"
@@ -26,7 +39,12 @@ public class FillWrapPanel : Panel
     static FillWrapPanel()
     {
         SpacingProperty.Changed.AddClassHandler<FillWrapPanel>((panel, _) => panel.InvalidateMeasure());
+        AffectsParentMeasure<FillWrapPanel>(WrapWidthProperty);
     }
+
+    public static double GetWrapWidth(Control control) => control.GetValue(WrapWidthProperty);
+
+    public static void SetWrapWidth(Control control, double value) => control.SetValue(WrapWidthProperty, value);
 
     public double Spacing
     {
@@ -123,7 +141,8 @@ public class FillWrapPanel : Panel
             if (!child.IsVisible)
                 continue;
 
-            var childMinWidth = child.MinWidth > 0 ? child.MinWidth : 0;
+            var wrapWidth = GetWrapWidth(child);
+            var childMinWidth = !double.IsNaN(wrapWidth) ? wrapWidth : child.MinWidth > 0 ? child.MinWidth : 0;
             var candidateWidth = currentMinWidth + (current.Count > 0 ? Spacing : 0) + childMinWidth;
 
             if (current.Count > 0 && bounded && candidateWidth > availableWidth)

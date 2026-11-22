@@ -1,4 +1,5 @@
 using System.Reactive.Linq;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -68,17 +69,19 @@ public class ViewSmokeTests
     {
         var view = Render(new Views.ClassSchedules.ClassSchedulesView(), CreateClassSchedulesViewModel());
 
-        // The page-level pair. LinkedRecordsPanel adds its own pair for the nested Class rolls list, so
-        // filter to the ones that are not inside it.
+        // The main list has one sort-and-filter button (sort lives inside its popup) and no separate
+        // SortByButton. LinkedRecordsPanel keeps its own separate pair for the nested Class rolls
+        // list, so filter to the controls that are not inside it.
         var pageSortButtons = view.GetVisualDescendants().OfType<SortByButton>()
             .Where(b => b.FindAncestorOfType<LinkedRecordsPanel>() is null).ToList();
         var pageFilterButtons = view.GetVisualDescendants().OfType<FilterButton>()
             .Where(b => b.FindAncestorOfType<LinkedRecordsPanel>() is null).ToList();
 
-        Assert.Single(pageSortButtons);
-        Assert.Single(pageFilterButtons);
-        Assert.NotNull(pageSortButtons[0].SortOptions);
-        Assert.NotNull(pageFilterButtons[0].Filters);
+        Assert.Empty(pageSortButtons);
+        var filterButton = Assert.Single(pageFilterButtons);
+        Assert.NotNull(filterButton.SortOptions);
+        Assert.NotNull(filterButton.Filters);
+        Assert.Equal("Sort and filter", filterButton.Label);
     }
 
     [AvaloniaFact]
@@ -87,11 +90,14 @@ public class ViewSmokeTests
         var viewModel = CreateClassSchedulesViewModel();
         var view = Render(new Views.ClassSchedules.ClassSchedulesView(), viewModel);
 
+        // Icon-only (Button.Icon + Plus), so it's identified by its accessible name, and must carry
+        // the same text as a tooltip since there's no visible label.
         var addButton = view.GetVisualDescendants().OfType<Button>()
-            .SingleOrDefault(b => b.Content as string == "Add class");
+            .SingleOrDefault(b => AutomationProperties.GetName(b) == "Add class");
 
         Assert.NotNull(addButton);
         Assert.Same(viewModel.AddClassCommand, addButton.Command);
+        Assert.Equal("Add class", ToolTip.GetTip(addButton));
     }
 
     [AvaloniaFact]
@@ -126,7 +132,7 @@ public class ViewSmokeTests
         Assert.True(masterDetail.IsEmpty);
 
         var emptyLabel = view.GetVisualDescendants().OfType<TextBlock>()
-            .SingleOrDefault(t => t.Text == "No terms match this search.");
+            .SingleOrDefault(t => t.Text == "No terms match the current search and filters.");
         Assert.NotNull(emptyLabel);
         Assert.True(emptyLabel.IsVisible);
     }
@@ -144,7 +150,7 @@ public class ViewSmokeTests
         Assert.False(masterDetail.IsEmpty);
 
         var emptyLabel = view.GetVisualDescendants().OfType<TextBlock>()
-            .SingleOrDefault(t => t.Text == "No class schedules match these filters.");
+            .SingleOrDefault(t => t.Text == "No class schedules match the current filters.");
         Assert.NotNull(emptyLabel);
         Assert.False(emptyLabel.IsVisible);
     }

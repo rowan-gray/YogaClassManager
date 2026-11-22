@@ -26,6 +26,10 @@ public class ClassSchedulesViewModel : CollectionPageModelBase<ClassSchedule>, I
     private ClassScheduleSortOptions sortBy = ClassScheduleSortOptions.Day;
     private Order sortOrder = Order.Ascending;
 
+    // The "Class rolls" list defaults to the last 6 months rather than every roll ever marked, so a
+    // long-running class opens on recent rolls. Captured once per ViewModel so RollFilterCount and
+    // Clear filters agree on what "default" means (same pattern as StudentsViewModel's attendance).
+    private readonly DateOnly defaultRollDateFrom = DateOnly.FromDateTime(DateTime.Today).AddMonths(-6);
     private DateOnly? rollDateFrom;
     private DateOnly? rollDateTo;
     private DayOfWeek? rollDayOfWeek;
@@ -38,6 +42,7 @@ public class ClassSchedulesViewModel : CollectionPageModelBase<ClassSchedule>, I
     {
         HostScreen = hostScreen;
         this.navigator = navigator;
+        rollDateFrom = defaultRollDateFrom;
         this.classScheduleRepository = classScheduleRepository;
         this.classRollRepository = classRollRepository;
         this.dialogService = dialogService;
@@ -60,7 +65,9 @@ public class ClassSchedulesViewModel : CollectionPageModelBase<ClassSchedule>, I
         this.WhenAnyValue(x => x.IncludeArchived, x => x.Day)
             .Subscribe(_ => this.RaisePropertyChanged(nameof(ActiveFilterCount)));
 
-        ReloadOn(this.WhenAnyValue(x => x.Selection), LoadRollsAsync, "this class's rolls");
+        // Debounced, with the list emptied at once so its skeleton shows during the wait.
+        ReloadOn(this.WhenAnyValue(x => x.Selection), LoadRollsAsync, "this class's rolls",
+            debounce: true, clearNow: () => Rolls.Clear());
 
         ReloadOn(
             this.WhenAnyValue(x => x.RollDateFrom, x => x.RollDateTo, x => x.RollDayOfWeek, x => x.RollSortBy,
@@ -156,7 +163,8 @@ public class ClassSchedulesViewModel : CollectionPageModelBase<ClassSchedule>, I
     public IReadOnlyList<Order> RollSortOrderOptions { get; } = Enum.GetValues<Order>();
 
     public int RollFilterCount =>
-        (RollDateFrom is not null ? 1 : 0) + (RollDateTo is not null ? 1 : 0) + (RollDayOfWeek is not null ? 1 : 0);
+        (RollDateFrom != defaultRollDateFrom ? 1 : 0) + (RollDateTo is not null ? 1 : 0) +
+        (RollDayOfWeek is not null ? 1 : 0);
 
     public ReactiveCommand<Unit, Unit> ClearFiltersCommand { get; }
     public ReactiveCommand<Unit, Unit> AddClassCommand { get; }
@@ -212,7 +220,7 @@ public class ClassSchedulesViewModel : CollectionPageModelBase<ClassSchedule>, I
 
     private void ClearRollFilters()
     {
-        RollDateFrom = null;
+        RollDateFrom = defaultRollDateFrom;
         RollDateTo = null;
         RollDayOfWeek = null;
     }

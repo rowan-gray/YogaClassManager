@@ -15,9 +15,9 @@ namespace YogaClassManager.Core.Models.People;
 /// </summary>
 public partial class Student : Identity, IUpdateable<Student>
 {
-    [ObservableProperty] private IDbModel<Pass, PassFilter>? passes;
+    [ObservableProperty] private IReadOnlyDbModel<Pass, PassFilter>? passes;
 
-    [ObservableProperty] private IDbModel<EmergencyContact, EmergencyContactFilter>? emergencyContacts;
+    [ObservableProperty] private IReadOnlyDbModel<EmergencyContact, EmergencyContactFilter>? emergencyContacts;
 
     [ObservableProperty] private ObservableCollection<string> healthConcerns = new();
 

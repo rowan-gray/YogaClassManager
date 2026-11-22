@@ -16,7 +16,7 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
         this.dataStoreProvider = dataStoreProvider;
     }
 
-    public IDbModel<ClassSchedule, ClassScheduleFilter> Query(ClassScheduleFilter filter)
+    public IReadOnlyDbModel<ClassSchedule, ClassScheduleFilter> Query(ClassScheduleFilter filter)
     {
         return new SqliteClassScheduleDbModel(filter, dataStoreProvider);
     }
@@ -30,14 +30,14 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
 
             var id = await connection.ExecuteScalarAsync<long>(
                 """
-                INSERT INTO ClassSchedule(Day, Time, IsActive) VALUES ($day, $time, $isActive);
+                INSERT INTO ClassSchedule(Day, Time, IsArchived) VALUES ($day, $time, $isArchived);
                 SELECT last_insert_rowid();
                 """,
                 new
                 {
                     day = (int)schedule.Day,
                     time = schedule.Time.Hour * 60 + schedule.Time.Minute,
-                    isActive = schedule.IsArchived ? 0 : 1
+                    isArchived = schedule.IsArchived ? 1 : 0
                 }, transaction);
 
             schedule.Id = (int)id;
@@ -53,13 +53,13 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
             await EnsureNoDayTimeCollisionAsync(connection, transaction, schedule.Day, schedule.Time, schedule.Id);
 
             await connection.ExecuteAsync(
-                "UPDATE ClassSchedule SET Day=$day, Time=$time, IsActive=$isActive WHERE ClassScheduleId=$id",
+                "UPDATE ClassSchedule SET Day=$day, Time=$time, IsArchived=$isArchived WHERE ClassScheduleId=$id",
                 new
                 {
                     id = schedule.Id,
                     day = (int)schedule.Day,
                     time = schedule.Time.Hour * 60 + schedule.Time.Minute,
-                    isActive = schedule.IsArchived ? 0 : 1
+                    isArchived = schedule.IsArchived ? 1 : 0
                 }, transaction);
         }, cancellationToken);
     }
@@ -84,7 +84,7 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
     {
         var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync("UPDATE ClassSchedule SET IsActive=0 WHERE ClassScheduleId=$id", new { id = scheduleId },
+            connection.ExecuteAsync("UPDATE ClassSchedule SET IsArchived=1 WHERE ClassScheduleId=$id", new { id = scheduleId },
                 transaction), cancellationToken);
     }
 
@@ -92,7 +92,7 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
     {
         var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync("UPDATE ClassSchedule SET IsActive=1 WHERE ClassScheduleId=$id", new { id = scheduleId },
+            connection.ExecuteAsync("UPDATE ClassSchedule SET IsArchived=0 WHERE ClassScheduleId=$id", new { id = scheduleId },
                 transaction), cancellationToken);
     }
 
@@ -118,21 +118,26 @@ public class SqliteClassScheduleRepository : IClassScheduleRepository
     }
 }
 
+/// <summary>
+///     ClassSchedule.IsArchived: 1 = archived, 0 = active. Named IsActive before migration 006, though
+///     it always held IsArchived (the legacy MAUI app's encoding) - see that migration. Unlike Person,
+///     whose IsActive column means what it says.
+/// </summary>
 internal sealed class ClassScheduleRow
 {
     public int ClassScheduleId { get; set; }
     public int Day { get; set; }
     public int Time { get; set; }
-    public int IsActive { get; set; }
+    public int IsArchived { get; set; }
 
     public ClassSchedule ToModel()
     {
         return new ClassSchedule(ClassScheduleId, (DayOfWeek)Day, TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(Time)),
-            isArchived: IsActive == 0);
+            isArchived: IsArchived != 0);
     }
 }
 
-internal class SqliteClassScheduleDbModel : IDbModel<ClassSchedule, ClassScheduleFilter>
+internal class SqliteClassScheduleDbModel : IReadOnlyDbModel<ClassSchedule, ClassScheduleFilter>
 {
     private readonly IDataStoreProvider dataStoreProvider;
 
@@ -160,13 +165,13 @@ internal class SqliteClassScheduleDbModel : IDbModel<ClassSchedule, ClassSchedul
         var orderBy = BuildOrderBy(filter.SortBy);
 
         var sql = $"""
-                   SELECT ClassScheduleId, Day, Time, IsActive
+                   SELECT ClassScheduleId, Day, Time, IsArchived
                    FROM ClassSchedule
                    WHERE ($id IS NULL OR ClassScheduleId = $id)
                      AND ($day IS NULL OR Day = $day)
                      AND ($timeFrom IS NULL OR Time >= $timeFrom)
                      AND ($timeTo IS NULL OR Time <= $timeTo)
-                     AND ($includeArchived = 1 OR IsActive = 1)
+                     AND ($includeArchived = 1 OR IsArchived = 0)
                    ORDER BY {orderBy}
                    LIMIT $take OFFSET $skip
                    """;
@@ -207,7 +212,7 @@ internal class SqliteClassScheduleDbModel : IDbModel<ClassSchedule, ClassSchedul
     {
         var store = dataStoreProvider.RetrieveDataStore();
         var row = await store.QueryAsync(connection => connection.QuerySingleOrDefaultAsync<ClassScheduleRow>(
-            "SELECT ClassScheduleId, Day, Time, IsActive FROM ClassSchedule WHERE ClassScheduleId=$id",
+            "SELECT ClassScheduleId, Day, Time, IsArchived FROM ClassSchedule WHERE ClassScheduleId=$id",
             new { id = model.Id }), cancellationToken);
 
         if (row is null)
@@ -215,53 +220,7 @@ internal class SqliteClassScheduleDbModel : IDbModel<ClassSchedule, ClassSchedul
 
         model.Day = (DayOfWeek)row.Day;
         model.Time = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(row.Time));
-        model.IsArchived = row.IsActive == 0;
+        model.IsArchived = row.IsArchived != 0;
         return true;
-    }
-
-    public Task Save(ClassSchedule model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync(async (connection, transaction) =>
-        {
-            var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
-                "SELECT EXISTS(SELECT 1 FROM ClassSchedule WHERE ClassScheduleId=$id)", new { id = model.Id },
-                transaction) == 1;
-
-            if (exists && saveOptions == SaveOptions.Create)
-                throw new ModelExistsException();
-            if (!exists && saveOptions == SaveOptions.Replace)
-                throw new ModelDoesNotExistException();
-
-            var isActive = model.IsArchived ? 0 : 1;
-            var day = (int)model.Day;
-            var time = model.Time.Hour * 60 + model.Time.Minute;
-
-            if (exists)
-            {
-                await connection.ExecuteAsync(
-                    "UPDATE ClassSchedule SET Day=$day, Time=$time, IsActive=$isActive WHERE ClassScheduleId=$id",
-                    new { id = model.Id, day, time, isActive }, transaction);
-            }
-            else
-            {
-                var id = await connection.ExecuteScalarAsync<long>(
-                    """
-                    INSERT INTO ClassSchedule(Day, Time, IsActive) VALUES ($day, $time, $isActive);
-                    SELECT last_insert_rowid();
-                    """,
-                    new { day, time, isActive }, transaction);
-                model.Id = (int)id;
-            }
-        }, cancellationToken);
-    }
-
-    public Task Delete(ClassSchedule model, CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync("DELETE FROM ClassSchedule WHERE ClassScheduleId=$id", new { id = model.Id },
-                transaction), cancellationToken);
     }
 }

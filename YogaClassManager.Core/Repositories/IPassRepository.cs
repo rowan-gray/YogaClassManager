@@ -7,7 +7,7 @@ namespace YogaClassManager.Core.Repositories;
 
 public interface IPassRepository
 {
-    IDbModel<Pass, PassFilter> Query(PassFilter filter);
+    IReadOnlyDbModel<Pass, PassFilter> Query(PassFilter filter);
 
     Task<int> AddAsync(Pass pass, CancellationToken cancellationToken = default);
     Task UpdateAsync(Pass pass, CancellationToken cancellationToken = default);

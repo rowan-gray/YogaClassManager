@@ -209,4 +209,70 @@ public class DialogKeyboardTests
         Assert.Same(viewModel.DefaultCommand, buttons[1].Command);
         Assert.Same(viewModel.ConfirmCommand, buttons[1].Command);
     }
+
+    /// <summary>A dialog closes only through one of its actions: a stray click on the dimmed backdrop
+    /// used to cancel it, throwing away a half-filled form.</summary>
+    [AvaloniaFact]
+    public void ClickingTheBackdrop_DoesNotCloseTheDialog()
+    {
+        var (window, _, dialogs) = ShowHost();
+
+        var result = OpenDialog(dialogs, new TextInputViewModel("Add health concern", "Concern", "Asthma"));
+
+        // The window's corner: on the backdrop, well outside the centred card.
+        window.MouseDown(new Point(5, 5), MouseButton.Left, RawInputModifiers.None);
+        window.MouseUp(new Point(5, 5), MouseButton.Left, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(result.IsCompleted);
+        Assert.True(dialogs.IsDialogOpen);
+    }
+
+    private static void PumpFor(TimeSpan duration)
+    {
+        var until = DateTime.UtcNow + duration;
+        while (DateTime.UtcNow < until)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(5);
+        }
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>The card used to empty the instant a dialog closed, leaving a small square (just its
+    /// padding and border) in the middle of the screen for the overlay's 150ms fade-out. It now keeps
+    /// showing the closing dialog until the fade has finished.</summary>
+    [AvaloniaFact]
+    public void AClosedDialog_StaysInTheCardThroughTheFadeOut_ThenClears()
+    {
+        var (_, host, dialogs) = ShowHost();
+        var confirm = new ConfirmViewModel("Delete this roll?", "This can't be undone.", "Delete");
+        _ = OpenDialog(dialogs, confirm);
+        Assert.Same(confirm, host.DisplayedDialog);
+
+        ((System.Windows.Input.ICommand)confirm.CancelCommand).Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(dialogs.IsDialogOpen);
+        Assert.Same(confirm, host.DisplayedDialog); // still drawn while the overlay fades
+
+        PumpFor(TimeSpan.FromMilliseconds(400));
+        Assert.Null(host.DisplayedDialog);
+    }
+
+    [AvaloniaFact]
+    public void ANewDialog_OpenedDuringTheFadeOut_ReplacesTheOldOneImmediately()
+    {
+        var (_, host, dialogs) = ShowHost();
+        var first = new ConfirmViewModel("First?", "", "OK");
+        _ = OpenDialog(dialogs, first);
+        ((System.Windows.Input.ICommand)first.CancelCommand).Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var second = new ConfirmViewModel("Second?", "", "OK");
+        _ = OpenDialog(dialogs, second);
+        Assert.Same(second, host.DisplayedDialog);
+
+        PumpFor(TimeSpan.FromMilliseconds(400)); // the first dialog's pending clear must not blank it
+        Assert.Same(second, host.DisplayedDialog);
+    }
 }

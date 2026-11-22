@@ -5,11 +5,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The legacy MAUI app's icon (rendered from its appicon.svg), for the .exe and taskbar. -->
+    <ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <Folder Include="Models\" />
-    <AvaloniaResource Include="Assets\**" />
+    <!-- Sounds are copied beside the app rather than embedded: the platform players (see
+         Services/SoundPlayer.cs) need a real file path. -->
+    <AvaloniaResource Include="Assets\**" Exclude="Assets\Sounds\**" />
+    <Content Include="Assets\Sounds\*.mp3" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

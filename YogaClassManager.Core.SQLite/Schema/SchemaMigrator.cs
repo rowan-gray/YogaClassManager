@@ -13,9 +13,18 @@ namespace YogaClassManager.Core.SQLite.Schema;
 ///     empty database gets fully bootstrapped, and the existing production yogamanager.db.sql schema
 ///     is brought up to date additively (nothing is dropped or altered destructively).
 /// </summary>
-public static class SchemaMigrator
+public static partial class SchemaMigrator
 {
-    private static readonly Regex MigrationResourceName = new(@"(\d+)_\w+\.sql$", RegexOptions.Compiled);
+    [GeneratedRegex(@"(\d+)_\w+\.sql$")]
+    private static partial Regex MigrationResourceName();
+
+    /// <summary>Schema-dependent steps plain SQL can't express (SQLite has no conditional DDL), run
+    /// inside a migration's transaction just before its script.</summary>
+    private static readonly Dictionary<int, Func<SqliteConnection, SqliteTransaction, CancellationToken, Task>>
+        PreMigrationSteps = new()
+        {
+            [3] = RenameMisspelledAlterationCountAsync
+        };
 
     public static async Task EnsureUpToDateAsync(SqliteConnection connection, CancellationToken cancellationToken = default)
     {
@@ -29,6 +38,9 @@ public static class SchemaMigrator
             var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
             try
             {
+                if (PreMigrationSteps.TryGetValue(migration.Version, out var preStep))
+                    await preStep(connection, transaction, cancellationToken);
+
                 await using (var command = connection.CreateCommand())
                 {
                     command.Transaction = transaction;
@@ -74,16 +86,32 @@ public static class SchemaMigrator
         await using var connection = new SqliteConnection(dataSource);
         await connection.OpenAsync(cancellationToken);
 
-        var currentVersion = await EnsureSchemaVersionTableAndGetCurrentVersionAsync(connection, cancellationToken);
+        var currentVersion = await GetCurrentVersionWithoutWritingAsync(connection, cancellationToken);
         var latestVersion = LoadEmbeddedMigrations().Max(m => m.Version);
 
         return currentVersion < latestVersion;
     }
 
+    /// <summary>Reads the tracked version without creating SchemaVersion: HasPendingMigrationsAsync runs
+    /// before the pre-migration backup is copied, so it must leave the file byte-for-byte untouched.
+    /// A database with no SchemaVersion table is version 0, exactly as EnsureUpToDateAsync treats it.</summary>
+    private static async Task<int> GetCurrentVersionWithoutWritingAsync(SqliteConnection connection,
+        CancellationToken cancellationToken)
+    {
+        await using var existsCommand = connection.CreateCommand();
+        existsCommand.CommandText = "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'SchemaVersion')";
+        if (Convert.ToInt64(await existsCommand.ExecuteScalarAsync(cancellationToken)) == 0)
+            return 0;
+
+        await using var versionCommand = connection.CreateCommand();
+        versionCommand.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM SchemaVersion";
+        return Convert.ToInt32(await versionCommand.ExecuteScalarAsync(cancellationToken));
+    }
+
     /// <summary>Ensures the SchemaVersion bootstrap table exists (creating it if this is a brand-new
     /// database) and returns the currently tracked version, without applying any migration bodies.
-    /// Shared by EnsureUpToDateAsync (which then applies whatever's pending) and
-    /// HasPendingMigrationsAsync (which only wants to know if anything's pending).</summary>
+    /// Used by EnsureUpToDateAsync only - HasPendingMigrationsAsync must not write, see
+    /// GetCurrentVersionWithoutWritingAsync.</summary>
     private static async Task<int> EnsureSchemaVersionTableAndGetCurrentVersionAsync(SqliteConnection connection,
         CancellationToken cancellationToken)
     {
@@ -104,6 +132,24 @@ public static class SchemaMigrator
         return Convert.ToInt32(await versionCommand.ExecuteScalarAsync(cancellationToken));
     }
 
+    /// <summary>Databases created from earlier versions of migration 001 have PassAlterations'
+    /// count column misspelled as "AlerationCount" - rename it to the production "AlterationCount".
+    /// A no-op on production databases, which already use the correct name.</summary>
+    private static async Task RenameMisspelledAlterationCountAsync(SqliteConnection connection,
+        SqliteTransaction transaction, CancellationToken cancellationToken)
+    {
+        await using var check = connection.CreateCommand();
+        check.Transaction = transaction;
+        check.CommandText = "SELECT EXISTS(SELECT 1 FROM pragma_table_info('PassAlterations') WHERE name = 'AlerationCount')";
+        if (Convert.ToInt64(await check.ExecuteScalarAsync(cancellationToken)) == 0)
+            return;
+
+        await using var rename = connection.CreateCommand();
+        rename.Transaction = transaction;
+        rename.CommandText = "ALTER TABLE PassAlterations RENAME COLUMN AlerationCount TO AlterationCount";
+        await rename.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     internal static IReadOnlyList<(int Version, string Sql)> LoadEmbeddedMigrations()
     {
         var assembly = typeof(SchemaMigrator).Assembly;
@@ -111,7 +157,7 @@ public static class SchemaMigrator
 
         foreach (var resourceName in assembly.GetManifestResourceNames())
         {
-            var match = MigrationResourceName.Match(resourceName);
+            var match = MigrationResourceName().Match(resourceName);
             if (!match.Success)
                 continue;
 

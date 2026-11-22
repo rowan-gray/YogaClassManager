@@ -16,7 +16,7 @@ public class SqliteEmergencyContactRepository : IEmergencyContactRepository
         this.dataStoreProvider = dataStoreProvider;
     }
 
-    public IDbModel<EmergencyContact, EmergencyContactFilter> Query(EmergencyContactFilter filter)
+    public IReadOnlyDbModel<EmergencyContact, EmergencyContactFilter> Query(EmergencyContactFilter filter)
     {
         return new SqliteEmergencyContactDbModel(filter, dataStoreProvider);
     }
@@ -41,7 +41,7 @@ internal sealed class EmergencyContactRow
     }
 }
 
-internal class SqliteEmergencyContactDbModel : IDbModel<EmergencyContact, EmergencyContactFilter>
+internal class SqliteEmergencyContactDbModel : IReadOnlyDbModel<EmergencyContact, EmergencyContactFilter>
 {
     private readonly IDataStoreProvider dataStoreProvider;
 
@@ -95,10 +95,11 @@ internal class SqliteEmergencyContactDbModel : IDbModel<EmergencyContact, Emerge
         var (key, order) = sortBy.Value;
         var direction = StringValueAttribute.GetStringValue(order);
 
+        // Text columns sort case-insensitively ("van Dyke" among the Vs), matching the in-memory store.
         var column = key switch
         {
-            EmergencyContactSortOptions.FirstName => "FirstName",
-            EmergencyContactSortOptions.LastName => "LastName",
+            EmergencyContactSortOptions.FirstName => "FirstName COLLATE NOCASE",
+            EmergencyContactSortOptions.LastName => "LastName COLLATE NOCASE",
             _ => "PersonId"
         };
 
@@ -113,44 +114,5 @@ internal class SqliteEmergencyContactDbModel : IDbModel<EmergencyContact, Emerge
             new { studentId = model.StudentId, id = model.Id }), cancellationToken);
 
         return exists == 1;
-    }
-
-    /// <summary>Functionally identical to IStudentRepository.LinkEmergencyContactAsync's upsert - the
-    /// in-memory backend wires both up as separate but equivalent "remove existing link, add fresh
-    /// one" paths, and this SQL implementation preserves that same parity (writes for emergency
-    /// contacts are documented as normally going through IStudentRepository, but IDbModel.Save/Delete
-    /// still need to work functionally here to match the in-memory contract).</summary>
-    public Task Save(EmergencyContact model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync(async (connection, transaction) =>
-        {
-            var exists = await connection.ExecuteScalarAsync<long>(
-                "SELECT EXISTS(SELECT 1 FROM StudentEmergencyContacts WHERE StudentId=$studentId AND EmergencyContactId=$id)",
-                new { studentId = model.StudentId, id = model.Id }, transaction) == 1;
-
-            if (exists && saveOptions == SaveOptions.Create)
-                throw new ModelExistsException();
-            if (!exists && saveOptions == SaveOptions.Replace)
-                throw new ModelDoesNotExistException();
-
-            await connection.ExecuteAsync(
-                """
-                INSERT INTO StudentEmergencyContacts(StudentId, EmergencyContactId, Relationship)
-                VALUES ($studentId, $id, $relationship)
-                ON CONFLICT(StudentId, EmergencyContactId) DO UPDATE SET Relationship = excluded.Relationship
-                """,
-                new { studentId = model.StudentId, id = model.Id, relationship = (int)model.Relationship }, transaction);
-        }, cancellationToken);
-    }
-
-    public Task Delete(EmergencyContact model, CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync(
-                "DELETE FROM StudentEmergencyContacts WHERE StudentId=$studentId AND EmergencyContactId=$id",
-                new { studentId = model.StudentId, id = model.Id }, transaction), cancellationToken);
     }
 }

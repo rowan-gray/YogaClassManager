@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="YogaClassManager.Avalonia.Controls.DetailHeader"
              x:Name="Control">
 
@@ -13,9 +14,22 @@
 
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource SpacingSm}"
                     Margin="8,0,0,0">
-            <Button Content="{Binding PrimaryActionLabel, ElementName=Control}" Classes="accent"
+            <!-- Text label, or (PrimaryActionIcon set) an icon-only square with the label as its
+                 tooltip/accessible name. -->
+            <Button Classes="accent"
+                    Classes.Icon="{Binding PrimaryActionIcon, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}"
                     Command="{Binding PrimaryActionCommand, ElementName=Control}"
-                    IsVisible="{Binding PrimaryActionCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+                    AutomationProperties.Name="{Binding PrimaryActionLabel, ElementName=Control}"
+                    ToolTip.Tip="{Binding PrimaryActionLabel, ElementName=Control}"
+                    IsVisible="{Binding PrimaryActionCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+                <Panel>
+                    <TextBlock Text="{Binding PrimaryActionLabel, ElementName=Control}"
+                               IsVisible="{Binding PrimaryActionIcon, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNull}}" />
+                    <materialIcons:MaterialIcon Kind="{Binding PrimaryActionIcon, ElementName=Control}"
+                                                Width="18" Height="18"
+                                                IsVisible="{Binding PrimaryActionIcon, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+                </Panel>
+            </Button>
             <ContentPresenter Content="{Binding Actions, ElementName=Control}" VerticalAlignment="Center" />
         </StackPanel>
     </Grid>

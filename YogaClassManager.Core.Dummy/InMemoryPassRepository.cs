@@ -15,7 +15,7 @@ public class InMemoryPassRepository : IPassRepository
         this.store = store;
     }
 
-    public IDbModel<Pass, PassFilter> Query(PassFilter filter)
+    public IReadOnlyDbModel<Pass, PassFilter> Query(PassFilter filter)
     {
         return new InMemoryPassDbModel(filter, store);
     }
@@ -125,7 +125,7 @@ public class InMemoryPassRepository : IPassRepository
             .SelectMany(roll => roll.StudentEntries
                 .Where(entry => entry.Pass?.Id == passId)
                 .Select(entry => new ClassAttendanceRecord(roll.Id, roll.Date, roll.ClassSchedule, entry.Student.Id,
-                    entry.Pass?.Id)))
+                    entry.Pass)))
             .OrderByDescending(r => r.Date)
             .ToList();
 
@@ -133,7 +133,7 @@ public class InMemoryPassRepository : IPassRepository
     }
 }
 
-internal class InMemoryPassDbModel : IDbModel<Pass, PassFilter>
+internal class InMemoryPassDbModel : IReadOnlyDbModel<Pass, PassFilter>
 {
     private readonly InMemoryDataStore store;
 
@@ -161,26 +161,6 @@ internal class InMemoryPassDbModel : IDbModel<Pass, PassFilter>
     public Task<bool> Refresh(Pass model, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(store.Passes.ContainsKey(model.Id));
-    }
-
-    public Task Save(Pass model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var exists = store.Passes.ContainsKey(model.Id);
-
-        if (exists && saveOptions == SaveOptions.Create)
-            throw new ModelExistsException();
-        if (!exists && saveOptions == SaveOptions.Replace)
-            throw new ModelDoesNotExistException();
-
-        store.Passes[model.Id <= 0 ? store.NextId() : model.Id] = model;
-        return Task.CompletedTask;
-    }
-
-    public Task Delete(Pass model, CancellationToken cancellationToken = default)
-    {
-        store.Passes.Remove(model.Id);
-        return Task.CompletedTask;
     }
 
     private IEnumerable<Pass> Matching()

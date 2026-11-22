@@ -3,6 +3,9 @@
              xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Dashboard"
              xmlns:classes="using:YogaClassManager.Core.Models.Classes"
              xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+             xmlns:objConv="using:Avalonia.Data.Converters"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -11,68 +14,201 @@
              x:TypeArguments="vm:DashboardViewModel"
              x:Name="Root">
 
-    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
-        <StackPanel Grid.Row="0" Spacing="{StaticResource SpacingSm}">
-            <TextBlock Text="YogaClassManager" Classes="PageTitle" />
-            <TextBlock Text="Dashboard" Classes="Caption" />
-        </StackPanel>
-
-        <!-- FillWrapPanel, not a horizontal StackPanel with three fixed 180px tiles: those clipped off
-             the right edge on a narrow window. MinWidth lets them share a row while there's room and
-             stack once there isn't. -->
-        <controls:FillWrapPanel Grid.Row="1" Spacing="{StaticResource SpacingLg}" Margin="0,24,0,0"
-                                IsVisible="{Binding !IsBusy}">
-            <Border Classes="Card" Background="{DynamicResource SystemAccentColorLight2}" MinWidth="180">
-                <StackPanel Spacing="{StaticResource SpacingXs}">
-                    <TextBlock Text="{Binding StudentCount}" Classes="StatValue" />
-                    <TextBlock Text="Active students" />
+    <reactiveui:ReactiveUserControl.Resources>
+        <!-- Class-roll tiles (Button.Tile, see Styles/Controls.axaml): today's say "Mark roll", the last
+             7 days' say "Edit roll" with the matching icon plus the date - both open the roll window.
+             The command is reached through the hosting ItemsControl's DataContext (the dashboard view
+             model) rather than ElementName=Root, which a template defined in Resources can't rely on
+             resolving. The tile shows the class rather than the action, so the action is its tooltip
+             and the start of its accessible name. -->
+        <DataTemplate x:Key="TodaysRollTileTemplate" DataType="classes:ClassRoll">
+            <Button Classes="Tile" Margin="0,0,12,12" ToolTip.Tip="Mark roll"
+                    Command="{Binding $parent[ItemsControl].DataContext.MarkRollCommand}"
+                    CommandParameter="{Binding}"
+                    AutomationProperties.Name="{Binding ClassSchedule, StringFormat='Mark roll: {0}'}">
+                <StackPanel Classes="TileContent">
+                    <materialIcons:MaterialIcon Kind="ClipboardCheckOutline" />
+                    <!-- Always one line: TileTitle sizes it for the worst case, and the Viewbox only
+                         ever shrinks it (never enlarges) if a font renders wider than expected. -->
+                    <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Center">
+                        <TextBlock Classes="TileTitle" Text="{Binding ClassSchedule}" />
+                    </Viewbox>
+                    <TextBlock Text="{Binding StudentEntries.Count, StringFormat='{}{0} attendees'}"
+                               Classes="Caption" />
                 </StackPanel>
-            </Border>
-            <Border Classes="Card" Background="{DynamicResource SystemAccentColorLight2}" MinWidth="180">
-                <StackPanel Spacing="{StaticResource SpacingXs}">
-                    <TextBlock Text="{Binding ClassScheduleCount}" Classes="StatValue" />
-                    <TextBlock Text="Class schedules" />
+            </Button>
+        </DataTemplate>
+
+        <DataTemplate x:Key="PreviousRollTileTemplate" DataType="classes:ClassRoll">
+            <Button Classes="Tile" Margin="0,0,12,12" ToolTip.Tip="Edit roll"
+                    Command="{Binding $parent[ItemsControl].DataContext.MarkRollCommand}"
+                    CommandParameter="{Binding}">
+                <AutomationProperties.Name>
+                    <MultiBinding StringFormat="{}Edit roll: {0}, {1:dd/MM/yyyy}">
+                        <Binding Path="ClassSchedule" />
+                        <Binding Path="Date" />
+                    </MultiBinding>
+                </AutomationProperties.Name>
+                <StackPanel Classes="TileContent">
+                    <materialIcons:MaterialIcon Kind="ClipboardEditOutline" />
+                    <!-- Always one line: TileTitle sizes it for the worst case, and the Viewbox only
+                         ever shrinks it (never enlarges) if a font renders wider than expected. -->
+                    <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Center">
+                        <TextBlock Classes="TileTitle" Text="{Binding ClassSchedule}" />
+                    </Viewbox>
+                    <TextBlock Text="{Binding Date, StringFormat='{}{0:dd/MM/yyyy}'}" Classes="Caption" />
+                    <TextBlock Text="{Binding StudentEntries.Count, StringFormat='{}{0} attendees'}"
+                               Classes="Caption" />
                 </StackPanel>
-            </Border>
-            <Border Classes="Card" Background="{DynamicResource SystemAccentColorLight2}" MinWidth="180">
-                <StackPanel Spacing="{StaticResource SpacingXs}">
-                    <TextBlock Text="{Binding TodaysClasses.Count}" Classes="StatValue" />
-                    <TextBlock Text="Classes today" />
+            </Button>
+        </DataTemplate>
+
+        <!-- Tiles flow left to right and wrap onto the next line. -->
+        <ItemsPanelTemplate x:Key="TileWrapPanel">
+            <WrapPanel />
+        </ItemsPanelTemplate>
+    </reactiveui:ReactiveUserControl.Resources>
+
+    <Grid RowDefinitions="Auto,*" Margin="{StaticResource PagePadding}">
+        <!-- The studio banner (from the MAUI app), on white as it was there, so it reads the same in
+             either theme. Clicking it is the noot noot easter egg (PlayNootCommand, wired in
+             code-behind) - deliberately no tooltip or button chrome, so it stays a surprise. -->
+        <Border Grid.Row="0" x:Name="Banner" Background="White" CornerRadius="{StaticResource RadiusMedium}"
+                ClipToBounds="True" Padding="8" Cursor="Hand"
+                AutomationProperties.Name="Tracy Gray Yoga">
+            <Image Source="/Assets/tracygrayyoga_header.jpg" Stretch="Uniform" MaxHeight="200" />
+        </Border>
+
+        <!-- Stats, quick actions and two class lists outgrow a short window, so the page scrolls as
+             one region (same single-outer-ScrollViewer convention as the Students detail pane). -->
+        <!-- While loading, only the data regions (stat counts, class tiles) swap for skeleton
+             placeholders; the layout, headings and quick actions show straight away. -->
+        <ScrollViewer Grid.Row="1" Margin="0,24,0,0" behaviors:ScrollEdgeShadow.IsEnabled="True">
+            <StackPanel Spacing="{StaticResource SpacingLg}">
+                <!-- FillWrapPanel, not a horizontal StackPanel with three fixed 180px tiles: those clipped
+                     off the right edge on a narrow window. WrapWidth lets them share a row while there's
+                     room and stack once there isn't (and, unlike MinWidth, still shrink below 180 alone). -->
+                <controls:FillWrapPanel Spacing="{StaticResource SpacingLg}">
+                    <Border Classes="Card" BorderThickness="0" Background="{DynamicResource AccentSurfaceBrush}" controls:FillWrapPanel.WrapWidth="180"
+                            IsVisible="{Binding !IsBusy}">
+                        <StackPanel Spacing="{StaticResource SpacingXs}">
+                            <TextBlock Text="{Binding StudentCount}" Classes="StatValue" />
+                            <TextBlock Text="Active students" />
+                        </StackPanel>
+                    </Border>
+                    <!-- Skeleton while loading: the count's place is a grey block (the label is known). -->
+                    <Border Classes="Card" BorderThickness="0" controls:FillWrapPanel.WrapWidth="180" IsVisible="{Binding IsBusy}">
+                        <StackPanel Spacing="{StaticResource SpacingXs}">
+                            <Border Classes="Skeleton" Width="56" Height="38" HorizontalAlignment="Left" />
+                            <TextBlock Text="Active students" />
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="Card" BorderThickness="0" Background="{DynamicResource AccentSurfaceBrush}" controls:FillWrapPanel.WrapWidth="180"
+                            IsVisible="{Binding !IsBusy}">
+                        <StackPanel Spacing="{StaticResource SpacingXs}">
+                            <TextBlock Text="{Binding ClassScheduleCount}" Classes="StatValue" />
+                            <TextBlock Text="Class schedules" />
+                        </StackPanel>
+                    </Border>
+                    <!-- Skeleton while loading: the count's place is a grey block (the label is known). -->
+                    <Border Classes="Card" BorderThickness="0" controls:FillWrapPanel.WrapWidth="180" IsVisible="{Binding IsBusy}">
+                        <StackPanel Spacing="{StaticResource SpacingXs}">
+                            <Border Classes="Skeleton" Width="56" Height="38" HorizontalAlignment="Left" />
+                            <TextBlock Text="Class schedules" />
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="Card" BorderThickness="0" Background="{DynamicResource AccentSurfaceBrush}" controls:FillWrapPanel.WrapWidth="180"
+                            IsVisible="{Binding !IsBusy}">
+                        <StackPanel Spacing="{StaticResource SpacingXs}">
+                            <TextBlock Text="{Binding TodaysClasses.Count}" Classes="StatValue" />
+                            <TextBlock Text="Classes today" />
+                        </StackPanel>
+                    </Border>
+                    <!-- Skeleton while loading: the count's place is a grey block (the label is known). -->
+                    <Border Classes="Card" BorderThickness="0" controls:FillWrapPanel.WrapWidth="180" IsVisible="{Binding IsBusy}">
+                        <StackPanel Spacing="{StaticResource SpacingXs}">
+                            <Border Classes="Skeleton" Width="56" Height="38" HorizontalAlignment="Left" />
+                            <TextBlock Text="Classes today" />
+                        </StackPanel>
+                    </Border>
+                </controls:FillWrapPanel>
+
+                <!-- Quick actions are square tiles (Button.Tile) with a large icon and a visible label
+                     (unlike the icon-only Add/Edit buttons elsewhere): unlabelled icons on a landing page
+                     would leave the instructor guessing which is which. -->
+                <StackPanel Spacing="{StaticResource SpacingSm}">
+                    <TextBlock Text="Quick actions" Classes="SectionTitle" />
+                    <WrapPanel>
+                        <Button Classes="Tile" Command="{Binding AddStudentCommand}" Margin="0,0,12,12">
+                            <StackPanel Classes="TileContent">
+                                <materialIcons:MaterialIcon Kind="AccountPlus" />
+                                <TextBlock Text="Add student" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="Tile" Command="{Binding AddPassCommand}" Margin="0,0,12,12">
+                            <StackPanel Classes="TileContent">
+                                <materialIcons:MaterialIcon Kind="TicketConfirmation" />
+                                <TextBlock Text="Add pass" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="Tile" Command="{Binding SearchStudentCommand}" Margin="0,0,12,12">
+                            <StackPanel Classes="TileContent">
+                                <materialIcons:MaterialIcon Kind="AccountSearch" />
+                                <TextBlock Text="Search student" />
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
                 </StackPanel>
-            </Border>
-        </controls:FillWrapPanel>
 
-        <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="{StaticResource SpacingSm}"
-                    IsVisible="{Binding !IsBusy}">
-            <TextBlock Text="Today's classes" Classes="SectionTitle" />
+                <StackPanel Spacing="{StaticResource SpacingSm}">
+                    <TextBlock Text="Today's classes" Classes="SectionTitle" />
+                    <!-- Skeleton tiles while loading, shaped like the class tiles that replace them. -->
+                    <WrapPanel IsVisible="{Binding IsBusy}">
+                        <Border Classes="Skeleton" Width="{StaticResource TileSize}" Height="{StaticResource TileSize}"
+                                CornerRadius="{StaticResource RadiusMedium}" Margin="0,0,12,12" />
+                        <Border Classes="Skeleton" Width="{StaticResource TileSize}" Height="{StaticResource TileSize}"
+                                CornerRadius="{StaticResource RadiusMedium}" Margin="0,0,12,12" />
+                        <Border Classes="Skeleton" Width="{StaticResource TileSize}" Height="{StaticResource TileSize}"
+                                CornerRadius="{StaticResource RadiusMedium}" Margin="0,0,12,12" />
+                    </WrapPanel>
+                    <TextBlock Text="No classes scheduled for today." Classes="Caption">
+                        <TextBlock.IsVisible>
+                            <MultiBinding Converter="{x:Static objConv:BoolConverters.And}">
+                                <Binding Path="!TodaysClasses.Count" />
+                                <Binding Path="!IsBusy" />
+                            </MultiBinding>
+                        </TextBlock.IsVisible>
+                    </TextBlock>
+                    <ItemsControl ItemsSource="{Binding TodaysClasses}"
+                                  ItemTemplate="{StaticResource TodaysRollTileTemplate}"
+                                  ItemsPanel="{StaticResource TileWrapPanel}" />
+                </StackPanel>
 
-            <TextBlock Text="No classes are scheduled for today." Classes="Caption"
-                       IsVisible="{Binding !TodaysClasses.Count}" />
-
-            <ItemsControl ItemsSource="{Binding TodaysClasses}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="classes:ClassRoll">
-                        <Border BorderBrush="{DynamicResource SystemBaseLowColor}" BorderThickness="0,0,0,1"
-                                Padding="0,8">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="{Binding}" FontWeight="{StaticResource FontWeightMedium}"
-                                               TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding StudentEntries.Count, StringFormat='{}{0} attendees'}"
-                                               Classes="Caption" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Content="Mark roll"
-                                        Command="{Binding DataContext.MarkRollCommand, ElementName=Root}"
-                                        CommandParameter="{Binding}" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </StackPanel>
-
-        <ProgressBar Grid.Row="2" IsIndeterminate="True" VerticalAlignment="Top"
-                     IsVisible="{Binding IsBusy}" />
+                <StackPanel Spacing="{StaticResource SpacingSm}">
+                    <TextBlock Text="Recent classes" Classes="SectionTitle" />
+                    <!-- Skeleton tiles while loading, shaped like the class tiles that replace them. -->
+                    <WrapPanel IsVisible="{Binding IsBusy}">
+                        <Border Classes="Skeleton" Width="{StaticResource TileSize}" Height="{StaticResource TileSize}"
+                                CornerRadius="{StaticResource RadiusMedium}" Margin="0,0,12,12" />
+                        <Border Classes="Skeleton" Width="{StaticResource TileSize}" Height="{StaticResource TileSize}"
+                                CornerRadius="{StaticResource RadiusMedium}" Margin="0,0,12,12" />
+                        <Border Classes="Skeleton" Width="{StaticResource TileSize}" Height="{StaticResource TileSize}"
+                                CornerRadius="{StaticResource RadiusMedium}" Margin="0,0,12,12" />
+                    </WrapPanel>
+                    <TextBlock Text="No classes in the last 7 days." Classes="Caption">
+                        <TextBlock.IsVisible>
+                            <MultiBinding Converter="{x:Static objConv:BoolConverters.And}">
+                                <Binding Path="!RecentClasses.Count" />
+                                <Binding Path="!IsBusy" />
+                            </MultiBinding>
+                        </TextBlock.IsVisible>
+                    </TextBlock>
+                    <ItemsControl ItemsSource="{Binding RecentClasses}"
+                                  ItemTemplate="{StaticResource PreviousRollTileTemplate}"
+                                  ItemsPanel="{StaticResource TileWrapPanel}" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 
 </reactiveui:ReactiveUserControl>

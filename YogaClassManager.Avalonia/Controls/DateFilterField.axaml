@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             x:Class="YogaClassManager.Avalonia.Controls.DateFilterField"
+             x:Name="Control">
+
+    <!-- The standard labelled-input shape for a filter flyout (label, then the input, 4px apart), with a
+         clear button beside the picker: CalendarDatePicker has no built-in way back to "no date", which
+         a filter needs. Disabled rather than hidden while there's no date, so the picker doesn't
+         change width as dates are picked and cleared. -->
+    <StackPanel Spacing="4">
+        <TextBlock Text="{Binding Label, ElementName=Control}" />
+        <Grid ColumnDefinitions="*,Auto">
+            <CalendarDatePicker Grid.Column="0" HorizontalAlignment="Stretch"
+                                SelectedDate="{Binding SelectedDate, ElementName=Control, Mode=TwoWay}"
+                                AutomationProperties.Name="{Binding Label, ElementName=Control}" />
+            <Button Grid.Column="1" x:Name="ClearButton" Classes="Icon" Margin="4,0,0,0"
+                    Click="OnClearClick"
+                    IsEnabled="{Binding SelectedDate, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}"
+                    AutomationProperties.Name="{Binding Label, ElementName=Control, StringFormat='Clear {0}'}"
+                    ToolTip.Tip="Clear date">
+                <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16" />
+            </Button>
+        </Grid>
+    </StackPanel>
+
+</UserControl>

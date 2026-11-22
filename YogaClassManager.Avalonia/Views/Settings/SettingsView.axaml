@@ -2,6 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Settings"
              xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:services="using:YogaClassManager.Avalonia.Services"
+             xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
              xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -26,6 +28,31 @@
             <Button Content="Create new file..." Command="{Binding CreateNewDatabaseCommand}"
                     IsEnabled="{Binding !IsBusy}" />
         </StackPanel>
+
+        <!-- Theme: applied immediately (no restart) and saved for next launch - IThemeService. -->
+        <TextBlock Text="Appearance" Classes="SectionTitle" Margin="{StaticResource GroupGapMargin}" />
+
+        <controls:FormField Label="Theme">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <RadioButton Content="Match system"
+                             IsChecked="{Binding SelectedTheme, Converter={x:Static localConv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static services:AppTheme.System}}" />
+                <RadioButton Content="Light"
+                             IsChecked="{Binding SelectedTheme, Converter={x:Static localConv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static services:AppTheme.Light}}" />
+                <RadioButton Content="Dark"
+                             IsChecked="{Binding SelectedTheme, Converter={x:Static localConv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static services:AppTheme.Dark}}" />
+            </StackPanel>
+        </controls:FormField>
+
+        <!-- Errors (everything shown as an error toast, plus full exception details and crashes) are
+             written to a daily file here - see Services/ErrorLog.cs. -->
+        <TextBlock Text="Logs" Classes="SectionTitle" Margin="{StaticResource GroupGapMargin}" />
+
+        <controls:FormField Label="Error log folder">
+            <TextBox Text="{Binding LogDirectory, Mode=OneWay}" IsReadOnly="True" />
+        </controls:FormField>
+
+        <Button Content="Open log folder" Command="{Binding OpenLogFolderCommand}"
+                HorizontalAlignment="Left" />
     </StackPanel>
 
 </reactiveui:ReactiveUserControl>

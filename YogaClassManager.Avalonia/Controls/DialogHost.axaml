@@ -9,8 +9,10 @@
          code-behind so neither host has to re-implement it. -->
     <Border x:Name="PART_Overlay" Classes="DialogOverlay"
             Classes.Open="{Binding DialogService.IsDialogOpen, ElementName=Control, FallbackValue=False}"
-            Background="{DynamicResource OverlayScrimBrush}"
-            PointerPressed="OnBackdropPressed">
+            Background="{DynamicResource OverlayScrimBrush}">
+        <!-- No click-outside-to-close: a press on the backdrop does nothing (it's hit-testable, so the
+             page behind doesn't get it either). A dialog closes only through one of its actions, or
+             Escape for Cancel. -->
         <!--
             TabNavigation="Cycle" is what makes the dialog actually modal to the keyboard: Tab wraps from
             the last focusable control back to the first instead of walking out into the page behind.
@@ -21,7 +23,9 @@
                 KeyboardNavigation.TabNavigation="Cycle"
                 MaxWidth="{Binding MaxDialogWidth, ElementName=Control}"
                 MaxHeight="{Binding MaxDialogHeight, ElementName=Control}">
-            <ContentControl Content="{Binding DialogService.ActiveDialog, ElementName=Control}" />
+            <!-- DisplayedDialog, not DialogService.ActiveDialog: it's held through the fade-out so the
+                 card fades away whole instead of collapsing to an empty square (see the code-behind). -->
+            <ContentControl Content="{Binding DisplayedDialog, ElementName=Control}" />
         </Border>
     </Border>
 

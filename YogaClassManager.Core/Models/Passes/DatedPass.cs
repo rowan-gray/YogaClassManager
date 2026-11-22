@@ -32,8 +32,6 @@ public partial class DatedPass : Pass
 
     public override string PassName => "Dated Pass";
 
-    public override string? DateRangeDisplay => $"{StartDate:dd/MM/yyyy} - {EndDate:dd/MM/yyyy}";
-
     public override int NumberOfClasses => ClassCount + Alterations.Sum(a => a.Amount);
 
     public override bool IsExpired => DateOnly.FromDateTime(DateTime.Now) > EndDate;

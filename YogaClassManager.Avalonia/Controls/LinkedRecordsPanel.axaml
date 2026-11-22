@@ -23,11 +23,15 @@
                 FilterCount="{Binding FilterCount, ElementName=Control}"
                 ClearFiltersCommand="{Binding ClearFiltersCommand, ElementName=Control}" />
             <ContentPresenter Grid.Column="3" Content="{Binding HeaderContent, ElementName=Control}"
-                              Margin="8,0,0,0" VerticalAlignment="Center" />
-            <Button Grid.Column="4" Content="Add" Margin="8,0,0,0" Classes="accent"
+                              Margin="8,0,0,0" VerticalAlignment="Center"
+                              IsVisible="{Binding HeaderContent, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+            <Button Grid.Column="4" Margin="8,0,0,0" Classes="accent Icon"
                     Command="{Binding AddCommand, ElementName=Control}"
                     AutomationProperties.Name="{Binding Header, ElementName=Control, StringFormat='Add {0}'}"
-                    IsVisible="{Binding AddCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+                    ToolTip.Tip="{Binding Header, ElementName=Control, StringFormat='Add {0}'}"
+                    IsVisible="{Binding AddCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+                <materialIcons:MaterialIcon Kind="Plus" Width="18" Height="18" />
+            </Button>
         </Grid>
 
         <Border Classes="Card" Padding="4">
@@ -40,30 +44,57 @@
                 <TextBlock.IsVisible>
                     <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
                         <Binding Path="IsEmpty" ElementName="Control" />
+                        <Binding Path="!IsLoading" ElementName="Control" />
                         <Binding Path="EmptyText" ElementName="Control"
                                  Converter="{x:Static conv:StringConverters.IsNotNullOrEmpty}" />
                     </MultiBinding>
                 </TextBlock.IsVisible>
             </TextBlock>
 
-            <ListBox ItemsSource="{Binding ItemsSource, ElementName=Control}"
-                     SelectedItem="{Binding SelectedItem, ElementName=Control, Mode=TwoWay}"
-                     Background="Transparent" BorderThickness="0"
-                     behaviors:ScrollEdgeFade.IsEnabled="True">
-                <ListBox.ItemTemplate>
+            <!-- Skeleton rows while the owning page loads this list and it has nothing to show yet. -->
+            <controls:SkeletonList VerticalAlignment="Top"
+                                   Rows="{Binding SkeletonRows, ElementName=Control}"
+                                   ShowSubtitle="{Binding SkeletonShowsSubtitle, ElementName=Control}">
+                <controls:SkeletonList.IsVisible>
+                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                        <Binding Path="IsLoading" ElementName="Control" />
+                        <Binding Path="IsEmpty" ElementName="Control" />
+                    </MultiBinding>
+                </controls:SkeletonList.IsVisible>
+            </controls:SkeletonList>
+
+            <!-- An ItemsControl, not a ListBox: nothing acts on a "selected" linked record (every
+                 action is in the row's ... menu), so a ListBox's click-to-select highlight was just
+                 noise. Rows keep the ListBoxItem padding they used to get, so spacing is unchanged. -->
+            <ScrollViewer behaviors:ScrollEdgeShadow.IsEnabled="True">
+              <ItemsControl ItemsSource="{Binding ItemsSource, ElementName=Control}">
+                <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <ContentControl Grid.Column="0" Content="{Binding}"
+                        <Grid ColumnDefinitions="*,Auto" Margin="{DynamicResource ListBoxItemPadding}">
+                            <!-- Centred against the 36px Overflow button: a single-line row (Health
+                                 concerns, or any row whose second line is hidden) is shorter than the
+                                 button, and Stretch would pin its text to the top. Two-line rows are
+                                 taller than the button, so this changes nothing for them. -->
+                            <ContentControl Grid.Column="0" Content="{Binding}" VerticalAlignment="Center"
                                             ContentTemplate="{Binding ItemTemplate, ElementName=Control}" />
+                            <!-- Hidden when the panel has no row actions at all: an empty "..." menu
+                                 used to open to nothing, which read as broken. -->
                             <Button Grid.Column="1" Classes="Overflow" Margin="4,0,0,0" Background="Transparent"
                                     AutomationProperties.Name="{Binding Header, ElementName=Control, StringFormat='{}{0} item actions'}">
+                                <Button.IsVisible>
+                                    <MultiBinding Converter="{x:Static conv:BoolConverters.Or}">
+                                        <Binding Path="ViewCommand" ElementName="Control" Converter="{x:Static conv:ObjectConverters.IsNotNull}" />
+                                        <Binding Path="EditCommand" ElementName="Control" Converter="{x:Static conv:ObjectConverters.IsNotNull}" />
+                                        <Binding Path="RemoveCommand" ElementName="Control" Converter="{x:Static conv:ObjectConverters.IsNotNull}" />
+                                    </MultiBinding>
+                                </Button.IsVisible>
                                 <Button.Flyout>
-                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                        <MenuItem Header="View"
+                                    <controls:FadeMenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding ViewLabel, ElementName=Control}"
                                                   Command="{Binding ViewCommand, ElementName=Control}"
                                                   CommandParameter="{Binding}"
                                                   IsVisible="{Binding ViewCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
-                                        <MenuItem Header="Edit"
+                                        <MenuItem Header="{Binding EditLabel, ElementName=Control}"
                                                   Command="{Binding EditCommand, ElementName=Control}"
                                                   CommandParameter="{Binding}"
                                                   IsVisible="{Binding EditCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
@@ -71,13 +102,14 @@
                                                   Command="{Binding RemoveCommand, ElementName=Control}"
                                                   CommandParameter="{Binding}"
                                                   IsVisible="{Binding RemoveCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
-                                    </MenuFlyout>
+                                    </controls:FadeMenuFlyout>
                                 </Button.Flyout>
                             </Button>
                         </Grid>
                     </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
           </Panel>
         </Border>
     </DockPanel>

@@ -14,7 +14,7 @@ public class InMemoryTermRepository : ITermRepository
         this.store = store;
     }
 
-    public IDbModel<Term, TermFilter> Query(TermFilter filter)
+    public IReadOnlyDbModel<Term, TermFilter> Query(TermFilter filter)
     {
         return new InMemoryTermDbModel(filter, store);
     }
@@ -30,8 +30,17 @@ public class InMemoryTermRepository : ITermRepository
 
     public Task UpdateAsync(Term term, CancellationToken cancellationToken = default)
     {
+        // Details only, never Classes (so not Term.Update, which replaces them) - linked classes are
+        // managed solely via LinkClassAsync/UnlinkClassAsync, matching the SQLite backend's UPDATE Term.
         if (store.Terms.TryGetValue(term.Id, out var existing))
-            existing.Update(term);
+        {
+            existing.Name = term.Name;
+            existing.StartDate = term.StartDate;
+            existing.EndDate = term.EndDate;
+            existing.CatchupStartDate = term.CatchupStartDate;
+            existing.CatchupEndDate = term.CatchupEndDate;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -74,7 +83,7 @@ public class InMemoryTermRepository : ITermRepository
     }
 }
 
-internal class InMemoryTermDbModel : IDbModel<Term, TermFilter>
+internal class InMemoryTermDbModel : IReadOnlyDbModel<Term, TermFilter>
 {
     private readonly InMemoryDataStore store;
 
@@ -102,26 +111,6 @@ internal class InMemoryTermDbModel : IDbModel<Term, TermFilter>
     public Task<bool> Refresh(Term model, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(store.Terms.ContainsKey(model.Id));
-    }
-
-    public Task Save(Term model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var exists = store.Terms.ContainsKey(model.Id);
-
-        if (exists && saveOptions == SaveOptions.Create)
-            throw new ModelExistsException();
-        if (!exists && saveOptions == SaveOptions.Replace)
-            throw new ModelDoesNotExistException();
-
-        store.Terms[model.Id <= 0 ? store.NextId() : model.Id] = model;
-        return Task.CompletedTask;
-    }
-
-    public Task Delete(Term model, CancellationToken cancellationToken = default)
-    {
-        store.Terms.Remove(model.Id);
-        return Task.CompletedTask;
     }
 
     private IEnumerable<Term> Matching()

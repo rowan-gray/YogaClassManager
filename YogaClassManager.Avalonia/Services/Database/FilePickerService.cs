@@ -31,7 +31,7 @@ public sealed class FilePickerService : IFilePickerService
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Create a new database file",
-            SuggestedFileName = "yogamanager.db",
+            SuggestedFileName = DatabaseFileDefaults.FileName,
             DefaultExtension = "db",
             FileTypeChoices = [DatabaseFileType]
         });

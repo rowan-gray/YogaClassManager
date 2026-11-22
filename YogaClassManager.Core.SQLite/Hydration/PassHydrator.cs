@@ -26,7 +26,7 @@ internal static class PassHydrator
                 new TermClassSchedule(
                     new ClassSchedule(row.TermClassScheduleId!.Value, (DayOfWeek)row.TermClassDay!.Value,
                         TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(row.TermClassTime!.Value)),
-                        isArchived: row.TermClassIsActive == 0),
+                        isArchived: (row.TermClassIsArchived ?? 0) != 0),
                     row.TermClassCount ?? 0, row.TermClassUsesCount ?? 0)),
 
             _ => throw new InvalidOperationException($"Unknown Pass kind '{row.Kind}' for PassId {row.PassId}.")

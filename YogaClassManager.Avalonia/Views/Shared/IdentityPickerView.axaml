@@ -21,7 +21,7 @@
         </Grid>
 
         <Panel Grid.Row="2">
-            <TextBlock Text="No identities match this search." Classes="Caption"
+            <TextBlock Text="No identities match the current search." Classes="Caption"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                        TextWrapping="Wrap" TextAlignment="Center" Margin="12"
                        IsVisible="{Binding HasNoResults}" />
@@ -29,7 +29,7 @@
             <!-- Enter here runs the dialog's DefaultCommand (SelectCommand) via DialogHost, so a
                  keyboard user can Tab in, arrow to a row, and press Enter without touching the mouse. -->
             <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedItem}"
-                     behaviors:ScrollEdgeFade.IsEnabled="True">
+                     behaviors:ScrollEdgeShadow.IsEnabled="True">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding}" />

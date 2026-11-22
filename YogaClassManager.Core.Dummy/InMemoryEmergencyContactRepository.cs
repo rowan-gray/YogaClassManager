@@ -14,13 +14,13 @@ public class InMemoryEmergencyContactRepository : IEmergencyContactRepository
         this.store = store;
     }
 
-    public IDbModel<EmergencyContact, EmergencyContactFilter> Query(EmergencyContactFilter filter)
+    public IReadOnlyDbModel<EmergencyContact, EmergencyContactFilter> Query(EmergencyContactFilter filter)
     {
         return new InMemoryEmergencyContactDbModel(filter, store);
     }
 }
 
-internal class InMemoryEmergencyContactDbModel : IDbModel<EmergencyContact, EmergencyContactFilter>
+internal class InMemoryEmergencyContactDbModel : IReadOnlyDbModel<EmergencyContact, EmergencyContactFilter>
 {
     private readonly InMemoryDataStore store;
 
@@ -50,31 +50,6 @@ internal class InMemoryEmergencyContactDbModel : IDbModel<EmergencyContact, Emer
         var exists = store.EmergencyContactLinks.Any(l =>
             l.StudentId == model.StudentId && l.EmergencyContactIdentityId == model.Id);
         return Task.FromResult(exists);
-    }
-
-    public Task Save(EmergencyContact model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var exists = store.EmergencyContactLinks.Any(l =>
-            l.StudentId == model.StudentId && l.EmergencyContactIdentityId == model.Id);
-
-        if (exists && saveOptions == SaveOptions.Create)
-            throw new ModelExistsException();
-        if (!exists && saveOptions == SaveOptions.Replace)
-            throw new ModelDoesNotExistException();
-
-        store.EmergencyContactLinks.RemoveAll(l =>
-            l.StudentId == model.StudentId && l.EmergencyContactIdentityId == model.Id);
-        store.EmergencyContactLinks.Add(new EmergencyContactLink(model.StudentId, model.Id, model.Relationship));
-
-        return Task.CompletedTask;
-    }
-
-    public Task Delete(EmergencyContact model, CancellationToken cancellationToken = default)
-    {
-        store.EmergencyContactLinks.RemoveAll(l =>
-            l.StudentId == model.StudentId && l.EmergencyContactIdentityId == model.Id);
-        return Task.CompletedTask;
     }
 
     private IEnumerable<EmergencyContact> Matching()

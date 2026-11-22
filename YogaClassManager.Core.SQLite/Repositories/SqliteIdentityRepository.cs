@@ -18,7 +18,7 @@ public class SqliteIdentityRepository : IIdentityRepository
         this.dataStoreProvider = dataStoreProvider;
     }
 
-    public IDbModel<Identity, IdentityFilter> Query(IdentityFilter filter)
+    public IReadOnlyDbModel<Identity, IdentityFilter> Query(IdentityFilter filter)
     {
         return new SqliteIdentityDbModel(filter, dataStoreProvider);
     }
@@ -263,7 +263,7 @@ internal sealed class IdentityRow
     }
 }
 
-internal class SqliteIdentityDbModel : IDbModel<Identity, IdentityFilter>
+internal class SqliteIdentityDbModel : IReadOnlyDbModel<Identity, IdentityFilter>
 {
     private readonly IDataStoreProvider dataStoreProvider;
 
@@ -338,12 +338,13 @@ internal class SqliteIdentityDbModel : IDbModel<Identity, IdentityFilter>
         var (key, order) = sortBy.Value;
         var direction = StringValueAttribute.GetStringValue(order);
 
+        // Text columns sort case-insensitively ("van Dyke" among the Vs), matching the in-memory store.
         var column = key switch
         {
-            IdentitySortOptions.FirstName => "FirstName",
-            IdentitySortOptions.LastName => "LastName",
+            IdentitySortOptions.FirstName => "FirstName COLLATE NOCASE",
+            IdentitySortOptions.LastName => "LastName COLLATE NOCASE",
             IdentitySortOptions.PhoneNumber => "PhoneNumber",
-            IdentitySortOptions.Email => "Email",
+            IdentitySortOptions.Email => "Email COLLATE NOCASE",
             _ => "PersonId"
         };
 
@@ -366,59 +367,5 @@ internal class SqliteIdentityDbModel : IDbModel<Identity, IdentityFilter>
         model.Email = row.Email;
         model.IsActive = row.IsActive == 1;
         return true;
-    }
-
-    public Task Save(Identity model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync(async (connection, transaction) =>
-        {
-            var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
-                "SELECT EXISTS(SELECT 1 FROM Person WHERE PersonId=$id)", new { id = model.Id }, transaction) == 1;
-
-            if (exists && saveOptions == SaveOptions.Create)
-                throw new ModelExistsException();
-            if (!exists && saveOptions == SaveOptions.Replace)
-                throw new ModelDoesNotExistException();
-
-            if (exists)
-            {
-                await connection.ExecuteAsync(
-                    """
-                    UPDATE Person SET FirstName=$firstName, LastName=$lastName, PhoneNumber=$phoneNumber,
-                                       Email=$email, IsActive=$isActive
-                    WHERE PersonId=$id
-                    """,
-                    new
-                    {
-                        id = model.Id, firstName = model.FirstName, lastName = model.LastName,
-                        phoneNumber = model.PhoneNumber, email = model.Email, isActive = model.IsActive ? 1 : 0
-                    }, transaction);
-            }
-            else
-            {
-                var id = await connection.ExecuteScalarAsync<long>(
-                    """
-                    INSERT INTO Person(FirstName, LastName, PhoneNumber, Email, IsActive)
-                    VALUES ($firstName, $lastName, $phoneNumber, $email, $isActive);
-                    SELECT last_insert_rowid();
-                    """,
-                    new
-                    {
-                        firstName = model.FirstName, lastName = model.LastName, phoneNumber = model.PhoneNumber,
-                        email = model.Email, isActive = model.IsActive ? 1 : 0
-                    }, transaction);
-                model.Id = (int)id;
-            }
-        }, cancellationToken);
-    }
-
-    public Task Delete(Identity model, CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync("DELETE FROM Person WHERE PersonId=$id", new { id = model.Id }, transaction),
-            cancellationToken);
     }
 }

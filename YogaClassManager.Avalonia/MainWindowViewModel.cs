@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Reactive;
+using Avalonia.Controls;
 using Material.Icons;
 using ReactiveUI;
 using Splat;
@@ -20,8 +21,17 @@ namespace YogaClassManager.Avalonia;
 /// </summary>
 public class MainWindowViewModel : ReactiveObject, IScreen
 {
+    /// <summary>Below this window width the side menu is forced to its collapsed icon rail (see
+    /// <see cref="IsNarrow" />).</summary>
+    public const double NarrowWindowWidth = 900;
+
     private readonly AppScreen appScreen;
     private bool isPaneOpen = true;
+    private bool isNarrow;
+
+    /// <summary>Whether the menu should be open while the window is wide - the user's own choice, kept
+    /// so that narrowing the window (which forces it closed) and widening it again restores it.</summary>
+    private bool openWhenWide = true;
 
     public MainWindowViewModel(AppScreen appScreen, IDialogService dialogService)
     {
@@ -47,7 +57,12 @@ public class MainWindowViewModel : ReactiveObject, IScreen
         SettingsNavItem = CreateNavItem("Settings", MaterialIconKind.CogOutline, "settings",
             () => Locator.Current.GetService<SettingsViewModel>()!);
 
-        ToggleNavCommand = ReactiveCommand.Create(() => { IsPaneOpen = !IsPaneOpen; });
+        ToggleNavCommand = ReactiveCommand.Create(() =>
+        {
+            IsPaneOpen = !IsPaneOpen;
+            if (!IsNarrow)
+                openWhenWide = IsPaneOpen;
+        });
 
         Router.CurrentViewModel.Subscribe(active => UpdateSelection(active?.UrlPathSegment));
 
@@ -69,10 +84,39 @@ public class MainWindowViewModel : ReactiveObject, IScreen
         set => this.RaiseAndSetIfChanged(ref isPaneOpen, value);
     }
 
+    /// <summary>
+    ///     Set by MainWindow from its width (below <see cref="NarrowWindowWidth" />). Narrow forces the
+    ///     menu closed to its icon rail, and opening it with the menu button then overlays the page
+    ///     (<see cref="PaneDisplayMode" />) instead of squeezing it; picking a page closes it again.
+    ///     Widening the window restores the menu to how it was last left while wide, inline.
+    /// </summary>
+    public bool IsNarrow
+    {
+        get => isNarrow;
+        set
+        {
+            if (isNarrow == value)
+                return;
+
+            this.RaiseAndSetIfChanged(ref isNarrow, value);
+            this.RaisePropertyChanged(nameof(PaneDisplayMode));
+            IsPaneOpen = !value && openWhenWide;
+        }
+    }
+
+    public SplitViewDisplayMode PaneDisplayMode =>
+        IsNarrow ? SplitViewDisplayMode.CompactOverlay : SplitViewDisplayMode.CompactInline;
+
     private NavItemViewModel CreateNavItem(string label, MaterialIconKind icon, string urlPathSegment,
         Func<IRoutableViewModel> resolveViewModel)
     {
-        var command = ReactiveCommand.CreateFromObservable(() => Router.Navigate.Execute(resolveViewModel()));
+        var command = ReactiveCommand.CreateFromObservable(() =>
+        {
+            // In the narrow layout the open menu overlays the page - close it once a page is chosen.
+            if (IsNarrow)
+                IsPaneOpen = false;
+            return Router.Navigate.Execute(resolveViewModel());
+        });
         return new NavItemViewModel(label, icon, command, urlPathSegment);
     }
 

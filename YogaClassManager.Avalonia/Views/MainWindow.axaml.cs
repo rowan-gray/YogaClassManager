@@ -10,6 +10,16 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Opened += OnOpened;
+
+        // Force the side menu to collapse when the window is narrow (MainWindowViewModel.IsNarrow).
+        SizeChanged += (_, _) => UpdateNarrow();
+        DataContextChanged += (_, _) => UpdateNarrow();
+    }
+
+    private void UpdateNarrow()
+    {
+        if (DataContext is MainWindowViewModel viewModel && ClientSize.Width > 0)
+            viewModel.IsNarrow = ClientSize.Width < MainWindowViewModel.NarrowWindowWidth;
     }
 
     private void OnOpened(object? sender, EventArgs e)

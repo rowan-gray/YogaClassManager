@@ -8,7 +8,7 @@
         mc:Ignorable="d" d:DesignWidth="440" d:DesignHeight="280"
         x:Class="YogaClassManager.Avalonia.Views.Bootstrap.DatabaseGateWindow"
         x:DataType="vm:DatabaseGateViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/appicon.ico"
         Title="YogaClassManager"
         Width="440" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterScreen"

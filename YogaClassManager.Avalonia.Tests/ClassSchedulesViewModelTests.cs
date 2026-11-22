@@ -168,4 +168,45 @@ public class ClassSchedulesViewModelTests
         Assert.Equal(existingId, opened.Id);
         Assert.Single(store.ClassRolls);
     }
+
+    [Fact]
+    public void RollList_DefaultsToTheLastSixMonths_WithoutCountingAsAFilter()
+    {
+        var (viewModel, _, _) = Create(Schedule(DayOfWeek.Monday, 9));
+
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Today).AddMonths(-6), viewModel.RollDateFrom);
+        Assert.Equal(0, viewModel.RollFilterCount);
+
+        viewModel.RollDateFrom = null; // "show every roll" is the non-default choice now
+        Assert.Equal(1, viewModel.RollFilterCount);
+
+        viewModel.ClearRollFiltersCommand.Execute().Subscribe();
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Today).AddMonths(-6), viewModel.RollDateFrom);
+        Assert.Equal(0, viewModel.RollFilterCount);
+    }
+
+    [Fact]
+    public async Task RollList_LeavesOutRollsOlderThanSixMonths_ByDefault()
+    {
+        var (viewModel, store, _) = Create(Schedule(DayOfWeek.Monday, 9));
+        await viewModel.RefreshCommand.Execute();
+        var schedule = viewModel.Items.Single();
+
+        var rolls = new InMemoryClassRollRepository(store);
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var recentId = await rolls.AddAsync(new ClassRoll(0, today.AddMonths(-3), schedule, []));
+        await rolls.AddAsync(new ClassRoll(0, today.AddMonths(-8), schedule, []));
+
+        // The page may already have this schedule selected (and loaded its - then empty - rolls), so
+        // clear it first to make re-selecting it a real change that reloads.
+        viewModel.Selection = null;
+        viewModel.Selection = schedule;
+
+        // ReloadOn starts the load via Observable.FromAsync (task pool), so wait for it to land.
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (viewModel.Rolls.Count == 0 && DateTime.UtcNow < deadline)
+            Thread.Sleep(5);
+
+        Assert.Equal([recentId], viewModel.Rolls.Select(r => r.Id));
+    }
 }

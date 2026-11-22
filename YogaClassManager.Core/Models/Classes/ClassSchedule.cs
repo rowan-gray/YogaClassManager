@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace YogaClassManager.Core.Models.Classes;
@@ -49,8 +50,16 @@ public partial class ClassSchedule : ObservableObject, IIdentifiable, IUpdateabl
         return HashCode.Combine(Id, Day, Time, IsArchived);
     }
 
+    /// <summary>"Monday: 9:00 am" - every list, tile and roll title shows a class this way. The time
+    /// is formatted explicitly (12-hour, lowercase am/pm) rather than with the machine's culture, so
+    /// it reads the same everywhere and its longest form ("Wednesday: 12:00 pm") is known - the
+    /// Dashboard's class tiles are sized to fit that on one line.</summary>
     public override string ToString()
     {
-        return $"{Day}: {Time}";
+        return $"{Day}: {FormatTime(Time)}";
     }
+
+    /// <summary>12-hour time with lowercase am/pm, e.g. "9:00 am", "12:30 pm".</summary>
+    public static string FormatTime(TimeOnly time) =>
+        time.ToString("h:mm tt", CultureInfo.InvariantCulture).ToLowerInvariant();
 }

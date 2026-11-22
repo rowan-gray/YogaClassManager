@@ -1,3 +1,5 @@
+using YogaClassManager.Core.Models.Passes;
+
 namespace YogaClassManager.Core.Models.Classes;
 
 public record ClassAttendanceRecord(
@@ -5,4 +7,4 @@ public record ClassAttendanceRecord(
     DateOnly Date,
     ClassSchedule ClassSchedule,
     int StudentId,
-    int? PassId);
+    Pass? Pass);

@@ -25,6 +25,32 @@ public abstract class IdentityRepositoryTestBase<TFactory> : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateAsync_PersistsEditedDetails_IncludingClearedOptionalFields()
+    {
+        var identityId = await Factory.Identities.AddAsync(
+            new Identity(0, "Noah", "Robinson", "0400000000", "noah@example.com", true));
+
+        // A fresh object, as the edit dialog saves - not the instance the repository handed out.
+        await Factory.Identities.UpdateAsync(new Identity(identityId, "Noel", null, "0411111111", null, true));
+
+        var reloaded = (await Factory.Identities.Query(new IdentityFilter { Id = (uint)identityId }).LoadSingle())!;
+        Assert.Equal(("Noel", (string?)null, "0411111111", (string?)null),
+            (reloaded.FirstName, reloaded.LastName, reloaded.PhoneNumber, reloaded.Email));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_KeepsAnIdentitysStudentStatus()
+    {
+        var studentId = await Factory.Students.AddAsync(new Student(0, "Ava", "Lee", null, "ava@example.com", true));
+
+        await Factory.Identities.UpdateAsync(new Identity(studentId, "Ava", "Lee-Smith", null, "ava@example.com", true));
+
+        var student = (await Factory.Students.Query(new StudentFilter { Id = (uint)studentId }).LoadSingle())!;
+        Assert.Equal("Lee-Smith", student.LastName);
+        Assert.True((await Factory.Identities.GetLinkageSummaryAsync(studentId)).IsStudent);
+    }
+
+    [Fact]
     public async Task ArchiveOrDeleteAsync_HardDeletes_WhenIdentityHasNoLinks()
     {
         var identityId = await Factory.Identities.AddAsync(
@@ -149,5 +175,78 @@ public abstract class IdentityRepositoryTestBase<TFactory> : IAsyncLifetime
 
         Assert.Equal(["Zeta", "Alpha"], results.Select(p => p.LastName));
         Assert.Equal([aId, bId], results.Select(p => p.Id));
+    }
+
+    /// <summary>Every sort key, both directions. Each key orders the four records differently (and
+    /// differently from insertion order), and a missing value sorts first ascending / last descending.</summary>
+    [Theory]
+    [InlineData(IdentitySortOptions.Id, Order.Ascending)]
+    [InlineData(IdentitySortOptions.Id, Order.Descending)]
+    [InlineData(IdentitySortOptions.FirstName, Order.Ascending)]
+    [InlineData(IdentitySortOptions.FirstName, Order.Descending)]
+    [InlineData(IdentitySortOptions.LastName, Order.Ascending)]
+    [InlineData(IdentitySortOptions.LastName, Order.Descending)]
+    [InlineData(IdentitySortOptions.PhoneNumber, Order.Ascending)]
+    [InlineData(IdentitySortOptions.PhoneNumber, Order.Descending)]
+    [InlineData(IdentitySortOptions.Email, Order.Ascending)]
+    [InlineData(IdentitySortOptions.Email, Order.Descending)]
+    public async Task Query_SortsByEveryKeyInBothDirections(IdentitySortOptions key, Order order)
+    {
+        int[] ids =
+        [
+            await Factory.Identities.AddAsync(new Identity(0, "Dana", "Adams", "0400 000 003", "b@example.com", true)),
+            await Factory.Identities.AddAsync(new Identity(0, "Bea", "Clark", null, "d@example.com", true)),
+            await Factory.Identities.AddAsync(new Identity(0, "Cara", null, "0400 000 001", null, true)),
+            await Factory.Identities.AddAsync(new Identity(0, "Amy", "Brown", "0400 000 002", "a@example.com", true))
+        ];
+        int[] ascending = key switch
+        {
+            IdentitySortOptions.FirstName => [3, 1, 2, 0],
+            IdentitySortOptions.LastName => [2, 0, 3, 1],
+            IdentitySortOptions.PhoneNumber => [1, 2, 3, 0],
+            IdentitySortOptions.Email => [2, 3, 0, 1],
+            _ => [0, 1, 2, 3]
+        };
+
+        var results = await Factory.Identities.Query(new IdentityFilter
+        {
+            SortBy = new KeyValuePair<IdentitySortOptions, Order>(key, order)
+        }).LoadMultiple();
+
+        var expected = ascending.Select(i => ids[i]);
+        Assert.Equal(order == Order.Ascending ? expected : expected.Reverse(), results.Select(p => p.Id));
+    }
+
+    [Theory]
+    [InlineData(Order.Ascending)]
+    [InlineData(Order.Descending)]
+    public async Task Query_SortTiesBreakByIdAscending_InEitherDirection(Order order)
+    {
+        var first = await Factory.Identities.AddAsync(new Identity(0, "Sam", "Lee", null, "sam.lee@example.com", true));
+        var second = await Factory.Identities.AddAsync(new Identity(0, "Sam", "Ng", null, "sam.ng@example.com", true));
+
+        var results = await Factory.Identities.Query(new IdentityFilter
+        {
+            SortBy = new KeyValuePair<IdentitySortOptions, Order>(IdentitySortOptions.FirstName, order)
+        }).LoadMultiple();
+
+        Assert.Equal([first, second], results.Select(p => p.Id));
+    }
+
+    /// <summary>Surnames like "van Dyke" sort among the V/W names, not after every capitalised one -
+    /// i.e. both stores compare names case-insensitively.</summary>
+    [Fact]
+    public async Task Query_SortByName_IgnoresCase()
+    {
+        var wilson = await Factory.Identities.AddAsync(new Identity(0, "Kim", "Wilson", null, "kim@example.com", true));
+        var vanDyke = await Factory.Identities.AddAsync(new Identity(0, "Jo", "van Dyke", null, "jo@example.com", true));
+        var adams = await Factory.Identities.AddAsync(new Identity(0, "Al", "Adams", null, "al@example.com", true));
+
+        var results = await Factory.Identities.Query(new IdentityFilter
+        {
+            SortBy = new KeyValuePair<IdentitySortOptions, Order>(IdentitySortOptions.LastName, Order.Ascending)
+        }).LoadMultiple();
+
+        Assert.Equal([adams, vanDyke, wilson], results.Select(p => p.Id));
     }
 }

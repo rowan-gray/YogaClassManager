@@ -58,7 +58,7 @@ public class MarkRollKeyboardTests
 
     private static void Search(MarkRollViewModel viewModel, TestScheduler scheduler, string query)
     {
-        viewModel.SearchQuery = query;
+        viewModel.Search.SearchQuery = query;
         scheduler.AdvanceByMs(300);
     }
 
@@ -67,8 +67,8 @@ public class MarkRollKeyboardTests
     {
         var viewModel = CreateWithStudents("Ada");
 
-        Assert.False(viewModel.HasSearchResults);
-        Assert.Equal("Type a name to find a student.", viewModel.SearchEmptyText);
+        Assert.False(viewModel.Search.HasSearchResults);
+        Assert.Equal("Type a name to find a student.", viewModel.Search.SearchEmptyText);
     }
 
     [Fact]
@@ -80,13 +80,13 @@ public class MarkRollKeyboardTests
 
             Search(viewModel, scheduler, "zzz");
 
-            Assert.False(viewModel.HasSearchResults);
-            Assert.Equal("No students match this search.", viewModel.SearchEmptyText);
+            Assert.False(viewModel.Search.HasSearchResults);
+            Assert.Equal("No students match the current search.", viewModel.Search.SearchEmptyText);
         });
     }
 
     [Fact]
-    public void EnterInTheSearchBox_AddsTheTopMatch_WithNothingSelected()
+    public void EnterInTheSearchBox_AddsTheOnlyMatch_WithNothingSelected()
     {
         WithTestScheduler(scheduler =>
         {
@@ -94,13 +94,35 @@ public class MarkRollKeyboardTests
 
             Search(viewModel, scheduler, "Ada");
 
-            Assert.True(viewModel.HasSearchResults);
-            Assert.Null(viewModel.SelectedSearchResult);
+            Assert.True(viewModel.Search.HasSearchResults);
+            Assert.Null(viewModel.Search.SelectedSearchResult);
 
-            viewModel.AddSelectedStudentCommand.Execute().Subscribe();
+            viewModel.Search.ChooseSelectedCommand.Execute().Subscribe();
 
             var entry = Assert.Single(viewModel.Entries);
             Assert.Equal("Ada", entry.Student.FirstName);
+        });
+    }
+
+    /// <summary>With several matches and no row highlighted, Enter in the box adds nobody - it used to
+    /// add whichever happened to be first, which made adding the wrong one of two similar names easy.</summary>
+    [Fact]
+    public void EnterInTheSearchBox_AddsNobody_WhenSeveralStudentsMatch()
+    {
+        WithTestScheduler(scheduler =>
+        {
+            var viewModel = CreateWithStudents("Ada", "Grace");
+
+            Search(viewModel, scheduler, "Tester");
+            Assert.Equal(2, viewModel.Search.SearchResults.Count);
+            Assert.Null(viewModel.Search.SelectedSearchResult);
+
+            var canExecute = true;
+            using (viewModel.Search.ChooseSelectedCommand.CanExecute.Subscribe(value => canExecute = value))
+                Assert.False(canExecute);
+
+            viewModel.Search.ChooseSelectedCommand.Execute().Subscribe(_ => { }, _ => { });
+            Assert.Empty(viewModel.Entries);
         });
     }
 
@@ -112,10 +134,10 @@ public class MarkRollKeyboardTests
             var viewModel = CreateWithStudents("Ada", "Grace");
 
             Search(viewModel, scheduler, "Tester");
-            Assert.Equal(2, viewModel.SearchResults.Count);
+            Assert.Equal(2, viewModel.Search.SearchResults.Count);
 
-            viewModel.SelectedSearchResult = viewModel.SearchResults.Single(s => s.FirstName == "Grace");
-            viewModel.AddSelectedStudentCommand.Execute().Subscribe();
+            viewModel.Search.SelectedSearchResult = viewModel.Search.SearchResults.Single(s => s.FirstName == "Grace");
+            viewModel.Search.ChooseSelectedCommand.Execute().Subscribe();
 
             var entry = Assert.Single(viewModel.Entries);
             Assert.Equal("Grace", entry.Student.FirstName);
@@ -128,7 +150,7 @@ public class MarkRollKeyboardTests
         var viewModel = CreateWithStudents("Ada");
 
         var canExecute = true;
-        using (viewModel.AddSelectedStudentCommand.CanExecute.Subscribe(value => canExecute = value))
+        using (viewModel.Search.ChooseSelectedCommand.CanExecute.Subscribe(value => canExecute = value))
         {
             Assert.False(canExecute);
         }

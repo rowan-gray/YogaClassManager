@@ -15,7 +15,7 @@ public class InMemoryClassRollRepository : IClassRollRepository
         this.store = store;
     }
 
-    public IDbModel<ClassRoll, ClassRollFilter> Query(ClassRollFilter filter)
+    public IReadOnlyDbModel<ClassRoll, ClassRollFilter> Query(ClassRollFilter filter)
     {
         return new InMemoryClassRollDbModel(filter, store);
     }
@@ -78,22 +78,45 @@ public class InMemoryClassRollRepository : IClassRollRepository
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<ClassAttendanceRecord>> GetAttendanceHistoryAsync(int studentId,
-        CancellationToken cancellationToken = default)
+    public Task ApplyChangesAsync(ClassRoll details, IReadOnlyCollection<int> removedStudentIds,
+        IReadOnlyCollection<ClassRollEntry> addedOrChangedEntries, CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<ClassAttendanceRecord> history = store.ClassRolls.Values
-            .SelectMany(roll => roll.StudentEntries
-                .Where(entry => entry.Student.Id == studentId)
-                .Select(entry => new ClassAttendanceRecord(roll.Id, roll.Date, roll.ClassSchedule, studentId,
-                    entry.Pass?.Id)))
-            .OrderByDescending(r => r.Date)
-            .ToList();
+        // Synchronous with nothing that can fail part-way, so all-or-nothing by construction.
+        if (!store.ClassRolls.TryGetValue(details.Id, out var roll))
+            return Task.CompletedTask;
 
-        return Task.FromResult(history);
+        roll.Date = details.Date;
+        roll.ClassSchedule = details.ClassSchedule;
+        roll.StudentEntries.RemoveAll(e => removedStudentIds.Contains(e.Student.Id));
+
+        foreach (var entry in addedOrChangedEntries)
+        {
+            roll.StudentEntries.RemoveAll(e => e.Student.Id == entry.Student.Id);
+            roll.StudentEntries.Add(entry);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public async Task<IReadOnlyList<ClassAttendanceRecord>> GetAttendanceHistoryAsync(int studentId,
+        ClassRollFilter filter = default, CancellationToken cancellationToken = default)
+    {
+        // Routed through Query/Matching/Sort - the exact same filtering/ordering the Class Rolls list
+        // uses - rather than a parallel implementation, so the two can't drift apart.
+        var rolls = await Query(filter).LoadMultiple(cancellationToken: cancellationToken);
+
+        return rolls
+            .Where(r => r.StudentEntries.Any(e => e.Student.Id == studentId))
+            .Select(r =>
+            {
+                var entry = r.StudentEntries.First(e => e.Student.Id == studentId);
+                return new ClassAttendanceRecord(r.Id, r.Date, r.ClassSchedule, studentId, entry.Pass);
+            })
+            .ToList();
     }
 }
 
-internal class InMemoryClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
+internal class InMemoryClassRollDbModel : IReadOnlyDbModel<ClassRoll, ClassRollFilter>
 {
     private readonly InMemoryDataStore store;
 
@@ -123,26 +146,6 @@ internal class InMemoryClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
         return Task.FromResult(store.ClassRolls.ContainsKey(model.Id));
     }
 
-    public Task Save(ClassRoll model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var exists = store.ClassRolls.ContainsKey(model.Id);
-
-        if (exists && saveOptions == SaveOptions.Create)
-            throw new ModelExistsException();
-        if (!exists && saveOptions == SaveOptions.Replace)
-            throw new ModelDoesNotExistException();
-
-        store.ClassRolls[model.Id <= 0 ? store.NextId() : model.Id] = model;
-        return Task.CompletedTask;
-    }
-
-    public Task Delete(ClassRoll model, CancellationToken cancellationToken = default)
-    {
-        store.ClassRolls.Remove(model.Id);
-        return Task.CompletedTask;
-    }
-
     private IEnumerable<ClassRoll> Matching()
     {
         var filter = Filter;
@@ -166,14 +169,22 @@ internal class InMemoryClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
             return rolls.OrderByDescending(r => r.Date).ThenBy(r => r.ClassSchedule.Time);
 
         var (key, order) = sortBy.Value;
+        var ascending = order == Order.Ascending;
 
-        Func<ClassRoll, IComparable> selector = key switch
+        // Ties break so each sort still reads chronologically (must match SqliteClassRollRepository):
+        // Date - same-day classes by time in the same direction (newest first = latest class first);
+        // Time - most recent date first; Day of week - time of day, then most recent date first.
+        return key switch
         {
-            ClassRollSortOptions.Time => r => r.ClassSchedule.Time,
-            ClassRollSortOptions.DayOfWeek => r => r.ClassSchedule.Day,
-            _ => r => r.Date
+            ClassRollSortOptions.Time =>
+                (ascending ? rolls.OrderBy(r => r.ClassSchedule.Time) : rolls.OrderByDescending(r => r.ClassSchedule.Time))
+                .ThenByDescending(r => r.Date).ThenBy(r => r.Id),
+            ClassRollSortOptions.DayOfWeek =>
+                (ascending ? rolls.OrderBy(r => r.ClassSchedule.Day) : rolls.OrderByDescending(r => r.ClassSchedule.Day))
+                .ThenBy(r => r.ClassSchedule.Time).ThenByDescending(r => r.Date).ThenBy(r => r.Id),
+            _ => ascending
+                ? rolls.OrderBy(r => r.Date).ThenBy(r => r.ClassSchedule.Time).ThenBy(r => r.Id)
+                : rolls.OrderByDescending(r => r.Date).ThenByDescending(r => r.ClassSchedule.Time).ThenBy(r => r.Id)
         };
-
-        return order == Order.Ascending ? rolls.OrderBy(selector) : rolls.OrderByDescending(selector);
     }
 }

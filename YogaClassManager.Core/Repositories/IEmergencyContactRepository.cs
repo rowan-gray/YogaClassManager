@@ -6,5 +6,5 @@ namespace YogaClassManager.Core.Repositories;
 
 public interface IEmergencyContactRepository
 {
-    IDbModel<EmergencyContact, EmergencyContactFilter> Query(EmergencyContactFilter filter);
+    IReadOnlyDbModel<EmergencyContact, EmergencyContactFilter> Query(EmergencyContactFilter filter);
 }

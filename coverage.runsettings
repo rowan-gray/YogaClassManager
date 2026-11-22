@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Code-coverage settings for Microsoft's "Code Coverage" collector (ships with Microsoft.NET.Test.Sdk).
+  Usage, from the repo root: pass this file to `dotnet test` via its settings option
+  (see CLAUDE.md, "Build & run" for the exact command).
+  Each test project writes TestResults/<guid>/<name>.cobertura.xml under its own folder.
+
+  Static (on-disk) instrumentation is disabled on purpose: rewritten DLLs are blocked by Windows
+  Smart App Control. Dynamic instrumentation rewrites IL in memory via the CLR profiler instead.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="Code Coverage">
+        <Configuration>
+          <Format>Cobertura</Format>
+          <CodeCoverage>
+            <EnableStaticManagedInstrumentation>False</EnableStaticManagedInstrumentation>
+            <EnableDynamicManagedInstrumentation>True</EnableDynamicManagedInstrumentation>
+            <ModulePaths>
+              <!-- Only measure the app's own assemblies, never the tests or shared test fixtures. -->
+              <Include>
+                <!-- Matched against the full path, so anchor to the file name (the repo folder is also "YogaClassManager"). -->
+                <ModulePath>.*\\YogaClassManager[^\\]*\.dll$</ModulePath>
+              </Include>
+              <Exclude>
+                <ModulePath>.*\.Tests\.dll$</ModulePath>
+                <ModulePath>.*YogaClassManager\.Core\.Tests\.Shared\.dll$</ModulePath>
+              </Exclude>
+            </ModulePaths>
+            <!-- Source-generator / XAML-compiler output (CommunityToolkit.Mvvm, ReactiveUI, Avalonia). -->
+            <Attributes>
+              <Exclude>
+                <Attribute>^System\.CodeDom\.Compiler\.GeneratedCodeAttribute$</Attribute>
+                <Attribute>^System\.Runtime\.CompilerServices\.CompilerGeneratedAttribute$</Attribute>
+                <Attribute>^System\.Diagnostics\.CodeAnalysis\.ExcludeFromCodeCoverageAttribute$</Attribute>
+              </Exclude>
+            </Attributes>
+            <Sources>
+              <Exclude>
+                <Source>.*\\obj\\.*</Source>
+                <Source>.*\.g\.cs$</Source>
+              </Exclude>
+            </Sources>
+            <CollectFromChildProcesses>True</CollectFromChildProcesses>
+          </CodeCoverage>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

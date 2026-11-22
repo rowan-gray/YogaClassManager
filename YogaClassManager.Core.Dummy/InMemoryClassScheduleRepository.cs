@@ -14,7 +14,7 @@ public class InMemoryClassScheduleRepository : IClassScheduleRepository
         this.store = store;
     }
 
-    public IDbModel<ClassSchedule, ClassScheduleFilter> Query(ClassScheduleFilter filter)
+    public IReadOnlyDbModel<ClassSchedule, ClassScheduleFilter> Query(ClassScheduleFilter filter)
     {
         return new InMemoryClassScheduleDbModel(filter, store);
     }
@@ -77,7 +77,7 @@ public class InMemoryClassScheduleRepository : IClassScheduleRepository
     }
 }
 
-internal class InMemoryClassScheduleDbModel : IDbModel<ClassSchedule, ClassScheduleFilter>
+internal class InMemoryClassScheduleDbModel : IReadOnlyDbModel<ClassSchedule, ClassScheduleFilter>
 {
     private readonly InMemoryDataStore store;
 
@@ -105,26 +105,6 @@ internal class InMemoryClassScheduleDbModel : IDbModel<ClassSchedule, ClassSched
     public Task<bool> Refresh(ClassSchedule model, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(store.ClassSchedules.ContainsKey(model.Id));
-    }
-
-    public Task Save(ClassSchedule model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var exists = store.ClassSchedules.ContainsKey(model.Id);
-
-        if (exists && saveOptions == SaveOptions.Create)
-            throw new ModelExistsException();
-        if (!exists && saveOptions == SaveOptions.Replace)
-            throw new ModelDoesNotExistException();
-
-        store.ClassSchedules[model.Id <= 0 ? store.NextId() : model.Id] = model;
-        return Task.CompletedTask;
-    }
-
-    public Task Delete(ClassSchedule model, CancellationToken cancellationToken = default)
-    {
-        store.ClassSchedules.Remove(model.Id);
-        return Task.CompletedTask;
     }
 
     private IEnumerable<ClassSchedule> Matching()

@@ -20,8 +20,9 @@ namespace YogaClassManager.Avalonia.ViewModels.Shared;
 ///
 ///     Uses a save/cancel paradigm, not save-immediately: date/attendee/pass-assignment edits only
 ///     mutate local state (Date/Entries) and set IsDirty, and are reconciled against the repository -
-///     via a diff against the last-saved snapshot, since IClassRollRepository's Add/Remove/UpdatePass
-///     methods are incremental, not a single "replace everything" call - only when SaveCommand runs.
+///     as a diff against the last-saved snapshot, applied atomically via IClassRollRepository.ApplyChangesAsync
+///     (a diff, not "replace everything", so concurrent edits to the roll elsewhere survive) - only when
+///     SaveCommand runs.
 ///     Creating a brand-new Pass via the "student has no available pass" flow is the one exception:
 ///     that's a distinct entity with its own explicit Save button in PassEditView, so it persists
 ///     immediately there regardless of whether the roll itself is later saved or cancelled.
@@ -39,6 +40,7 @@ public class MarkRollViewModel : ViewModelBase
     private readonly IPassRepository passRepository;
     private readonly ITermRepository termRepository;
     private readonly IToastService toastService;
+    private readonly RollPassResolver passResolver;
 
     /// <summary>0 until this roll has been persisted - see the class remarks. Not readonly because
     /// the first successful save is what assigns it a real id.</summary>
@@ -46,9 +48,6 @@ public class MarkRollViewModel : ViewModelBase
 
     private DateOnly date;
     private List<(int StudentId, int? PassId)> savedEntryState;
-    private string? searchQuery;
-    private Student? selectedSearchResult;
-    private bool hasSearchResults;
     private bool isDirty;
 
     public MarkRollViewModel(ClassRoll roll, IClassRollRepository classRollRepository,
@@ -69,32 +68,27 @@ public class MarkRollViewModel : ViewModelBase
         savedEntryState = SnapshotEntries();
 
         SaveCommand = ReactiveCommand.CreateFromTask(SaveAsync, this.WhenAnyValue(x => x.IsDirty));
-        AddStudentCommand = ReactiveCommand.CreateFromTask<Student>(AddStudentAsync);
         RemoveStudentCommand = ReactiveCommand.Create<ClassRollEntry>(RemoveEntry);
         ChangePassCommand = ReactiveCommand.CreateFromTask<ClassRollEntry>(ChangePassAsync);
 
-        // The keyboard path for the app's most-repeated action: Enter in the search box adds the top
-        // match, Enter on a row in the results list adds that row. One command serves both because
-        // "whatever is selected, or the first result if nothing is" is the same intent either way.
-        var canAddSelected = this
-            .WhenAnyValue(x => x.SelectedSearchResult, x => x.HasSearchResults,
-                (selected, hasResults) => selected is not null || hasResults);
-        AddSelectedStudentCommand = ReactiveCommand.CreateFromTask(AddSelectedStudentAsync, canAddSelected);
+        // The keyboard path for the app's most-repeated action (Enter in the box adds the student when they're the only match,
+        // Enter on a row adds that row) lives in the shared search - see StudentSearchViewModel.
+        // Students already on the roll are left out of the results.
+        passResolver = new RollPassResolver(studentRepository, passRepository, termRepository, toastService);
 
-        this.WhenAnyValue(x => x.SearchQuery)
-            // Skip(1): WhenAnyValue replays the current (empty) query immediately, which would run a
-            // pointless search on open - the same footgun SearchableCollectionPageModelBase documents.
-            .Skip(1)
-            .Throttle(TimeSpan.FromMilliseconds(250), RxApp.MainThreadScheduler)
-            .DistinctUntilChanged()
-            // Switch, not SelectMany: two searches in flight would otherwise both Clear()-and-refill
-            // SearchResults, and the slower one could land last and show results for a stale query.
-            .Select(query => Observable.FromAsync(() => SearchStudentsAsync(query)))
-            .Switch()
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Subscribe(ApplySearchResults,
-                error => toastService.ShowError($"Couldn't search students - {error.Message}"));
+        Search = new StudentSearchViewModel(studentRepository, AddStudentAsync,
+            error => toastService.ShowError($"Couldn't search students - {error.Message}"),
+            () => Entries.Select(e => e.Student.Id).ToList());
+
+        // Attendee rows show each student's health concerns under their name. Students loaded with a
+        // roll don't carry them (the roll query only hydrates name/contact details), so fetch them.
+        LoadOnCreate(LoadAttendeeHealthConcernsAsync,
+            error => toastService.ShowError($"Couldn't load attendees' health concerns - {error.Message}"));
     }
+
+    /// <summary>The "Add a student" search (Controls/PersonSearchBox); choosing a student adds them
+    /// to the roll.</summary>
+    public StudentSearchViewModel Search { get; }
 
     /// <summary>Its own private instance, not the shared app-wide IDialogService - popups opened from
     /// here render in this window's own local overlay (see MarkRollWindow.axaml), not MainWindow's.</summary>
@@ -118,41 +112,9 @@ public class MarkRollViewModel : ViewModelBase
         }
     }
 
-    public string? SearchQuery
-    {
-        get => searchQuery;
-        set => this.RaiseAndSetIfChanged(ref searchQuery, value);
-    }
-
-    /// <summary>The row the keyboard is on in the results list. Null while focus is still in the search
-    /// box, which is why <see cref="AddSelectedStudentAsync" /> falls back to the first result.</summary>
-    public Student? SelectedSearchResult
-    {
-        get => selectedSearchResult;
-        set => this.RaiseAndSetIfChanged(ref selectedSearchResult, value);
-    }
-
-    public bool HasSearchResults
-    {
-        get => hasSearchResults;
-        private set => this.RaiseAndSetIfChanged(ref hasSearchResults, value);
-    }
-
-    /// <summary>What to show in place of an empty results list. Distinguishes "you haven't typed
-    /// anything yet" from "nothing matched what you typed" - both leave the list empty, but only one of
-    /// them is a dead end.</summary>
-    public string? SearchEmptyText => HasSearchResults
-        ? null
-        : string.IsNullOrWhiteSpace(SearchQuery)
-            ? "Type a name to find a student."
-            : "No students match this search.";
-
-    public ObservableCollection<Student> SearchResults { get; } = new();
     public ObservableCollection<ClassRollEntry> Entries { get; } = new();
 
     public ReactiveCommand<Unit, Unit> SaveCommand { get; }
-    public ReactiveCommand<Student, Unit> AddStudentCommand { get; }
-    public ReactiveCommand<Unit, Unit> AddSelectedStudentCommand { get; }
     public ReactiveCommand<ClassRollEntry, Unit> RemoveStudentCommand { get; }
     public ReactiveCommand<ClassRollEntry, Unit> ChangePassCommand { get; }
 
@@ -170,34 +132,6 @@ public class MarkRollViewModel : ViewModelBase
         return await Dialogs.ShowDialogAsync(confirmViewModel) == true;
     }
 
-    private void ApplySearchResults(IEnumerable<Student> results)
-    {
-        SearchResults.Clear();
-        foreach (var student in results)
-            SearchResults.Add(student);
-
-        SelectedSearchResult = null;
-        HasSearchResults = SearchResults.Count > 0;
-        this.RaisePropertyChanged(nameof(SearchEmptyText));
-    }
-
-    private Task AddSelectedStudentAsync()
-    {
-        var student = SelectedSearchResult ?? SearchResults.FirstOrDefault();
-        return student is null ? Task.CompletedTask : AddStudentAsync(student);
-    }
-
-    private async Task<IEnumerable<Student>> SearchStudentsAsync(string? query)
-    {
-        if (string.IsNullOrWhiteSpace(query))
-            return [];
-
-        var excludeIds = Entries.Select(e => e.Student.Id).ToList();
-        return await studentRepository
-            .Query(new StudentFilter { NameFilter = query, IsActive = true, ExcludeIds = excludeIds })
-            .LoadMultiple();
-    }
-
     private async Task SaveAsync()
     {
         if (classRollId == 0)
@@ -209,35 +143,28 @@ public class MarkRollViewModel : ViewModelBase
                 Entries.ToList()));
             savedEntryState = SnapshotEntries();
             IsDirty = false;
+            await RefreshAttendeePassesAsync();
             return;
         }
 
-        await classRollRepository.UpdateDetailsAsync(new ClassRoll(classRollId, Date, classSchedule,
-            Entries.ToList()));
-
-        var previousStudentIds = savedEntryState.Select(e => e.StudentId).ToHashSet();
+        // Diffed against the last save (not "replace the list") so an attendee added to this roll from the
+        // Class Rolls page while this window was open isn't wiped out; applied in one atomic call so a
+        // failure leaves the roll exactly as it was, with this window still dirty for a retry.
+        var previousPassIds = savedEntryState.ToDictionary(e => e.StudentId, e => e.PassId);
         var currentStudentIds = Entries.Select(e => e.Student.Id).ToHashSet();
 
-        foreach (var studentId in previousStudentIds.Except(currentStudentIds))
-            await classRollRepository.RemoveStudentEntryAsync(classRollId, studentId);
+        var removedStudentIds = previousPassIds.Keys.Where(id => !currentStudentIds.Contains(id)).ToList();
+        var addedOrChangedEntries = Entries
+            .Where(e => !previousPassIds.TryGetValue(e.Student.Id, out var previousPassId) || previousPassId != e.Pass?.Id)
+            .ToList();
 
-        foreach (var entry in Entries)
-        {
-            if (!previousStudentIds.Contains(entry.Student.Id))
-            {
-                await classRollRepository.AddStudentEntryAsync(classRollId, entry);
-            }
-            else
-            {
-                var previousPassId = savedEntryState.First(e => e.StudentId == entry.Student.Id).PassId;
-                if (previousPassId != entry.Pass?.Id)
-                    await classRollRepository.UpdateStudentEntryPassAsync(classRollId, entry.Student.Id,
-                        entry.Pass?.Id);
-            }
-        }
+        await classRollRepository.ApplyChangesAsync(new ClassRoll(classRollId, Date, classSchedule, []),
+            removedStudentIds, addedOrChangedEntries);
 
         savedEntryState = SnapshotEntries();
         IsDirty = false;
+
+        await RefreshAttendeePassesAsync();
     }
 
     private List<(int StudentId, int? PassId)> SnapshotEntries()
@@ -251,39 +178,48 @@ public class MarkRollViewModel : ViewModelBase
         {
             StartBusy();
 
-            var candidates = await BuildCandidatesAsync(student);
+            // Cancelled = the instructor backed out of "Add pass" (no usable pass): they're not put on the
+            // roll without one, and the search (query and results) is left as it was so they can try
+            // again or pick someone else. See RollPassResolver for how the pass is chosen.
+            var choice = await passResolver.ChooseForNewAttendeeAsync(student, classSchedule, Date, Dialogs);
+            if (choice.Cancelled)
+                return;
 
-            Pass? chosenPass;
-            if (candidates.Count == 0)
-            {
-                toastService.ShowWarning($"{student.FullName} has no available pass.");
-
-                var editViewModel = new PassEditViewModel(student.Id, Dialogs, termRepository);
-                var newPass = await Dialogs.ShowDialogAsync(editViewModel);
-                if (newPass is not null)
-                    await passRepository.AddAsync(newPass);
-
-                chosenPass = newPass;
-            }
-            else if (candidates.Count == 1)
-            {
-                chosenPass = candidates[0];
-            }
-            else
-            {
-                var pickerViewModel = new PassPickerViewModel(candidates, classSchedule, Date, student.FullName);
-                chosenPass = await Dialogs.ShowDialogAsync(pickerViewModel);
-            }
-
-            Entries.Add(new ClassRollEntry(student, chosenPass));
+            await LoadHealthConcernsAsync(student);
+            Entries.Add(new ClassRollEntry(student, choice.Pass));
             IsDirty = true;
 
-            SearchQuery = null;
+            Search.SearchQuery = null;
         }
         finally
         {
             EndBusy();
         }
+    }
+
+    private async Task LoadAttendeeHealthConcernsAsync()
+    {
+        foreach (var entry in Entries.ToList())
+            await LoadHealthConcernsAsync(entry.Student);
+    }
+
+    /// <summary>Replaces (rather than adds to) Student.HealthConcerns, so the attendee row's binding
+    /// to it re-evaluates.</summary>
+    private async Task LoadHealthConcernsAsync(Student student)
+    {
+        var concerns = await studentRepository.GetHealthConcernsAsync(student.Id);
+        student.HealthConcerns = new ObservableCollection<string>(concerns);
+    }
+
+    /// <summary>Attendee rows show each pass's classes remaining as saved; once this roll is saved its
+    /// classes count against those passes, so re-read them in place (Pass.ClassesUsed notifies
+    /// ClassesRemaining, which the rows bind to).</summary>
+    private async Task RefreshAttendeePassesAsync()
+    {
+        foreach (var pass in Entries.Select(e => e.Pass).OfType<Pass>().Distinct().ToList())
+            await passRepository
+                .Query(new PassFilter { Id = (uint)pass.Id, IncludeExpired = true, IncludeDepleted = true })
+                .Refresh(pass);
     }
 
     private void RemoveEntry(ClassRollEntry entry)
@@ -302,33 +238,12 @@ public class MarkRollViewModel : ViewModelBase
         {
             StartBusy();
 
-            var candidates = await BuildCandidatesAsync(entry.Student);
-
-            Pass chosenPass;
-            if (candidates.Count == 0)
-            {
-                toastService.ShowWarning($"{entry.Student.FullName} has no available pass.");
-
-                var editViewModel = new PassEditViewModel(entry.Student.Id, Dialogs, termRepository);
-                var newPass = await Dialogs.ShowDialogAsync(editViewModel);
-                if (newPass is null)
-                    return;
-
-                await passRepository.AddAsync(newPass);
-                chosenPass = newPass;
-            }
-            else
-            {
-                var pickerViewModel = new PassPickerViewModel(candidates, classSchedule, Date, entry.Student.FullName);
-                var picked = await Dialogs.ShowDialogAsync(pickerViewModel);
-                if (picked is null)
-                    return;
-
-                chosenPass = picked;
-            }
+            var choice = await passResolver.ChooseReplacementAsync(entry.Student, classSchedule, Date, Dialogs);
+            if (choice.Cancelled)
+                return;
 
             var index = Entries.IndexOf(entry);
-            Entries[index] = new ClassRollEntry(entry.Student, chosenPass);
+            Entries[index] = new ClassRollEntry(entry.Student, choice.Pass);
             IsDirty = true;
         }
         finally
@@ -336,40 +251,4 @@ public class MarkRollViewModel : ViewModelBase
             EndBusy();
         }
     }
-
-    private async Task<List<Pass>> BuildCandidatesAsync(Student student)
-    {
-        var passes = await studentRepository.GetPassesAsync(student.Id, includeExpired: true,
-            includeDepleted: false);
-
-        return passes
-            .Select(p => (Pass: p, Priority: p.GetPassUsagePriority(classSchedule, Date)))
-            .Where(x => x.Priority is not null || IsRecentlyExpired(x.Pass, classSchedule, Date))
-            .OrderBy(x => TypeRank(x.Pass))
-            .ThenBy(x => x.Priority is null) // usable-now before recently-expired, within the same type
-            .ThenBy(x => x.Priority ?? 0)
-            .Select(x => x.Pass)
-            .ToList();
-    }
-
-    /// <summary>A pass that no longer auto-selects (GetPassUsagePriority returned null) but still
-    /// expired recently enough to be worth offering the instructor explicitly, clearly marked. Computed
-    /// relative to the roll's own Date (not real wall-clock "today") so marking a backdated roll doesn't
-    /// disagree with itself about what "recently expired" means. Term passes must still match the
-    /// class's own schedule, mirroring GetPassUsagePriority's own guard; Dated has no such constraint,
-    /// also matching GetPassUsagePriority.</summary>
-    public static bool IsRecentlyExpired(Pass pass, ClassSchedule schedule, DateOnly date)
-    {
-        return pass.ExpiryDate is { } expiry
-               && expiry < date
-               && expiry >= date.AddMonths(-1)
-               && (pass is not TermPass termPass || termPass.TermClassSchedule.ClassSchedule.Equals(schedule));
-    }
-
-    private static int TypeRank(Pass pass) => pass switch
-    {
-        TermPass => 1,
-        DatedPass => 2,
-        _ => 3
-    };
 }

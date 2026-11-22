@@ -1,4 +1,8 @@
 using System.Reactive.Linq;
+using YogaClassManager.Core.Data;
+using YogaClassManager.Core.Filters;
+using YogaClassManager.Core.Models.People;
+using YogaClassManager.Core.Repositories;
 using YogaClassManager.Avalonia.ViewModels.Shared;
 using YogaClassManager.Core.Dummy;
 using YogaClassManager.Core.Models.Classes;
@@ -92,5 +96,123 @@ public class MarkRollViewModelTests
         var roll = Assert.Single(store.ClassRolls.Values);
         Assert.Equal(existingId, roll.Id);
         Assert.Equal(new DateOnly(2026, 7, 21), roll.Date);
+    }
+
+    // ---- Saving changes to an existing roll ----
+
+    private static async Task<(InMemoryDataStore Store, InMemoryStudentRepository Students, InMemoryPassRepository Passes,
+        ClassRoll Roll, Student Alice, Student Bob, Student Carol)> CreatePersistedRollAsync()
+    {
+        var store = new InMemoryDataStore();
+        var passRepository = new InMemoryPassRepository(store);
+        var studentRepository = new InMemoryStudentRepository(store, new InMemoryIdentityRepository(store), passRepository,
+            new InMemoryEmergencyContactRepository(store));
+
+        async Task<Student> AddStudent(string firstName)
+        {
+            var id = await studentRepository.AddAsync(new Student(0, firstName, "Tester", "0400000000", null, true));
+            return (await studentRepository.Query(new StudentFilter { Id = (uint)id }).LoadSingle())!;
+        }
+
+        var alice = await AddStudent("Alice");
+        var bob = await AddStudent("Bob");
+        var carol = await AddStudent("Carol");
+
+        var schedule = new ClassSchedule(1, DayOfWeek.Monday, new TimeOnly(9, 0), false);
+        var roll = new ClassRoll(0, new DateOnly(2026, 7, 20), schedule,
+            [new ClassRollEntry(alice, null), new ClassRollEntry(bob, null)]);
+        await new InMemoryClassRollRepository(store).AddAsync(roll);
+
+        return (store, studentRepository, passRepository, roll, alice, bob, carol);
+    }
+
+    /// <summary>The window is non-modal: someone can add a student to this roll from the Class Rolls page
+    /// while it's open. Saving the window applies only its own changes, so that attendee survives.</summary>
+    [Fact]
+    public async Task Saving_KeepsAnAttendeeAddedElsewhereWhileTheWindowWasOpen()
+    {
+        var (store, students, passes, roll, alice, bob, carol) = await CreatePersistedRollAsync();
+        var rollRepository = new InMemoryClassRollRepository(store);
+        // The window works on its own snapshot of the roll, as RollWindowService hands it a freshly loaded one.
+        var snapshot = new ClassRoll(roll.Id, roll.Date, roll.ClassSchedule, roll.StudentEntries.ToList());
+        var viewModel = new MarkRollViewModel(snapshot, rollRepository, students, passes,
+            new InMemoryTermRepository(store), new FakeToastService());
+
+        await rollRepository.AddStudentEntryAsync(roll.Id, new ClassRollEntry(carol, null));
+        await viewModel.RemoveStudentCommand.Execute(viewModel.Entries.Single(e => e.Student.Id == bob.Id));
+        await viewModel.SaveCommand.Execute();
+
+        var saved = store.ClassRolls[roll.Id];
+        Assert.Equal([alice.Id, carol.Id], saved.StudentEntries.Select(e => e.Student.Id).Order().ToArray());
+        Assert.False(viewModel.IsDirty);
+    }
+
+    /// <summary>A failed save goes through one atomic repository call - never a partial run of per-attendee
+    /// calls - and leaves the window dirty so the instructor can retry rather than lose their edits.</summary>
+    [Fact]
+    public async Task AFailedSave_ChangesNothing_AndLeavesTheWindowDirty()
+    {
+        var (store, students, passes, roll, alice, bob, _) = await CreatePersistedRollAsync();
+        var rollRepository = new FailingApplyChangesRepository(new InMemoryClassRollRepository(store));
+        var snapshot = new ClassRoll(roll.Id, roll.Date, roll.ClassSchedule, roll.StudentEntries.ToList());
+        var viewModel = new MarkRollViewModel(snapshot, rollRepository, students, passes,
+            new InMemoryTermRepository(store), new FakeToastService());
+        var errors = new List<Exception>();
+        viewModel.SaveCommand.ThrownExceptions.Subscribe(errors.Add);
+
+        viewModel.Date = new DateOnly(2026, 7, 27);
+        await viewModel.RemoveStudentCommand.Execute(viewModel.Entries.Single(e => e.Student.Id == bob.Id));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await viewModel.SaveCommand.Execute());
+
+        Assert.Single(errors);
+        Assert.Equal(0, rollRepository.PerEntryCalls);
+        var stored = store.ClassRolls[roll.Id];
+        Assert.Equal(new DateOnly(2026, 7, 20), stored.Date);
+        Assert.Equal([alice.Id, bob.Id], stored.StudentEntries.Select(e => e.Student.Id).Order().ToArray());
+        Assert.True(viewModel.IsDirty);
+    }
+
+    /// <summary>Delegates to a real repository, but ApplyChangesAsync fails (as a database error mid-save
+    /// would) and the per-entry write methods are counted, to prove the save no longer uses them.</summary>
+    private sealed class FailingApplyChangesRepository(IClassRollRepository inner) : IClassRollRepository
+    {
+        public int PerEntryCalls { get; private set; }
+
+        public IReadOnlyDbModel<ClassRoll, ClassRollFilter> Query(ClassRollFilter filter) => inner.Query(filter);
+        public Task<int> AddAsync(ClassRoll roll, CancellationToken cancellationToken = default) => inner.AddAsync(roll, cancellationToken);
+        public Task DeleteAsync(int classRollId, CancellationToken cancellationToken = default) => inner.DeleteAsync(classRollId, cancellationToken);
+
+        public Task<IReadOnlyList<ClassAttendanceRecord>> GetAttendanceHistoryAsync(int studentId,
+            ClassRollFilter filter = default, CancellationToken cancellationToken = default) =>
+            inner.GetAttendanceHistoryAsync(studentId, filter, cancellationToken);
+
+        public Task UpdateDetailsAsync(ClassRoll roll, CancellationToken cancellationToken = default)
+        {
+            PerEntryCalls++;
+            return inner.UpdateDetailsAsync(roll, cancellationToken);
+        }
+
+        public Task AddStudentEntryAsync(int classRollId, ClassRollEntry entry, CancellationToken cancellationToken = default)
+        {
+            PerEntryCalls++;
+            return inner.AddStudentEntryAsync(classRollId, entry, cancellationToken);
+        }
+
+        public Task RemoveStudentEntryAsync(int classRollId, int studentId, CancellationToken cancellationToken = default)
+        {
+            PerEntryCalls++;
+            return inner.RemoveStudentEntryAsync(classRollId, studentId, cancellationToken);
+        }
+
+        public Task UpdateStudentEntryPassAsync(int classRollId, int studentId, int? passId,
+            CancellationToken cancellationToken = default)
+        {
+            PerEntryCalls++;
+            return inner.UpdateStudentEntryPassAsync(classRollId, studentId, passId, cancellationToken);
+        }
+
+        public Task ApplyChangesAsync(ClassRoll details, IReadOnlyCollection<int> removedStudentIds,
+            IReadOnlyCollection<ClassRollEntry> addedOrChangedEntries, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Simulated database failure");
     }
 }

@@ -4,7 +4,7 @@
              x:Class="YogaClassManager.Avalonia.Controls.GrowableItemsControl"
              x:Name="Control">
 
-    <ScrollViewer x:Name="Scroller" ScrollChanged="OnScrollChanged" behaviors:ScrollEdgeFade.IsEnabled="True">
+    <ScrollViewer x:Name="Scroller" ScrollChanged="OnScrollChanged" behaviors:ScrollEdgeShadow.IsEnabled="True">
         <StackPanel>
             <ItemsControl ItemsSource="{Binding ItemsSource, ElementName=Control}"
                           ItemTemplate="{Binding ItemTemplate, ElementName=Control}" />

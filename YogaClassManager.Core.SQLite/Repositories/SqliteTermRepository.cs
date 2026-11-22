@@ -16,7 +16,7 @@ public class SqliteTermRepository : ITermRepository
         this.dataStoreProvider = dataStoreProvider;
     }
 
-    public IDbModel<Term, TermFilter> Query(TermFilter filter)
+    public IReadOnlyDbModel<Term, TermFilter> Query(TermFilter filter)
     {
         return new SqliteTermDbModel(filter, dataStoreProvider);
     }
@@ -149,17 +149,17 @@ internal sealed class TermClassRow
     public int Uses { get; set; }
     public int Day { get; set; }
     public int Time { get; set; }
-    public int IsActive { get; set; }
+    public int IsArchived { get; set; }
 
     public TermClassSchedule ToModel()
     {
         var classSchedule = new ClassSchedule(ClassId, (DayOfWeek)Day, TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(Time)),
-            isArchived: IsActive == 0);
+            isArchived: IsArchived != 0);
         return new TermClassSchedule(classSchedule, ClassCount, Uses);
     }
 }
 
-internal class SqliteTermDbModel : IDbModel<Term, TermFilter>
+internal class SqliteTermDbModel : IReadOnlyDbModel<Term, TermFilter>
 {
     private readonly IDataStoreProvider dataStoreProvider;
 
@@ -213,7 +213,7 @@ internal class SqliteTermDbModel : IDbModel<Term, TermFilter>
         var classRows = await store.QueryAsync(connection => connection.QueryAsync<TermClassRow>(
             """
             SELECT tc.TermId AS TermId, tc.ClassId AS ClassId, tc.ClassCount AS ClassCount, tcu.Uses AS Uses,
-                   cs.Day AS Day, cs.Time AS Time, cs.IsActive AS IsActive
+                   cs.Day AS Day, cs.Time AS Time, cs.IsArchived AS IsArchived
             FROM TermClasses tc
             JOIN ClassSchedule cs ON cs.ClassScheduleId = tc.ClassId
             LEFT JOIN TermClassUses tcu ON tcu.TermId = tc.TermId AND tcu.ClassId = tc.ClassId
@@ -235,9 +235,10 @@ internal class SqliteTermDbModel : IDbModel<Term, TermFilter>
         var (key, order) = sortBy.Value;
         var direction = StringValueAttribute.GetStringValue(order);
 
+        // Text columns sort case-insensitively ("van Dyke" among the Vs), matching the in-memory store.
         var column = key switch
         {
-            TermSortOptions.Name => "TermName",
+            TermSortOptions.Name => "TermName COLLATE NOCASE",
             TermSortOptions.StartDate => "StartDate",
             TermSortOptions.EndDate => "EndDate",
             _ => "TermId"
@@ -263,59 +264,5 @@ internal class SqliteTermDbModel : IDbModel<Term, TermFilter>
         foreach (var termClass in fresh.Classes)
             model.Classes.Add(termClass);
         return true;
-    }
-
-    public Task Save(Term model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync(async (connection, transaction) =>
-        {
-            var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
-                "SELECT EXISTS(SELECT 1 FROM Term WHERE TermId=$id)", new { id = model.Id }, transaction) == 1;
-
-            if (exists && saveOptions == SaveOptions.Create)
-                throw new ModelExistsException();
-            if (!exists && saveOptions == SaveOptions.Replace)
-                throw new ModelDoesNotExistException();
-
-            if (exists)
-            {
-                await connection.ExecuteAsync(
-                    """
-                    UPDATE Term SET TermName=$name, StartDate=$startDate, EndDate=$endDate,
-                                    CatchupStartDate=$catchupStart, CatchupEndDate=$catchupEnd
-                    WHERE TermId=$id
-                    """,
-                    new
-                    {
-                        id = model.Id, name = model.Name, startDate = model.StartDate, endDate = model.EndDate,
-                        catchupStart = model.CatchupStartDate, catchupEnd = model.CatchupEndDate
-                    }, transaction);
-            }
-            else
-            {
-                var id = await connection.ExecuteScalarAsync<long>(
-                    """
-                    INSERT INTO Term(TermName, StartDate, EndDate, CatchupStartDate, CatchupEndDate)
-                    VALUES ($name, $startDate, $endDate, $catchupStart, $catchupEnd);
-                    SELECT last_insert_rowid();
-                    """,
-                    new
-                    {
-                        name = model.Name, startDate = model.StartDate, endDate = model.EndDate,
-                        catchupStart = model.CatchupStartDate, catchupEnd = model.CatchupEndDate
-                    }, transaction);
-                model.Id = (int)id;
-            }
-        }, cancellationToken);
-    }
-
-    public Task Delete(Term model, CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync("DELETE FROM Term WHERE TermId=$id", new { id = model.Id }, transaction),
-            cancellationToken);
     }
 }

@@ -20,6 +20,9 @@ public partial class MasterDetailView : UserControl
         AvaloniaProperty.Register<MasterDetailView, object?>(nameof(SelectedItem),
             defaultBindingMode: BindingMode.TwoWay);
 
+    public static readonly StyledProperty<Control?> ListHeaderProperty =
+        AvaloniaProperty.Register<MasterDetailView, Control?>(nameof(ListHeader));
+
     public static readonly StyledProperty<IDataTemplate?> ListItemTemplateProperty =
         AvaloniaProperty.Register<MasterDetailView, IDataTemplate?>(nameof(ListItemTemplate));
 
@@ -57,9 +60,18 @@ public partial class MasterDetailView : UserControl
         InitializeComponent();
     }
 
+    /// <summary>The list's search box and action buttons, drawn inside the master pane's card above
+    /// the list - a <c>FilterBar</c> (search + Add on top, sort/filter below) for a searchable list, or
+    /// one inline row of SortByButton/FilterButton/Add for a list with no search box.</summary>
+    public Control? ListHeader
+    {
+        get => GetValue(ListHeaderProperty);
+        set => SetValue(ListHeaderProperty, value);
+    }
+
     /// <summary>Shown in the master pane when the list is empty and not loading - the case that
     /// otherwise renders as a blank card indistinguishable from "still loading". Pages should override
-    /// the default with something search-aware ("No students match this search.").</summary>
+    /// the default with something search-aware ("No students match the current search and filters.").</summary>
     public string? EmptyText
     {
         get => GetValue(EmptyTextProperty);

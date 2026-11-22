@@ -1,11 +1,12 @@
 namespace YogaClassManager.Core.Data;
 
 /// <summary>
-///     A query against a single entity type, scoped by <typeparamref name="TFilter" />.
-///     Implementations may be backed by an in-memory store (see YogaClassManager.Core.Dummy) or,
-///     in the future, a real database - callers never need to know which.
+///     A read-only query against a single entity type, scoped by <typeparamref name="TFilter" />.
+///     Implementations may be backed by an in-memory store (see YogaClassManager.Core.Dummy) or a
+///     SQLite database (see YogaClassManager.Core.SQLite) - callers never need to know which. Writes
+///     go through the entity's repository, so this is what repositories hand out from Query.
 /// </summary>
-public interface IDbModel<TModel, TFilter>
+public interface IReadOnlyDbModel<TModel, TFilter>
 {
     TFilter? Filter { get; init; }
 
@@ -27,7 +28,13 @@ public interface IDbModel<TModel, TFilter>
     /// </summary>
     /// <returns>True if the TModel is still backed by data in the store, else false.</returns>
     Task<bool> Refresh(TModel model, CancellationToken cancellationToken = default);
+}
 
+/// <summary>
+///     A query that can also write its models back to the backing store.
+/// </summary>
+public interface IDbModel<TModel, TFilter> : IReadOnlyDbModel<TModel, TFilter>
+{
     /// <summary>
     ///     Saves the current data of the TModel instance into the backing store.
     /// </summary>

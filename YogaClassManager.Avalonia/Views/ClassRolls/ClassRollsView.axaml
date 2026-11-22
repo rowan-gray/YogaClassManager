@@ -15,41 +15,46 @@
              x:TypeArguments="vm:ClassRollsViewModel"
              x:Name="Root">
 
-    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
+    <Grid RowDefinitions="Auto,*" Margin="{StaticResource PagePadding}">
         <TextBlock Grid.Row="0" Text="Class Rolls" Classes="PageTitle" Margin="0,0,0,16" />
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="0" Margin="{StaticResource HeaderRowMargin}">
-            <controls:SortByButton
-                SortOptions="{Binding SortByOptions}" SelectedSort="{Binding SortBy, Mode=TwoWay}"
-                SortOrderOptions="{Binding SortOrderOptions}" SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}" />
-            <controls:FilterButton Margin="8,0,0,0"
-                FilterCount="{Binding ActiveFilterCount}" ClearFiltersCommand="{Binding ClearFiltersCommand}">
-                <controls:FilterButton.Filters>
-                    <StackPanel Spacing="8" MinWidth="200">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="From" />
-                            <CalendarDatePicker
-                                SelectedDate="{Binding DateFrom, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="To" />
-                            <CalendarDatePicker
-                                SelectedDate="{Binding DateTo, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Day of week" />
-                            <ComboBox ItemsSource="{Binding DayOfWeekOptions}" SelectedItem="{Binding DayOfWeek}"
-                                      HorizontalAlignment="Stretch" />
-                        </StackPanel>
-                    </StackPanel>
-                </controls:FilterButton.Filters>
-            </controls:FilterButton>
-        </StackPanel>
-
-        <controls:MasterDetailView Grid.Row="2" Items="{Binding Items}" SelectedItem="{Binding Selection}"
+        <controls:MasterDetailView Grid.Row="1" Items="{Binding Items}" SelectedItem="{Binding Selection}"
                                    IsBusy="{Binding IsBusy}" ErrorText="{Binding LastError}"
-                                   EmptyText="No class rolls match these filters."
+                                   EmptyText="No class rolls match the current filters."
                                    NoSelectionText="Select a class roll to view its attendees.">
+            <controls:MasterDetailView.ListHeader>
+                <!-- No search box and no Add, so just the sort-and-filter button, right-aligned. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <controls:FilterButton
+                        SortOptions="{Binding SortByOptions}"
+                        SelectedSort="{Binding SortBy, Mode=TwoWay}"
+                        SortOrderOptions="{Binding SortOrderOptions}"
+                        SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}"
+                        FilterCount="{Binding ActiveFilterCount}" ClearFiltersCommand="{Binding ClearFiltersCommand}">
+                        <controls:FilterButton.Filters>
+                            <StackPanel Spacing="8" MinWidth="200">
+                                <controls:DateFilterField Label="From"
+                                                           SelectedDate="{Binding DateFrom, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
+                                <controls:DateFilterField Label="To"
+                                                           SelectedDate="{Binding DateTo, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Day of week" />
+                                    <ComboBox ItemsSource="{Binding DayOfWeekOptions}" SelectedItem="{Binding DayOfWeek}"
+                                              HorizontalAlignment="Stretch">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={x:Static localConv:NullableOptionTextConverter.Instance}}"
+                                                           Classes.Muted="{Binding Converter={x:Static conv:ObjectConverters.IsNull}}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </controls:FilterButton.Filters>
+                    </controls:FilterButton>
+                </StackPanel>
+            </controls:MasterDetailView.ListHeader>
+
             <controls:MasterDetailView.ListItemTemplate>
                 <DataTemplate DataType="classes:ClassRoll">
                     <controls:RecordListItem Title="{Binding}"
@@ -59,25 +64,33 @@
 
             <controls:MasterDetailView.DetailTemplate>
                 <DataTemplate DataType="classes:ClassRoll">
-                    <ScrollViewer behaviors:ScrollEdgeFade.IsEnabled="True">
+                    <ScrollViewer behaviors:ScrollEdgeShadow.IsEnabled="True">
                         <StackPanel Spacing="16">
-                            <controls:DetailHeader Title="{Binding}" PrimaryActionLabel="Edit roll"
+                            <controls:DetailHeader Title="{Binding}" PrimaryActionLabel="Edit roll" PrimaryActionIcon="Pencil"
                                     PrimaryActionCommand="{Binding DataContext.EditRollCommand, ElementName=Root}">
                                 <controls:DetailHeader.Actions>
                                     <Button Classes="Overflow">
                                         <Button.Flyout>
-                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <controls:FadeMenuFlyout Placement="BottomEdgeAlignedRight">
                                                 <MenuItem Header="Delete"
                                                           Command="{Binding DataContext.DeleteRollCommand, ElementName=Root}" />
-                                            </MenuFlyout>
+                                            </controls:FadeMenuFlyout>
                                         </Button.Flyout>
                                     </Button>
                                 </controls:DetailHeader.Actions>
                             </controls:DetailHeader>
 
+                            <!-- Quick attendee edits that save immediately, without opening the whole
+                                 roll in the Mark Roll window: + adds one student, and each row's "..." has
+                                 Change pass / Remove. Binds the page's observable Attendees (the roll
+                                 model's StudentEntries is a plain List, so it can't refresh itself). -->
                             <controls:LinkedRecordsPanel Header="Attendees"
-                                EmptyText="Nobody was marked present for this roll."
-                                ItemsSource="{Binding StudentEntries}">
+                                EmptyText="No students marked present for this roll."
+                                ItemsSource="{Binding DataContext.Attendees, ElementName=Root}"
+                                AddCommand="{Binding DataContext.AddAttendeeCommand, ElementName=Root}"
+                                EditLabel="Change pass"
+                                EditCommand="{Binding DataContext.ChangeAttendeePassCommand, ElementName=Root}"
+                                RemoveCommand="{Binding DataContext.RemoveAttendeeCommand, ElementName=Root}">
                                 <controls:LinkedRecordsPanel.ItemTemplate>
                                     <DataTemplate DataType="people:ClassRollEntry">
                                         <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">

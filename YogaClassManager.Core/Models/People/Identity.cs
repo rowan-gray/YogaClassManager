@@ -76,11 +76,23 @@ public partial class Identity : ObservableObject, IIdentifiable, IUpdateable<Ide
         Email = Email?.Trim();
         Email = Email == "" ? null : Email;
 
+        // A valid phone number is stored normalised ("0412 345 678" -> "0412345678"); an invalid one is
+        // left as typed.
+        var phoneNumberValid = true;
+        if (PhoneNumber is not null)
+        {
+            phoneNumberValid = AustralianPhoneNumber.TryNormalise(PhoneNumber, out var normalised);
+            PhoneNumber = normalised;
+        }
+
         return FirstName.Length > 0
-               && (PhoneNumber is null || Regex.IsMatch(PhoneNumber, @"^\d{10}$|^\d{8}$"))
-               && (Email is null || Regex.IsMatch(Email, @"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$"))
+               && phoneNumberValid
+               && (Email is null || EmailFormat().IsMatch(Email))
                && (Email is not null || PhoneNumber is not null);
     }
+
+    [GeneratedRegex(@"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$")]
+    private static partial Regex EmailFormat();
 
     public override string ToString()
     {

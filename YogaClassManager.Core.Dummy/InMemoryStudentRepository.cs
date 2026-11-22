@@ -23,7 +23,7 @@ public class InMemoryStudentRepository : IStudentRepository
         this.emergencyContactRepository = emergencyContactRepository;
     }
 
-    public IDbModel<Student, StudentFilter> Query(StudentFilter filter)
+    public IReadOnlyDbModel<Student, StudentFilter> Query(StudentFilter filter)
     {
         return new InMemoryStudentDbModel(filter, store, passRepository, emergencyContactRepository);
     }
@@ -130,7 +130,7 @@ public class InMemoryStudentRepository : IStudentRepository
     }
 }
 
-internal class InMemoryStudentDbModel : IDbModel<Student, StudentFilter>
+internal class InMemoryStudentDbModel : IReadOnlyDbModel<Student, StudentFilter>
 {
     private readonly InMemoryDataStore store;
     private readonly IPassRepository passRepository;
@@ -169,26 +169,6 @@ internal class InMemoryStudentDbModel : IDbModel<Student, StudentFilter>
     public Task<bool> Refresh(Student model, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(store.People.ContainsKey(model.Id));
-    }
-
-    public Task Save(Student model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var exists = store.People.ContainsKey(model.Id);
-
-        if (exists && saveOptions == SaveOptions.Create)
-            throw new ModelExistsException();
-        if (!exists && saveOptions == SaveOptions.Replace)
-            throw new ModelDoesNotExistException();
-
-        store.People[model.Id <= 0 ? store.NextId() : model.Id] = model;
-        return Task.CompletedTask;
-    }
-
-    public Task Delete(Student model, CancellationToken cancellationToken = default)
-    {
-        store.People.Remove(model.Id);
-        return Task.CompletedTask;
     }
 
     private IEnumerable<Student> Matching()

@@ -35,7 +35,7 @@
         </StackPanel>
 
         <controls:LinkedRecordsPanel Grid.Row="2" Header="Classes this pass was used for"
-                                      EmptyText="This pass hasn't been used for a class yet."
+                                      EmptyText="No classes attended with this pass yet."
                                       ItemsSource="{Binding UsageHistory}"
                                       ViewCommand="{Binding ViewClassCommand}">
             <controls:LinkedRecordsPanel.ItemTemplate>

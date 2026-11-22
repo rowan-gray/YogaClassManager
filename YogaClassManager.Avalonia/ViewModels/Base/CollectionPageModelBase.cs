@@ -22,6 +22,8 @@ public abstract class CollectionPageModelBase<T> : ViewModelBase
     private readonly IToastService toastService;
     private T? selection;
     private string? lastError;
+    private int detailLoadsInFlight;
+    private bool hasLoadedOnce;
 
     protected CollectionPageModelBase(IToastService toastService)
     {
@@ -29,11 +31,9 @@ public abstract class CollectionPageModelBase<T> : ViewModelBase
 
         RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync);
 
-        RefreshCommand.IsExecuting.Subscribe(executing =>
-        {
-            if (executing) StartBusy();
-            else EndBusy();
-        });
+        // Busy is set inside RefreshAsync itself, synchronously, rather than from RefreshCommand.IsExecuting:
+        // IsExecuting arrives via the UI scheduler a tick later, so during the load debounce the page could
+        // sit there with no skeleton showing.
 
         // Subscribing to ThrownExceptions at all means ReactiveUI stops routing these to
         // RxApp.DefaultExceptionHandler (Services/ToastExceptionHandler.cs) - so this subscription has
@@ -42,6 +42,7 @@ public abstract class CollectionPageModelBase<T> : ViewModelBase
         // ErrorText) so the user isn't left staring at an empty list wondering if it's empty or broken.
         RefreshCommand.ThrownExceptions.Subscribe(ex =>
         {
+            ErrorLog.Error($"Couldn't load the list on {GetType().Name}", ex);
             LastError = ex.Message;
             toastService.ShowError($"Couldn't load this list: {ex.Message}");
         });
@@ -62,6 +63,12 @@ public abstract class CollectionPageModelBase<T> : ViewModelBase
         get => lastError;
         protected set => this.RaiseAndSetIfChanged(ref lastError, value);
     }
+
+    /// <summary>True while any <see cref="ReloadOn{TSignal}" /> load (the detail pane's linked lists)
+    /// is running - drives MasterDetailView's detail-pane progress bar, so a student's passes or a
+    /// class's rolls read as "loading" rather than "empty" while they're fetched. A count, not a bool:
+    /// several panes load at once, and a superseded load's finally still runs.</summary>
+    public bool IsLoadingDetails => Volatile.Read(ref detailLoadsInFlight) > 0;
 
     public ReactiveCommand<Unit, Unit> RefreshCommand { get; }
 
@@ -112,14 +119,36 @@ public abstract class CollectionPageModelBase<T> : ViewModelBase
     ///     toast. Catching per-load and continuing with an empty sequence keeps the trigger live.
     ///     A cancelled load is not a failure and is not reported.
     /// </summary>
+    /// <param name="debounce">Wait <see cref="ViewModelBase.LoadDebounce" /> before loading - for a
+    /// selection trigger, so clicking quickly through records only loads the one you stop on. Each new
+    /// trigger cancels the previous wait (Switch).</param>
+    /// <param name="clearNow">Runs the moment the trigger fires, before any wait: empty the lists the
+    /// load fills, so the previous record's details vanish and the skeletons show straight away.</param>
     protected IDisposable ReloadOn<TSignal>(IObservable<TSignal> trigger, Func<CancellationToken, Task> load,
-        string whatFailed)
+        string whatFailed, bool debounce = false, Action? clearNow = null)
     {
         return trigger
-            .Select(_ => Observable.FromAsync(load).Catch<Unit, Exception>(error =>
+            .Do(_ => clearNow?.Invoke())
+            .Select(_ => Observable.FromAsync(async cancellationToken =>
+            {
+                Interlocked.Increment(ref detailLoadsInFlight);
+                this.RaisePropertyChanged(nameof(IsLoadingDetails));
+                try
+                {
+                    if (debounce && LoadDebounce > TimeSpan.Zero)
+                        await Task.Delay(LoadDebounce, cancellationToken);
+                    await load(cancellationToken);
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref detailLoadsInFlight);
+                    this.RaisePropertyChanged(nameof(IsLoadingDetails));
+                }
+            }).Catch<Unit, Exception>(error =>
             {
                 if (error is not OperationCanceledException)
                 {
+                    ErrorLog.Error($"Couldn't load {whatFailed} on {GetType().Name}", error);
                     LastError = error.Message;
                     toastService.ShowError($"Couldn't load {whatFailed}: {error.Message}");
                 }
@@ -133,6 +162,28 @@ public abstract class CollectionPageModelBase<T> : ViewModelBase
 
     private async Task RefreshAsync()
     {
+        StartBusy();
+        try
+        {
+            await RefreshCoreAsync();
+        }
+        finally
+        {
+            EndBusy();
+        }
+    }
+
+    private async Task RefreshCoreAsync()
+    {
+        // The page's first load waits out the debounce (the list's skeleton is already showing - the
+        // refresh counts as busy) and is skipped if the user has already moved on to another page.
+        if (!hasLoadedOnce)
+        {
+            hasLoadedOnce = true;
+            if (!await DebounceLoadAsync())
+                return;
+        }
+
         var items = await LoadItemsAsync();
 
         var previousSelection = Selection;

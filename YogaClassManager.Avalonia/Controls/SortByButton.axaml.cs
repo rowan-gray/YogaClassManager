@@ -2,6 +2,7 @@ using System.Collections;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
+using YogaClassManager.Avalonia.Converters;
 using YogaClassManager.Core.Data;
 
 namespace YogaClassManager.Avalonia.Controls;
@@ -71,7 +72,7 @@ public partial class SortByButton : UserControl
             _ => ""
         };
 
-        SortDescription = $"Sort by {SelectedSort}{direction}";
+        SortDescription = $"Sort by {EnumDisplayTextConverter.ToDisplayText(SelectedSort.ToString())}{direction}";
     }
 
     public IEnumerable? SortOptions

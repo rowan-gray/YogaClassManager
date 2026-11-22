@@ -14,6 +14,7 @@ public class ToastExceptionHandler(IToastService toastService) : IObserver<Excep
     public void OnNext(Exception error)
     {
         Debug.WriteLine($"Unhandled command exception: {error}");
+        ErrorLog.Error("Unhandled command exception", error);
         toastService.ShowError("Something went wrong. Please try again.");
     }
 

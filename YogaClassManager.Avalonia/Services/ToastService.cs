@@ -29,7 +29,13 @@ public class ToastService : IToastService
 
     public void ShowWarning(string message) => Show(message, NotificationType.Warning);
 
-    public void ShowError(string message) => Show(message, NotificationType.Error);
+    /// <summary>Every error the user is shown is also written to the error log (ErrorLog), so it can be
+    /// looked up after the toast has faded.</summary>
+    public void ShowError(string message)
+    {
+        ErrorLog.Error($"Shown to user: {message}");
+        Show(message, NotificationType.Error);
+    }
 
     private void Show(string message, NotificationType type)
     {

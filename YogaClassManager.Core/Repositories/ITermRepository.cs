@@ -6,9 +6,12 @@ namespace YogaClassManager.Core.Repositories;
 
 public interface ITermRepository
 {
-    IDbModel<Term, TermFilter> Query(TermFilter filter);
+    IReadOnlyDbModel<Term, TermFilter> Query(TermFilter filter);
 
     Task<int> AddAsync(Term term, CancellationToken cancellationToken = default);
+    /// <summary>Saves the term's own details (name, dates, catchup dates). <paramref name="term" />'s Classes
+    /// are ignored - linked classes change only via <see cref="LinkClassAsync" />/<see cref="UnlinkClassAsync" />,
+    /// so a stale or empty Classes list can't silently drop links (or bypass UnlinkClassAsync's used-class guard).</summary>
     Task UpdateAsync(Term term, CancellationToken cancellationToken = default);
 
     /// <summary>Returns false (no-op) if the term still has any linked classes.</summary>

@@ -26,8 +26,11 @@ public class DestructiveActionConfirmationTests
         ScriptedDialogService dialogs)
     {
         var store = new InMemoryDataStore();
+        // Dates relative to today: a fixed-date term eventually becomes "completed" (Term.IsCompleted
+        // reads the clock), which the Terms page hides by default - leaving nothing to select or delete.
+        var today = DateOnly.FromDateTime(DateTime.Now);
         await new InMemoryTermRepository(store).AddAsync(
-            new Term(0, "Winter 2026", new DateOnly(2026, 6, 1), new DateOnly(2026, 8, 31), null, null, []));
+            new Term(0, "Current term", today.AddDays(-7), today.AddDays(30), null, null, []));
 
         var viewModel = CreateTermsViewModel(dialogs, store);
         await viewModel.RefreshCommand.Execute();
@@ -66,7 +69,11 @@ public class DestructiveActionConfirmationTests
         await new InMemoryClassRollRepository(store).AddAsync(
             new ClassRoll(0, new DateOnly(2026, 7, 20), schedule, []));
 
+        var identities = new InMemoryIdentityRepository(store);
+        var passes = new InMemoryPassRepository(store);
+        var students = new InMemoryStudentRepository(store, identities, passes, new InMemoryEmergencyContactRepository(store));
         var viewModel = new ClassRollsViewModel(new AppScreen(), new InMemoryClassRollRepository(store),
+            students, passes, new InMemoryTermRepository(store),
             dialogs, new FakeToastService(), new FakeRollWindowService(), new FakeNavigator());
         await viewModel.RefreshCommand.Execute();
         return (viewModel, store);

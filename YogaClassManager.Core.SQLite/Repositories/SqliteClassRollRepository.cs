@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.Data.Sqlite;
 using YogaClassManager.Core.Data;
 using YogaClassManager.Core.Filters;
 using YogaClassManager.Core.Models.Classes;
@@ -18,7 +19,7 @@ public class SqliteClassRollRepository : IClassRollRepository
         this.dataStoreProvider = dataStoreProvider;
     }
 
-    public IDbModel<ClassRoll, ClassRollFilter> Query(ClassRollFilter filter)
+    public IReadOnlyDbModel<ClassRoll, ClassRollFilter> Query(ClassRollFilter filter)
     {
         return new SqliteClassRollDbModel(filter, dataStoreProvider);
     }
@@ -49,8 +50,7 @@ public class SqliteClassRollRepository : IClassRollRepository
         // managed via AddStudentEntryAsync/RemoveStudentEntryAsync/UpdateStudentEntryPassAsync.
         var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync("UPDATE ClassRoll SET ClassScheduleId=$scheduleId, Date=$date WHERE ClassId=$id",
-                new { id = roll.Id, scheduleId = roll.ClassSchedule.Id, date = roll.Date }, transaction), cancellationToken);
+            UpdateDetailsAsync(connection, transaction, roll), cancellationToken);
     }
 
     public Task DeleteAsync(int classRollId, CancellationToken cancellationToken = default)
@@ -64,24 +64,16 @@ public class SqliteClassRollRepository : IClassRollRepository
 
     public Task AddStudentEntryAsync(int classRollId, ClassRollEntry entry, CancellationToken cancellationToken = default)
     {
-        // Upsert-by-student: a student can't have two entries in one roll.
         var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync(
-                """
-                INSERT INTO ClassStudents(ClassId, StudentId, PassId) VALUES ($classId, $studentId, $passId)
-                ON CONFLICT(ClassId, StudentId) DO UPDATE SET PassId = excluded.PassId
-                """,
-                new { classId = classRollId, studentId = entry.Student.Id, passId = entry.Pass?.Id }, transaction),
-            cancellationToken);
+            UpsertStudentEntryAsync(connection, transaction, classRollId, entry), cancellationToken);
     }
 
     public Task RemoveStudentEntryAsync(int classRollId, int studentId, CancellationToken cancellationToken = default)
     {
         var store = dataStoreProvider.RetrieveDataStore();
         return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync("DELETE FROM ClassStudents WHERE ClassId=$classId AND StudentId=$studentId",
-                new { classId = classRollId, studentId }, transaction), cancellationToken);
+            RemoveStudentEntryAsync(connection, transaction, classRollId, studentId), cancellationToken);
     }
 
     public Task UpdateStudentEntryPassAsync(int classRollId, int studentId, int? passId,
@@ -94,23 +86,72 @@ public class SqliteClassRollRepository : IClassRollRepository
                 new { classId = classRollId, studentId, passId }, transaction), cancellationToken);
     }
 
-    public async Task<IReadOnlyList<ClassAttendanceRecord>> GetAttendanceHistoryAsync(int studentId,
-        CancellationToken cancellationToken = default)
+    public Task ApplyChangesAsync(ClassRoll details, IReadOnlyCollection<int> removedStudentIds,
+        IReadOnlyCollection<ClassRollEntry> addedOrChangedEntries, CancellationToken cancellationToken = default)
     {
+        // One transaction for the whole edit session, so a failure part-way (e.g. a FK violation on one
+        // entry) rolls back the details and every earlier entry change instead of half-saving the roll.
         var store = dataStoreProvider.RetrieveDataStore();
-        var rows = await store.QueryAsync(connection => connection.QueryAsync<ClassAttendanceRow>(
-            """
-            SELECT cr.ClassId AS ClassRollId, cr.Date AS Date, cs.ClassScheduleId AS ClassScheduleId,
-                   cs.Day AS Day, cs.Time AS Time, cs.IsActive AS IsActive,
-                   csx.StudentId AS StudentId, csx.PassId AS PassId
-            FROM ClassStudents csx
-            JOIN ClassRoll cr ON cr.ClassId = csx.ClassId
-            JOIN ClassSchedule cs ON cs.ClassScheduleId = cr.ClassScheduleId
-            WHERE csx.StudentId = $studentId
-            ORDER BY cr.Date DESC
-            """, new { studentId }), cancellationToken);
+        return store.ExecuteInTransactionAsync(async (connection, transaction) =>
+        {
+            await UpdateDetailsAsync(connection, transaction, details);
 
-        return rows.Select(r => r.ToRecord()).ToList();
+            foreach (var studentId in removedStudentIds)
+                await RemoveStudentEntryAsync(connection, transaction, details.Id, studentId);
+
+            foreach (var entry in addedOrChangedEntries)
+                await UpsertStudentEntryAsync(connection, transaction, details.Id, entry);
+        }, cancellationToken);
+    }
+
+    private static Task UpdateDetailsAsync(SqliteConnection connection, SqliteTransaction transaction, ClassRoll roll)
+    {
+        return connection.ExecuteAsync("UPDATE ClassRoll SET ClassScheduleId=$scheduleId, Date=$date WHERE ClassId=$id",
+            new { id = roll.Id, scheduleId = roll.ClassSchedule.Id, date = roll.Date }, transaction);
+    }
+
+    private static Task RemoveStudentEntryAsync(SqliteConnection connection, SqliteTransaction transaction,
+        int classRollId, int studentId)
+    {
+        return connection.ExecuteAsync("DELETE FROM ClassStudents WHERE ClassId=$classId AND StudentId=$studentId",
+            new { classId = classRollId, studentId }, transaction);
+    }
+
+    /// <summary>Upsert-by-student: a student can't have two entries in one roll. Deliberately
+    /// UPDATE-then-INSERT rather than INSERT ... ON CONFLICT DO UPDATE: an UPSERT's conflict policy overrides
+    /// the Modifications table's ON CONFLICT REPLACE inside the ClassStudents triggers, so the update
+    /// trigger's audit row collides with the one the original insert logged and the statement fails.</summary>
+    private static async Task UpsertStudentEntryAsync(SqliteConnection connection, SqliteTransaction transaction,
+        int classRollId, ClassRollEntry entry)
+    {
+        var parameters = new { classId = classRollId, studentId = entry.Student.Id, passId = entry.Pass?.Id };
+
+        var updated = await connection.ExecuteAsync(
+            "UPDATE ClassStudents SET PassId=$passId WHERE ClassId=$classId AND StudentId=$studentId",
+            parameters, transaction);
+
+        if (updated == 0)
+            await connection.ExecuteAsync(
+                "INSERT INTO ClassStudents(ClassId, StudentId, PassId) VALUES ($classId, $studentId, $passId)",
+                parameters, transaction);
+    }
+
+    public async Task<IReadOnlyList<ClassAttendanceRecord>> GetAttendanceHistoryAsync(int studentId,
+        ClassRollFilter filter = default, CancellationToken cancellationToken = default)
+    {
+        // Routed through Query/SqliteClassRollDbModel - the exact same filtering/ordering (and the
+        // same pass hydration via PassBatchLoader) the Class Rolls list uses - rather than a parallel
+        // hand-written query, so the two can't drift apart.
+        var rolls = await Query(filter).LoadMultiple(cancellationToken: cancellationToken);
+
+        return rolls
+            .Where(r => r.StudentEntries.Any(e => e.Student.Id == studentId))
+            .Select(r =>
+            {
+                var entry = r.StudentEntries.First(e => e.Student.Id == studentId);
+                return new ClassAttendanceRecord(r.Id, r.Date, r.ClassSchedule, studentId, entry.Pass);
+            })
+            .ToList();
     }
 }
 
@@ -121,12 +162,12 @@ internal sealed class ClassRollRow
     public int ClassScheduleId { get; set; }
     public int Day { get; set; }
     public int Time { get; set; }
-    public int IsActive { get; set; }
+    public int IsArchived { get; set; }
 
     public ClassSchedule ToClassSchedule()
     {
         return new ClassSchedule(ClassScheduleId, (DayOfWeek)Day, TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(Time)),
-            isArchived: IsActive == 0);
+            isArchived: IsArchived != 0);
     }
 }
 
@@ -142,7 +183,7 @@ internal sealed class ClassRollEntryRow
     public int? PassId { get; set; }
 }
 
-internal class SqliteClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
+internal class SqliteClassRollDbModel : IReadOnlyDbModel<ClassRoll, ClassRollFilter>
 {
     private readonly IDataStoreProvider dataStoreProvider;
 
@@ -170,7 +211,7 @@ internal class SqliteClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
 
         var sql = $"""
                    SELECT cr.ClassId AS ClassId, cr.Date AS Date, cs.ClassScheduleId AS ClassScheduleId,
-                          cs.Day AS Day, cs.Time AS Time, cs.IsActive AS IsActive
+                          cs.Day AS Day, cs.Time AS Time, cs.IsArchived AS IsArchived
                    FROM ClassRoll cr
                    JOIN ClassSchedule cs ON cs.ClassScheduleId = cr.ClassScheduleId
                    WHERE ($id IS NULL OR cr.ClassId = $id)
@@ -234,14 +275,17 @@ internal class SqliteClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
         var (key, order) = sortBy.Value;
         var direction = StringValueAttribute.GetStringValue(order);
 
-        var column = key switch
+        // Ties break so each sort still reads chronologically (must match InMemoryClassRollRepository):
+        // Date - same-day classes by time in the same direction (newest first = latest class first);
+        // Time - most recent date first; Day of week - time of day, then most recent date first.
+        var orderBy = key switch
         {
-            ClassRollSortOptions.Time => "cs.Time",
-            ClassRollSortOptions.DayOfWeek => "cs.Day",
-            _ => "cr.Date"
+            ClassRollSortOptions.Time => $"cs.Time {direction}, cr.Date DESC",
+            ClassRollSortOptions.DayOfWeek => $"cs.Day {direction}, cs.Time ASC, cr.Date DESC",
+            _ => $"cr.Date {direction}, cs.Time {direction}"
         };
 
-        return SqlFilterBuilder.AppendPkTiebreaker($"{column} {direction}", "cr.ClassId");
+        return SqlFilterBuilder.AppendPkTiebreaker(orderBy, "cr.ClassId");
     }
 
     public async Task<bool> Refresh(ClassRoll model, CancellationToken cancellationToken = default)
@@ -256,42 +300,5 @@ internal class SqliteClassRollDbModel : IDbModel<ClassRoll, ClassRollFilter>
         model.ClassSchedule = fresh.ClassSchedule;
         model.StudentEntries = fresh.StudentEntries;
         return true;
-    }
-
-    public Task Save(ClassRoll model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync(async (connection, transaction) =>
-        {
-            var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
-                "SELECT EXISTS(SELECT 1 FROM ClassRoll WHERE ClassId=$id)", new { id = model.Id }, transaction) == 1;
-
-            if (exists && saveOptions == SaveOptions.Create)
-                throw new ModelExistsException();
-            if (!exists && saveOptions == SaveOptions.Replace)
-                throw new ModelDoesNotExistException();
-
-            if (exists)
-            {
-                await connection.ExecuteAsync("UPDATE ClassRoll SET ClassScheduleId=$scheduleId, Date=$date WHERE ClassId=$id",
-                    new { id = model.Id, scheduleId = model.ClassSchedule.Id, date = model.Date }, transaction);
-            }
-            else
-            {
-                var id = await connection.ExecuteScalarAsync<long>(
-                    "INSERT INTO ClassRoll(ClassScheduleId, Date) VALUES ($scheduleId, $date); SELECT last_insert_rowid();",
-                    new { scheduleId = model.ClassSchedule.Id, date = model.Date }, transaction);
-                model.Id = (int)id;
-            }
-        }, cancellationToken);
-    }
-
-    public Task Delete(ClassRoll model, CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync((connection, transaction) =>
-            connection.ExecuteAsync("DELETE FROM ClassRoll WHERE ClassId=$id", new { id = model.Id }, transaction),
-            cancellationToken);
     }
 }

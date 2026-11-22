@@ -3,6 +3,8 @@
         xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Shared"
         xmlns:controls="using:YogaClassManager.Avalonia.Controls"
         xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="440" d:DesignHeight="420"
@@ -14,21 +16,28 @@
                    Classes="DialogTitle" />
 
         <Panel Grid.Row="1">
-            <TextBlock Text="No eligible passes." Classes="Caption"
+            <TextBlock Text="No usable passes for this class." Classes="Caption"
                        HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12"
                        IsVisible="{Binding HasNoResults}" />
 
             <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedRow}"
-                     behaviors:ScrollEdgeFade.IsEnabled="True" MaxHeight="360">
+                     behaviors:ScrollEdgeShadow.IsEnabled="True" MaxHeight="360">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:PassPickerRow">
-                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
-                            <TextBlock Text="{Binding Pass.PassName}"
-                                       FontWeight="{StaticResource FontWeightMedium}" />
-                            <TextBlock Text="{Binding Pass.ClassesRemaining, StringFormat='{}{0} remaining'}"
-                                       Classes="Muted" />
-                            <controls:Tag Color="{DynamicResource TagArchivedBrush}" Label="EXPIRED"
-                                          IsVisible="{Binding IsExpired}" />
+                        <StackPanel Spacing="{StaticResource SpacingXs}">
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                                <TextBlock Text="{Binding Pass.PassName}"
+                                           FontWeight="{StaticResource FontWeightMedium}" />
+                                <TextBlock Text="{Binding Pass.ClassesRemaining, StringFormat='{}{0} remaining'}"
+                                           Classes="Muted" />
+                                <controls:Tag Color="{DynamicResource TagArchivedBrush}" Label="EXPIRED"
+                                              IsVisible="{Binding IsExpired}" />
+                            </StackPanel>
+                            <!-- Same date range as the attendee rows, so choosing between two passes
+                                 shows which one actually covers this class. -->
+                            <TextBlock x:Name="PassDates" Classes="Caption"
+                                       Text="{Binding Pass, Converter={x:Static localConv:PassDateRangeTextConverter.Instance}}"
+                                       IsVisible="{Binding Text, ElementName=PassDates, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>

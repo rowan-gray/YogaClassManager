@@ -101,7 +101,10 @@ public sealed class DatabaseGateViewModel : ViewModelBase
         try
         {
             await dataStoreProvider.InitializeAsync(path, cancellationToken);
-            settingsService.Save(new AppSettings { DatabaseFilePath = path });
+            // Load-modify-save: a fresh AppSettings here would wipe the other settings (theme).
+            var settings = settingsService.Load();
+            settings.DatabaseFilePath = path;
+            settingsService.Save(settings);
             State = GateState.Completing;
             Completed?.Invoke(this, path);
         }

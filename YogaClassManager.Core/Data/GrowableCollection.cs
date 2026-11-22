@@ -10,9 +10,9 @@ namespace YogaClassManager.Core.Data;
 /// </summary>
 public class GrowableCollection<TModel, TFilter> : ObservableCollection<TModel>, IGrowableCollection
 {
-    private readonly IDbModel<TModel, TFilter> dbModel;
+    private readonly IReadOnlyDbModel<TModel, TFilter> dbModel;
 
-    public GrowableCollection(IDbModel<TModel, TFilter> dbModel)
+    public GrowableCollection(IReadOnlyDbModel<TModel, TFilter> dbModel)
     {
         this.dbModel = dbModel;
     }

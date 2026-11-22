@@ -75,12 +75,16 @@ public partial class Person : ObservableObject, IIdentifiable, IUpdateable<Perso
         PhoneNumber = PhoneNumber == "" ? null : PhoneNumber;
         Email = Email?.Trim();
         Email = Email == "" ? null : Email;
-        return FirstName is not null && FirstName.Length > 0 && (PhoneNumber is null
-                                                                 || Regex.IsMatch(
-                                                                     PhoneNumber is null ? "" : PhoneNumber,
-                                                                     @"^\d{10}$|^\d{8}$"))
+        return FirstName is not null && FirstName.Length > 0
+               && (PhoneNumber is null || PhoneNumberFormat().IsMatch(PhoneNumber))
                && (Email is null
-                   || Regex.IsMatch(Email is null ? "" : Email, @"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$"))
+                   || EmailFormat().IsMatch(Email))
                && (Email is not null || PhoneNumber is not null);
     }
+
+    [GeneratedRegex(@"^\d{10}$|^\d{8}$")]
+    private static partial Regex PhoneNumberFormat();
+
+    [GeneratedRegex(@"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$")]
+    private static partial Regex EmailFormat();
 }

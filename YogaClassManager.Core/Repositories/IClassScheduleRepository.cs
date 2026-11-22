@@ -6,7 +6,7 @@ namespace YogaClassManager.Core.Repositories;
 
 public interface IClassScheduleRepository
 {
-    IDbModel<ClassSchedule, ClassScheduleFilter> Query(ClassScheduleFilter filter);
+    IReadOnlyDbModel<ClassSchedule, ClassScheduleFilter> Query(ClassScheduleFilter filter);
 
     /// <summary>Throws <see cref="InvalidOperationException" /> if Day/Time collides with an existing schedule.</summary>
     Task<int> AddAsync(ClassSchedule schedule, CancellationToken cancellationToken = default);

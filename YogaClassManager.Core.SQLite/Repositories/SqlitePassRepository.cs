@@ -19,7 +19,7 @@ public class SqlitePassRepository : IPassRepository
         this.dataStoreProvider = dataStoreProvider;
     }
 
-    public IDbModel<Pass, PassFilter> Query(PassFilter filter)
+    public IReadOnlyDbModel<Pass, PassFilter> Query(PassFilter filter)
     {
         return new SqlitePassDbModel(filter, dataStoreProvider);
     }
@@ -61,7 +61,7 @@ public class SqlitePassRepository : IPassRepository
         {
             var id = await connection.ExecuteScalarAsync<long>(
                 """
-                INSERT INTO PassAlterations(PassId, AlerationCount, AlterationReason)
+                INSERT INTO PassAlterations(PassId, AlterationCount, AlterationReason)
                 VALUES ($passId, $amount, $reason);
                 SELECT last_insert_rowid();
                 """,
@@ -91,8 +91,8 @@ public class SqlitePassRepository : IPassRepository
         var rows = await store.QueryAsync(connection => connection.QueryAsync<ClassAttendanceRow>(
             """
             SELECT cr.ClassId AS ClassRollId, cr.Date AS Date, cs.ClassScheduleId AS ClassScheduleId,
-                   cs.Day AS Day, cs.Time AS Time, cs.IsActive AS IsActive,
-                   csx.StudentId AS StudentId, csx.PassId AS PassId
+                   cs.Day AS Day, cs.Time AS Time, cs.IsArchived AS IsArchived,
+                   csx.StudentId AS StudentId
             FROM ClassStudents csx
             JOIN ClassRoll cr ON cr.ClassId = csx.ClassId
             JOIN ClassSchedule cs ON cs.ClassScheduleId = cr.ClassScheduleId
@@ -100,7 +100,10 @@ public class SqlitePassRepository : IPassRepository
             ORDER BY cr.Date DESC
             """, new { passId }), cancellationToken);
 
-        return rows.Select(r => r.ToRecord()).ToList();
+        // Every row is a use of this same pass - resolve it once rather than per row.
+        var pass = await GetByIdAsync(passId, cancellationToken);
+
+        return rows.Select(r => r.ToRecord(pass)).ToList();
     }
 
     internal static async Task<int> InsertAsync(SqliteConnection connection, SqliteTransaction transaction, Pass pass)
@@ -147,7 +150,7 @@ public class SqlitePassRepository : IPassRepository
         {
             var id = await connection.ExecuteScalarAsync<long>(
                 """
-                INSERT INTO PassAlterations(PassId, AlerationCount, AlterationReason)
+                INSERT INTO PassAlterations(PassId, AlterationCount, AlterationReason)
                 VALUES ($passId, $amount, $reason);
                 SELECT last_insert_rowid();
                 """,
@@ -236,7 +239,7 @@ public class SqlitePassRepository : IPassRepository
         {
             var newId = await connection.ExecuteScalarAsync<long>(
                 """
-                INSERT INTO PassAlterations(PassId, AlerationCount, AlterationReason)
+                INSERT INTO PassAlterations(PassId, AlterationCount, AlterationReason)
                 VALUES ($passId, $amount, $reason);
                 SELECT last_insert_rowid();
                 """,
@@ -246,7 +249,7 @@ public class SqlitePassRepository : IPassRepository
     }
 }
 
-internal class SqlitePassDbModel : IDbModel<Pass, PassFilter>
+internal class SqlitePassDbModel : IReadOnlyDbModel<Pass, PassFilter>
 {
     private readonly IDataStoreProvider dataStoreProvider;
 
@@ -339,37 +342,5 @@ internal class SqlitePassDbModel : IDbModel<Pass, PassFilter>
         }
 
         return true;
-    }
-
-    public Task Save(Pass model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync(async (connection, transaction) =>
-        {
-            var exists = model.Id > 0 && await connection.ExecuteScalarAsync<long>(
-                "SELECT EXISTS(SELECT 1 FROM Pass WHERE PassId=$id)", new { id = model.Id }, transaction) == 1;
-
-            if (exists && saveOptions == SaveOptions.Create)
-                throw new ModelExistsException();
-            if (!exists && saveOptions == SaveOptions.Replace)
-                throw new ModelDoesNotExistException();
-
-            if (exists)
-                await SqlitePassRepository.UpdateInternalAsync(connection, transaction, model);
-            else
-                await SqlitePassRepository.InsertAsync(connection, transaction, model);
-        }, cancellationToken);
-    }
-
-    public Task Delete(Pass model, CancellationToken cancellationToken = default)
-    {
-        var store = dataStoreProvider.RetrieveDataStore();
-        return store.ExecuteInTransactionAsync(async (connection, transaction) =>
-        {
-            await connection.ExecuteAsync("UPDATE ClassStudents SET PassId=NULL WHERE PassId=$id", new { id = model.Id },
-                transaction);
-            await connection.ExecuteAsync("DELETE FROM Pass WHERE PassId=$id", new { id = model.Id }, transaction);
-        }, cancellationToken);
     }
 }

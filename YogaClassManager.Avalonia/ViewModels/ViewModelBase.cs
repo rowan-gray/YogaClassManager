@@ -9,6 +9,15 @@ namespace YogaClassManager.Avalonia.ViewModels;
 /// </summary>
 public abstract class ViewModelBase : ReactiveObject
 {
+    /// <summary>
+    ///     How long a fetch waits after the trigger before it runs - when a page opens (its first load) or
+    ///     the selection changes in a list-and-details layout (the details). The skeleton shows during the
+    ///     wait. Clicking quickly through pages or records then only fetches for the one you stop on:
+    ///     each new selection cancels the previous wait, and a page you've already left skips its fetch.
+    ///     Zero turns it off (the test project does, so its loads stay synchronous).
+    /// </summary>
+    public static TimeSpan LoadDebounce { get; set; } = TimeSpan.FromMilliseconds(200);
+
     private int busyDepth;
     private bool isBusy;
 
@@ -52,6 +61,25 @@ public abstract class ViewModelBase : ReactiveObject
     ///     onError is a callback rather than a fixed toast because the right surface differs: a page
     ///     toasts, a dialog puts the message on its own validation line, right beside the empty control.
     /// </summary>
+    /// <summary>
+    ///     Waits out <see cref="LoadDebounce" />, then says whether to go ahead and fetch: false if this is
+    ///     a routed page that's no longer the current one (the user navigated on during the wait). A
+    ///     page not in a router at all (e.g. constructed directly) always goes ahead.
+    /// </summary>
+    protected async Task<bool> DebounceLoadAsync(CancellationToken cancellationToken = default)
+    {
+        if (LoadDebounce <= TimeSpan.Zero)
+            return true;
+
+        await Task.Delay(LoadDebounce, cancellationToken);
+
+        if (this is not IRoutableViewModel page || page.HostScreen?.Router is not { } router ||
+            router.NavigationStack.Count == 0)
+            return true;
+
+        return ReferenceEquals(router.GetCurrentViewModel(), page);
+    }
+
     protected void LoadOnCreate(Func<Task> load, Action<Exception> onError)
     {
         _ = RunAsync();
@@ -64,6 +92,8 @@ public abstract class ViewModelBase : ReactiveObject
             }
             catch (Exception exception)
             {
+                // The full exception goes to the error log; onError decides what the user is told.
+                Services.ErrorLog.Error($"Couldn't load {GetType().Name}", exception);
                 onError(exception);
             }
         }

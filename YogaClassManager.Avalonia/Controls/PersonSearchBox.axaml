@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:people="using:YogaClassManager.Core.Models.People"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="YogaClassManager.Avalonia.Controls.PersonSearchBox"
+             x:Name="Control">
+
+    <!-- The app's one "find a person by name" component: the Mark Roll window's "Add a student", the
+         student picker (Dashboard quick actions) and the emergency-contact picker. DataContext is a
+         PersonSearchViewModel (StudentSearchViewModel, or one over identities), which owns the search
+         and what choosing someone means. ShowRowAction/ActionLabel/ActionIcon only dress the optional
+         per-row button. -->
+    <Grid RowDefinitions="Auto,*">
+        <!-- Enter chooses without leaving the box, but only when the search found exactly one person -
+             typing a distinctive name then Enter is the whole interaction for the common case; with
+             several matches, narrow the search or arrow down to the one you mean. -->
+        <TextBox Grid.Row="0" x:Name="SearchTextBox" Watermark="Search by name..."
+                 Text="{Binding SearchQuery}"
+                 AutomationProperties.Name="Search by name"
+                 Margin="{StaticResource HeaderRowMargin}">
+            <TextBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding ChooseSelectedCommand}" />
+            </TextBox.KeyBindings>
+        </TextBox>
+        <Border Grid.Row="1" Classes="Card" Padding="4">
+            <Panel>
+                <TextBlock Text="{Binding SearchEmptyText}" Classes="Caption"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextWrapping="Wrap" TextAlignment="Center" Margin="12"
+                           IsVisible="{Binding !HasSearchResults}" />
+
+                <!-- Same gesture once the keyboard has moved into the list, so arrowing to a row and
+                     pressing Enter chooses that row rather than the first one. A double-click on a row
+                     chooses it too (code-behind) - the mouse equivalent, and the only per-row gesture
+                     when ShowRowAction is off. -->
+                <ListBox x:Name="ResultsList" ItemsSource="{Binding SearchResults}"
+                         SelectedItem="{Binding SelectedSearchResult}"
+                         Background="Transparent" BorderThickness="0"
+                         behaviors:ScrollEdgeShadow.IsEnabled="True">
+                    <ListBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding ChooseSelectedCommand}" />
+                    </ListBox.KeyBindings>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="people:Identity">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <!-- Name, then phone and email so two people with the same name
+                                     can be told apart. Either may be missing (a person needs at
+                                     least one), so each hides itself when empty. -->
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                                        <TextBlock Text="{Binding PhoneNumber}" Classes="Caption"
+                                                   IsVisible="{Binding PhoneNumber, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+                                        <TextBlock Text="{Binding Email}" Classes="Caption"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   IsVisible="{Binding Email, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="Overflow" Margin="4,0,0,0"
+                                        Background="Transparent"
+                                        IsVisible="{Binding ShowRowAction, ElementName=Control}"
+                                        Command="{Binding DataContext.ChooseCommand, ElementName=Control}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="{Binding ActionLabel, ElementName=Control}">
+                                    <AutomationProperties.Name>
+                                        <MultiBinding StringFormat="{}{0}: {1}">
+                                            <Binding Path="ActionLabel" ElementName="Control" />
+                                            <Binding Path="FullName" />
+                                        </MultiBinding>
+                                    </AutomationProperties.Name>
+                                    <materialIcons:MaterialIcon Kind="{Binding ActionIcon, ElementName=Control}"
+                                                                Width="18" Height="18" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Panel>
+        </Border>
+    </Grid>
+
+</UserControl>

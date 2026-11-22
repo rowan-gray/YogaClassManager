@@ -9,6 +9,15 @@ namespace YogaClassManager.Core.SQLite.Data;
 ///     access - reads included, not just writes - is serialized through one gate: SqliteConnection is
 ///     not safe for concurrent use by multiple threads regardless of WAL mode (WAL enables concurrency
 ///     between separate connections, not within one shared instance).
+///     <para>
+///         <b>Every operation runs on the thread pool, not the caller's thread.</b> Microsoft.Data.Sqlite's
+///         "async" APIs actually complete synchronously, so awaiting them directly from the UI thread
+///         froze the window for the whole query - navigating to a page hung with no way to paint its
+///         loading indicator. <c>Task.Run</c> moves the work (still serialized by the gate) off the
+///         caller's thread; callers keep awaiting normally and resume on their own context. Never block
+///         on a store call (<c>.Result</c>, <c>.Wait()</c>, <c>GetAwaiter().GetResult()</c>) from the UI
+///         thread: the store resumes there to release its gate, so that would deadlock.
+///     </para>
 /// </summary>
 public sealed class SqliteDataStore : IAsyncDisposable
 {
@@ -20,22 +29,27 @@ public sealed class SqliteDataStore : IAsyncDisposable
         this.connection = connection;
     }
 
-    public static async Task<SqliteDataStore> OpenAsync(string dataSource, CancellationToken cancellationToken = default)
+    /// <summary>Opens and migrates on the thread pool too - migrating a large legacy database can take
+    /// a while, and the startup screen should keep painting meanwhile.</summary>
+    public static Task<SqliteDataStore> OpenAsync(string dataSource, CancellationToken cancellationToken = default)
     {
-        SqliteTypeHandlers.EnsureRegistered();
-
-        var connection = new SqliteConnection(dataSource);
-        await connection.OpenAsync(cancellationToken);
-
-        await using (var pragma = connection.CreateCommand())
+        return Task.Run(async () =>
         {
-            pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;";
-            await pragma.ExecuteNonQueryAsync(cancellationToken);
-        }
+            SqliteTypeHandlers.EnsureRegistered();
 
-        await SchemaMigrator.EnsureUpToDateAsync(connection, cancellationToken);
+            var connection = new SqliteConnection(dataSource);
+            await connection.OpenAsync(cancellationToken);
 
-        return new SqliteDataStore(connection);
+            await using (var pragma = connection.CreateCommand())
+            {
+                pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;";
+                await pragma.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await SchemaMigrator.EnsureUpToDateAsync(connection, cancellationToken);
+
+            return new SqliteDataStore(connection);
+        }, cancellationToken);
     }
 
     /// <summary>Runs a read-only operation against the shared connection, serialized through the same
@@ -45,7 +59,8 @@ public sealed class SqliteDataStore : IAsyncDisposable
         await gate.WaitAsync(cancellationToken);
         try
         {
-            return await query(connection);
+            // Off the caller's thread - see class remarks.
+            return await Task.Run(() => query(connection), cancellationToken);
         }
         finally
         {
@@ -73,22 +88,26 @@ public sealed class SqliteDataStore : IAsyncDisposable
         await gate.WaitAsync(cancellationToken);
         try
         {
-            var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
-            try
+            // The whole transaction runs off the caller's thread - see class remarks.
+            return await Task.Run(async () =>
             {
-                var result = await action(connection, transaction);
-                await transaction.CommitAsync(cancellationToken);
-                return result;
-            }
-            catch
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                throw;
-            }
-            finally
-            {
-                await transaction.DisposeAsync();
-            }
+                var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+                try
+                {
+                    var result = await action(connection, transaction);
+                    await transaction.CommitAsync(cancellationToken);
+                    return result;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
+                finally
+                {
+                    await transaction.DisposeAsync();
+                }
+            }, cancellationToken);
         }
         finally
         {

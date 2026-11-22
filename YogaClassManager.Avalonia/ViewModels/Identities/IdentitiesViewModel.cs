@@ -46,7 +46,14 @@ public class IdentitiesViewModel : SearchableCollectionPageModelBase<Identity>, 
         NavigateToStudentCommand = ReactiveCommand.CreateFromObservable<Student, IRoutableViewModel>(NavigateToStudent);
         ClearFiltersCommand = ReactiveCommand.Create(ClearFilters);
 
-        ReloadOn(this.WhenAnyValue(x => x.Selection), LoadContextAsync, "this identity's links");
+        // Debounced, with the previous identity's links cleared at once.
+        ReloadOn(this.WhenAnyValue(x => x.Selection), LoadContextAsync, "this identity's links",
+            debounce: true, clearNow: () =>
+            {
+                LinkedStudent = null;
+                EmergencyContactForStudents.Clear();
+                this.RaisePropertyChanged(nameof(HasEmergencyContactLinks));
+            });
 
         RefreshWhenChanged(this.WhenAnyValue(x => x.IncludeArchived, x => x.SortBy, x => x.SortOrder));
 

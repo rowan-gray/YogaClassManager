@@ -3,6 +3,8 @@
              xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.ClassSchedules"
              xmlns:classes="using:YogaClassManager.Core.Models.Classes"
              xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:conv="using:Avalonia.Data.Converters"
              xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
              xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
              xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
@@ -13,38 +15,50 @@
              x:TypeArguments="vm:ClassSchedulesViewModel"
              x:Name="Root">
 
-    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
+    <Grid RowDefinitions="Auto,*" Margin="{StaticResource PagePadding}">
         <TextBlock Grid.Row="0" Text="Class Schedules" Classes="PageTitle" Margin="0,0,0,16" />
 
-        <!-- No search box here: ClassScheduleFilter has no name/text field (a schedule is "Monday: 09:00"),
-             so this is the "SortByButton/FilterButton directly" case from UI_STYLE_GUIDE.md, not FilterBar. -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" Margin="{StaticResource HeaderRowMargin}">
-            <controls:SortByButton Grid.Column="1" VerticalAlignment="Center"
-                                   SortOptions="{Binding SortByOptions}" SelectedSort="{Binding SortBy, Mode=TwoWay}"
-                                   SortOrderOptions="{Binding SortOrderOptions}"
-                                   SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}" />
-            <controls:FilterButton Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
-                                   FilterCount="{Binding ActiveFilterCount}"
-                                   ClearFiltersCommand="{Binding ClearFiltersCommand}">
-                <controls:FilterButton.Filters>
-                    <StackPanel Spacing="8" MinWidth="200">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Day of week" />
-                            <ComboBox ItemsSource="{Binding DayOptions}" SelectedItem="{Binding Day, Mode=TwoWay}"
-                                      HorizontalAlignment="Stretch" />
-                        </StackPanel>
-                        <CheckBox Content="Show archived" IsChecked="{Binding IncludeArchived}" />
-                    </StackPanel>
-                </controls:FilterButton.Filters>
-            </controls:FilterButton>
-            <Button Grid.Column="3" Content="Add class" Command="{Binding AddClassCommand}"
-                    Margin="8,0,0,0" Classes="accent" VerticalAlignment="Center" />
-        </Grid>
-
-        <controls:MasterDetailView Grid.Row="2" Items="{Binding Items}" SelectedItem="{Binding Selection}"
+        <controls:MasterDetailView Grid.Row="1" Items="{Binding Items}" SelectedItem="{Binding Selection}"
                                    IsBusy="{Binding IsBusy}" ErrorText="{Binding LastError}"
-                                   EmptyText="No class schedules match these filters."
+                                   EmptyText="No class schedules match the current filters."
                                    NoSelectionText="Select a class to view its rolls.">
+            <controls:MasterDetailView.ListHeader>
+                <!-- No search box (ClassScheduleFilter has no name/text field - a schedule is "Monday: 9:00 am"),
+                     so the sort-and-filter button and Add sit right-aligned. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                            Spacing="{StaticResource SpacingSm}">
+                    <controls:FilterButton
+                        SortOptions="{Binding SortByOptions}"
+                        SelectedSort="{Binding SortBy, Mode=TwoWay}"
+                        SortOrderOptions="{Binding SortOrderOptions}"
+                        SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}" VerticalAlignment="Center"
+                        FilterCount="{Binding ActiveFilterCount}"
+                        ClearFiltersCommand="{Binding ClearFiltersCommand}">
+                        <controls:FilterButton.Filters>
+                            <StackPanel Spacing="8" MinWidth="200">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Day of week" />
+                                    <ComboBox ItemsSource="{Binding DayOptions}" SelectedItem="{Binding Day, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={x:Static localConv:NullableOptionTextConverter.Instance}}"
+                                                           Classes.Muted="{Binding Converter={x:Static conv:ObjectConverters.IsNull}}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                                <CheckBox Content="Show archived" IsChecked="{Binding IncludeArchived}" />
+                            </StackPanel>
+                        </controls:FilterButton.Filters>
+                    </controls:FilterButton>
+                    <Button Command="{Binding AddClassCommand}" Classes="accent Icon"
+                            VerticalAlignment="Center" AutomationProperties.Name="Add class" ToolTip.Tip="Add class">
+                        <materialIcons:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                    </Button>
+                </StackPanel>
+            </controls:MasterDetailView.ListHeader>
+
             <controls:MasterDetailView.ListItemTemplate>
                 <DataTemplate DataType="classes:ClassSchedule">
                     <controls:RecordListItem Title="{Binding}"
@@ -55,21 +69,21 @@
 
             <controls:MasterDetailView.DetailTemplate>
                 <DataTemplate DataType="classes:ClassSchedule">
-                    <ScrollViewer behaviors:ScrollEdgeFade.IsEnabled="True">
+                    <ScrollViewer behaviors:ScrollEdgeShadow.IsEnabled="True">
                         <StackPanel Spacing="16">
                             <controls:DetailHeader Title="{Binding}" PrimaryActionLabel="Mark new roll"
                                     PrimaryActionCommand="{Binding DataContext.MarkNewRollCommand, ElementName=Root}">
                                 <controls:DetailHeader.Actions>
                                     <Button Classes="Overflow">
                                         <Button.Flyout>
-                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <controls:FadeMenuFlyout Placement="BottomEdgeAlignedRight">
                                                 <MenuItem Header="Edit"
                                                           Command="{Binding DataContext.EditClassCommand, ElementName=Root}" />
                                                 <MenuItem Header="Archive" IsVisible="{Binding !IsArchived}"
                                                           Command="{Binding DataContext.ToggleArchiveCommand, ElementName=Root}" />
                                                 <MenuItem Header="Unarchive" IsVisible="{Binding IsArchived}"
                                                           Command="{Binding DataContext.ToggleArchiveCommand, ElementName=Root}" />
-                                            </MenuFlyout>
+                                            </controls:FadeMenuFlyout>
                                         </Button.Flyout>
                                     </Button>
                                 </controls:DetailHeader.Actions>
@@ -77,8 +91,8 @@
                             <TextBlock Text="Archived" Foreground="{DynamicResource StatusArchivedBrush}"
                                        IsVisible="{Binding IsArchived}" />
 
-                            <controls:LinkedRecordsPanel Header="Class rolls"
-                                EmptyText="No rolls have been marked for this class yet."
+                            <controls:LinkedRecordsPanel Header="Class rolls" IsLoading="{Binding DataContext.IsLoadingDetails, ElementName=Root}"
+                                EmptyText="No class rolls match the current filters."
                                 ItemsSource="{Binding DataContext.Rolls, ElementName=Root}"
                                 ViewCommand="{Binding DataContext.EditRollCommand, ElementName=Root}"
                                 EditCommand="{Binding DataContext.EditRollCommand, ElementName=Root}"
@@ -91,21 +105,22 @@
                                 ClearFiltersCommand="{Binding DataContext.ClearRollFiltersCommand, ElementName=Root}">
                                 <controls:LinkedRecordsPanel.Filters>
                                     <StackPanel Spacing="8" MinWidth="200">
-                                        <StackPanel Spacing="4">
-                                            <TextBlock Text="From" />
-                                            <CalendarDatePicker
-                                                SelectedDate="{Binding DataContext.RollDateFrom, ElementName=Root, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
-                                        </StackPanel>
-                                        <StackPanel Spacing="4">
-                                            <TextBlock Text="To" />
-                                            <CalendarDatePicker
-                                                SelectedDate="{Binding DataContext.RollDateTo, ElementName=Root, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
-                                        </StackPanel>
+                                        <controls:DateFilterField Label="From"
+                                                                   SelectedDate="{Binding DataContext.RollDateFrom, ElementName=Root, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
+                                        <controls:DateFilterField Label="To"
+                                                                   SelectedDate="{Binding DataContext.RollDateTo, ElementName=Root, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />
                                         <StackPanel Spacing="4">
                                             <TextBlock Text="Day of week" />
                                             <ComboBox ItemsSource="{Binding DataContext.RollDayOfWeekOptions, ElementName=Root}"
                                                       SelectedItem="{Binding DataContext.RollDayOfWeek, ElementName=Root, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" />
+                                                      HorizontalAlignment="Stretch">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Converter={x:Static localConv:NullableOptionTextConverter.Instance}}"
+                                                                   Classes.Muted="{Binding Converter={x:Static conv:ObjectConverters.IsNull}}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
                                         </StackPanel>
                                     </StackPanel>
                                 </controls:LinkedRecordsPanel.Filters>

@@ -49,18 +49,29 @@ public partial class LinkedRecordsPanel : UserControl
     public static readonly StyledProperty<ICommand?> ClearFiltersCommandProperty =
         AvaloniaProperty.Register<LinkedRecordsPanel, ICommand?>(nameof(ClearFiltersCommand));
 
+    public static readonly StyledProperty<bool> IsLoadingProperty =
+        AvaloniaProperty.Register<LinkedRecordsPanel, bool>(nameof(IsLoading));
+
+    public static readonly StyledProperty<int> SkeletonRowsProperty =
+        AvaloniaProperty.Register<LinkedRecordsPanel, int>(nameof(SkeletonRows), 3);
+
+    public static readonly StyledProperty<bool> SkeletonShowsSubtitleProperty =
+        AvaloniaProperty.Register<LinkedRecordsPanel, bool>(nameof(SkeletonShowsSubtitle), true);
+
     public static readonly StyledProperty<IEnumerable?> ItemsSourceProperty =
         AvaloniaProperty.Register<LinkedRecordsPanel, IEnumerable?>(nameof(ItemsSource));
-
-    public static readonly StyledProperty<object?> SelectedItemProperty =
-        AvaloniaProperty.Register<LinkedRecordsPanel, object?>(nameof(SelectedItem),
-            defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly StyledProperty<IDataTemplate?> ItemTemplateProperty =
         AvaloniaProperty.Register<LinkedRecordsPanel, IDataTemplate?>(nameof(ItemTemplate));
 
     public static readonly StyledProperty<ICommand?> AddCommandProperty =
         AvaloniaProperty.Register<LinkedRecordsPanel, ICommand?>(nameof(AddCommand));
+
+    public static readonly StyledProperty<string> EditLabelProperty =
+        AvaloniaProperty.Register<LinkedRecordsPanel, string>(nameof(EditLabel), "Edit");
+
+    public static readonly StyledProperty<string> ViewLabelProperty =
+        AvaloniaProperty.Register<LinkedRecordsPanel, string>(nameof(ViewLabel), "View");
 
     public static readonly StyledProperty<ICommand?> ViewCommandProperty =
         AvaloniaProperty.Register<LinkedRecordsPanel, ICommand?>(nameof(ViewCommand));
@@ -92,7 +103,7 @@ public partial class LinkedRecordsPanel : UserControl
         InitializeComponent();
     }
 
-    /// <summary>What to show instead of a blank card when the list has no items ("No passes yet."). A
+    /// <summary>What to show instead of a blank card when the list has no items ("No health concerns recorded."). A
     /// panel with no EmptyText renders nothing extra, so this stays opt-in.</summary>
     public string? EmptyText
     {
@@ -172,11 +183,6 @@ public partial class LinkedRecordsPanel : UserControl
         set => SetValue(ItemsSourceProperty, value);
     }
 
-    public object? SelectedItem
-    {
-        get => GetValue(SelectedItemProperty);
-        set => SetValue(SelectedItemProperty, value);
-    }
 
     public IDataTemplate? ItemTemplate
     {
@@ -206,5 +212,45 @@ public partial class LinkedRecordsPanel : UserControl
     {
         get => GetValue(RemoveCommandProperty);
         set => SetValue(RemoveCommandProperty, value);
+    }
+
+    /// <summary>The owning page is still loading this list (bind its IsLoadingDetails): while the list
+    /// is also empty, skeleton rows stand in for it and the empty text stays hidden, so "No passes
+    /// match these filters." doesn't flash before the passes arrive.</summary>
+    public bool IsLoading
+    {
+        get => GetValue(IsLoadingProperty);
+        set => SetValue(IsLoadingProperty, value);
+    }
+
+    /// <summary>How many skeleton rows to show while loading (default 3).</summary>
+    public int SkeletonRows
+    {
+        get => GetValue(SkeletonRowsProperty);
+        set => SetValue(SkeletonRowsProperty, value);
+    }
+
+    /// <summary>Whether the skeleton rows have a second line - match the real rows (false for
+    /// single-line lists like Health concerns).</summary>
+    public bool SkeletonShowsSubtitle
+    {
+        get => GetValue(SkeletonShowsSubtitleProperty);
+        set => SetValue(SkeletonShowsSubtitleProperty, value);
+    }
+
+    /// <summary>The "..." menu's View item text - "View" by default; say what opens when it isn't the
+    /// row's own record (e.g. "View identity" for an emergency contact).</summary>
+    public string ViewLabel
+    {
+        get => GetValue(ViewLabelProperty);
+        set => SetValue(ViewLabelProperty, value);
+    }
+
+    /// <summary>The "..." menu's Edit item text - "Edit" by default; name the action when it isn't a
+    /// general edit (e.g. "Change pass" for a roll's attendee).</summary>
+    public string EditLabel
+    {
+        get => GetValue(EditLabelProperty);
+        set => SetValue(EditLabelProperty, value);
     }
 }

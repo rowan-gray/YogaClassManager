@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="using:Avalonia.Data.Converters"
              xmlns:localConv="using:YogaClassManager.Avalonia.Converters"
+             xmlns:controls="using:YogaClassManager.Avalonia.Controls"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="YogaClassManager.Avalonia.Controls.FilterButton"
              x:Name="Control">
@@ -11,8 +12,14 @@
          expose filters for any repository-backed list (see UI_STYLE_GUIDE.md). FilterCount and
          ClearFiltersCommand are computed/implemented by whoever hosts this control (it has no way to
          introspect an arbitrary Filters control tree itself). -->
-    <Button AutomationProperties.Name="Filters" ToolTip.Tip="Filters"
-            IsVisible="{Binding Filters, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+    <Button AutomationProperties.Name="{Binding Label, ElementName=Control}"
+            ToolTip.Tip="{Binding Label, ElementName=Control}">
+        <Button.IsVisible>
+            <MultiBinding Converter="{x:Static conv:BoolConverters.Or}">
+                <Binding Path="Filters" ElementName="Control" Converter="{x:Static conv:ObjectConverters.IsNotNull}" />
+                <Binding Path="SortOptions" ElementName="Control" Converter="{x:Static conv:ObjectConverters.IsNotNull}" />
+            </MultiBinding>
+        </Button.IsVisible>
         <StackPanel Orientation="Horizontal" Spacing="4">
             <materialIcons:MaterialIcon Kind="FilterVariant" Width="16" Height="16" VerticalAlignment="Center" />
             <TextBlock x:Name="FilterCountText"
@@ -20,10 +27,26 @@
                        IsVisible="{Binding Text, ElementName=FilterCountText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
         </StackPanel>
         <Button.Flyout>
-            <Flyout Placement="BottomEdgeAlignedRight">
+            <controls:FadeFlyout Placement="BottomEdgeAlignedRight">
                 <StackPanel Spacing="{StaticResource SpacingMd}" MinWidth="260">
-                    <TextBlock Text="Filters" Classes="DialogTitle" />
-                    <ContentPresenter Content="{Binding Filters, ElementName=Control}" />
+                    <!-- Main lists only: sort lives here too, above the filters. -->
+                    <Border BorderBrush="{DynamicResource SystemBaseLowColor}" BorderThickness="0,0,0,1"
+                            Padding="0,0,0,12"
+                            IsVisible="{Binding SortOptions, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+                        <controls:SortOptionsPanel
+                            SortOptions="{Binding SortOptions, ElementName=Control}"
+                            SelectedSort="{Binding SelectedSort, ElementName=Control, Mode=TwoWay}"
+                            SortOrderOptions="{Binding SortOrderOptions, ElementName=Control}"
+                            SelectedSortOrder="{Binding SelectedSortOrder, ElementName=Control, Mode=TwoWay}" />
+                    </Border>
+                    <!-- Heading grouped with its content at 8px - previously DialogTitle's bottom
+                         margin plus the popup's 16px spacing left a 24px gap under it. Matches the
+                         "Sort by" section above (SortOptionsPanel). -->
+                    <StackPanel Spacing="{StaticResource SpacingSm}"
+                                IsVisible="{Binding Filters, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+                        <TextBlock Text="Filters" Classes="DialogTitle" Margin="0" />
+                        <ContentPresenter Content="{Binding Filters, ElementName=Control}" />
+                    </StackPanel>
                     <Border BorderBrush="{DynamicResource SystemBaseLowColor}" BorderThickness="0,1,0,0"
                             Padding="0,8,0,0"
                             IsVisible="{Binding ClearFiltersCommand, ElementName=Control, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
@@ -32,7 +55,7 @@
                                 IsEnabled="{Binding Text, ElementName=FilterCountText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
                     </Border>
                 </StackPanel>
-            </Flyout>
+            </controls:FadeFlyout>
         </Button.Flyout>
     </Button>
 

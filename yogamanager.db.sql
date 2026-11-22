@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS "Pass" (
 CREATE TABLE IF NOT EXISTS "PassAlterations" (
 	"PassAlterationId"	INTEGER NOT NULL,
 	"PassId"	INTEGER NOT NULL,
-	"AlerationCount"	INTEGER NOT NULL,
+	"AlterationCount"	INTEGER NOT NULL,
 	"AlterationReason"	TEXT,
 	PRIMARY KEY("PassAlterationId"),
 	FOREIGN KEY("PassId") REFERENCES "Pass"("PassId") ON UPDATE Cascade ON DELETE Cascade
@@ -121,7 +121,7 @@ LEFT JOIN ClassStudents
 ON Pass.PassId = ClassStudents.PassId
 GROUP BY Pass.PassId;
 CREATE VIEW PassesTotalClasses AS 
-SELECT Pass.PassId AS PassId, COALESCE(DatedPass.ClassCount,0) + SUM(COALESCE(PassAlterations.AlerationCount,0)) + COALESCE(TermClasses.ClassCount,0) AS NumberOfClasses 
+SELECT Pass.PassId AS PassId, COALESCE(DatedPass.ClassCount,0) + SUM(COALESCE(PassAlterations.AlterationCount,0)) + COALESCE(TermClasses.ClassCount,0) AS NumberOfClasses 
 FROM Pass LEFT JOIN PassAlterations 
 ON Pass.PassId = PassAlterations.PassId 
 LEFT JOIN DatedPass 

@@ -12,7 +12,7 @@
         x:Class="YogaClassManager.Avalonia.Views.Shared.PassEditView"
         Width="440">
 
-    <ScrollViewer MaxHeight="700" behaviors:ScrollEdgeFade.IsEnabled="True">
+    <ScrollViewer MaxHeight="700" behaviors:ScrollEdgeShadow.IsEnabled="True">
         <StackPanel Spacing="{StaticResource SpacingSm}">
             <TextBlock Text="{Binding Title}" Classes="DialogTitle" />
 
@@ -69,7 +69,7 @@
             <!-- No Height: this panel sits inside the dialog's own fading ScrollViewer, so it grows to
                  fit rather than nesting a second scroll region (UI_STYLE_GUIDE.md's scroll exception). -->
             <controls:LinkedRecordsPanel Header="Alterations" Margin="{StaticResource GroupGapMargin}"
-                                         EmptyText="No alterations."
+                                         EmptyText="No alterations recorded."
                     ItemsSource="{Binding Alterations}"
                     AddCommand="{Binding AddAlterationCommand}" RemoveCommand="{Binding RemoveAlterationCommand}">
                 <controls:LinkedRecordsPanel.ItemTemplate>

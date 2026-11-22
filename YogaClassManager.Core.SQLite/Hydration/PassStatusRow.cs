@@ -26,7 +26,7 @@ internal sealed class PassStatusRow
     public int? TermClassUsesCount { get; set; }
     public int? TermClassDay { get; set; }
     public int? TermClassTime { get; set; }
-    public int? TermClassIsActive { get; set; }
+    public int? TermClassIsArchived { get; set; }
 
     public int NumberOfClasses { get; set; }
     public int ClassesUsed { get; set; }
@@ -39,6 +39,6 @@ internal sealed class PassAlterationRow
 {
     public int PassAlterationId { get; set; }
     public int PassId { get; set; }
-    public int AlerationCount { get; set; }
+    public int AlterationCount { get; set; }
     public string? AlterationReason { get; set; }
 }

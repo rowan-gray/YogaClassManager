@@ -29,7 +29,7 @@ public class SchemaMigratorTests
 
         var version = await store.QueryAsync(connection =>
             connection.ExecuteScalarAsync<int>("SELECT MAX(Version) FROM SchemaVersion"));
-        Assert.Equal(2, version);
+        Assert.Equal(6, version);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class SchemaMigratorTests
         var versions = (await store.QueryAsync(connection =>
             connection.QueryAsync<int>("SELECT Version FROM SchemaVersion ORDER BY Version"))).ToList();
 
-        Assert.Equal([1, 2], versions);
+        Assert.Equal([1, 2, 3, 4, 5, 6], versions);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class SchemaMigratorTests
         Assert.Equal(1, hasCasualPassTable);
 
         var version = await connection.ExecuteScalarAsync<int>("SELECT MAX(Version) FROM SchemaVersion");
-        Assert.Equal(2, version);
+        Assert.Equal(6, version);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class SchemaMigratorTests
     {
         var migrations = SchemaMigrator.LoadEmbeddedMigrations();
 
-        Assert.Equal(2, migrations.Count);
+        Assert.Equal(6, migrations.Count);
         Assert.Contains(migrations, m => m.Version == 1 && m.Sql.Contains("CREATE TABLE IF NOT EXISTS \"Person\""));
         Assert.Contains(migrations, m => m.Version == 2 && m.Sql.Contains("CREATE TABLE IF NOT EXISTS \"CasualPass\""));
     }
@@ -106,6 +106,22 @@ public class SchemaMigratorTests
         Assert.False(await SchemaMigrator.HasPendingMigrationsAsync(dataSource));
     }
 
+    /// <summary>The check runs before the pre-migration backup is copied, so it must not write to the
+    /// file - not even the SchemaVersion bootstrap table EnsureUpToDateAsync creates.</summary>
+    [Fact]
+    public async Task HasPendingMigrationsAsync_ReturnsTrue_WithoutCreatingSchemaVersion_OnAnUnversionedDatabase()
+    {
+        var dataSource = $"Data Source=file:{Guid.NewGuid():N}?mode=memory&cache=shared";
+        await using var connection = new SqliteConnection(dataSource);
+        await connection.OpenAsync();
+        await connection.ExecuteAsync("CREATE TABLE Marker(Value TEXT)");
+
+        Assert.True(await SchemaMigrator.HasPendingMigrationsAsync(dataSource));
+
+        Assert.Equal(0, await connection.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE name = 'SchemaVersion'"));
+    }
+
     [Fact]
     public async Task HasPendingMigrationsAsync_ReturnsTrue_WhenOnlyAnOlderMigrationHasBeenApplied()
     {
@@ -123,5 +139,86 @@ public class SchemaMigratorTests
             """);
 
         Assert.True(await SchemaMigrator.HasPendingMigrationsAsync(dataSource));
+    }
+
+    /// <summary>A real production database that migration 002 was applied to before 002 used the
+    /// correct "AlterationCount" name: the column is right, but PassesTotalClasses was rebuilt
+    /// against "AlerationCount" and fails on every query.</summary>
+    [Fact]
+    public async Task EnsureUpToDateAsync_RepairsPassesTotalClasses_BuiltAgainstMisspelledColumn()
+    {
+        await using var connection = await OpenMigratedTo2Async();
+        await SeedDatedPassWithAlterationAsync(connection, classCount: 10, alteration: 2);
+        await connection.ExecuteAsync(
+            """
+            DROP VIEW PassesTotalClasses;
+            CREATE VIEW PassesTotalClasses AS
+            SELECT Pass.PassId AS PassId, SUM(COALESCE(PassAlterations.AlerationCount, 0)) AS NumberOfClasses
+            FROM Pass LEFT JOIN PassAlterations ON Pass.PassId = PassAlterations.PassId GROUP BY Pass.PassId;
+            """);
+
+        await SchemaMigrator.EnsureUpToDateAsync(connection);
+
+        Assert.Equal(12, await connection.ExecuteScalarAsync<int>("SELECT NumberOfClasses FROM PassesTotalClasses"));
+        Assert.Equal(1, await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM PassStatus"));
+    }
+
+    /// <summary>A database this app created from the earlier, misspelled migration 001: the column
+    /// itself is "AlerationCount" and must be renamed without losing its rows.</summary>
+    [Fact]
+    public async Task EnsureUpToDateAsync_RenamesMisspelledAlerationCountColumn_KeepingData()
+    {
+        await using var connection = await OpenMigratedTo2Async();
+        await SeedDatedPassWithAlterationAsync(connection, classCount: 10, alteration: 3);
+        // SQLite rewrites dependent views too, reproducing that database's schema exactly.
+        await connection.ExecuteAsync("ALTER TABLE PassAlterations RENAME COLUMN AlterationCount TO AlerationCount");
+
+        await SchemaMigrator.EnsureUpToDateAsync(connection);
+
+        var columns = (await connection.QueryAsync<string>("SELECT name FROM pragma_table_info('PassAlterations')")).ToList();
+        Assert.Contains("AlterationCount", columns);
+        Assert.DoesNotContain("AlerationCount", columns);
+        Assert.Equal(3, await connection.ExecuteScalarAsync<int>("SELECT AlterationCount FROM PassAlterations"));
+        Assert.Equal(13, await connection.ExecuteScalarAsync<int>("SELECT NumberOfClasses FROM PassesTotalClasses"));
+    }
+
+    [Fact]
+    public async Task EnsureUpToDateAsync_CreatesAlterationCountColumn_OnFreshDatabase()
+    {
+        await using var store = await SqliteTestDatabaseFactory.CreateAsync();
+
+        var columns = await store.QueryAsync(connection =>
+            connection.QueryAsync<string>("SELECT name FROM pragma_table_info('PassAlterations')"));
+
+        Assert.Contains("AlterationCount", columns);
+        Assert.DoesNotContain("AlerationCount", columns);
+    }
+
+    private static async Task<SqliteConnection> OpenMigratedTo2Async()
+    {
+        var connection = new SqliteConnection($"Data Source=file:{Guid.NewGuid():N}?mode=memory&cache=shared");
+        await connection.OpenAsync();
+
+        foreach (var migration in SchemaMigrator.LoadEmbeddedMigrations().Where(m => m.Version <= 2).OrderBy(m => m.Version))
+            await connection.ExecuteAsync(migration.Sql);
+
+        await connection.ExecuteAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "SchemaVersion" ("Version" INTEGER NOT NULL PRIMARY KEY, "AppliedAt" TEXT NOT NULL DEFAULT (datetime('now')));
+            INSERT INTO SchemaVersion(Version) VALUES (1), (2);
+            """);
+        return connection;
+    }
+
+    private static Task SeedDatedPassWithAlterationAsync(SqliteConnection connection, int classCount, int alteration)
+    {
+        return connection.ExecuteAsync(
+            """
+            INSERT INTO Person(PersonId, FirstName, PhoneNumber) VALUES (1, 'Existing', '0400000000');
+            INSERT INTO Student(StudentId) VALUES (1);
+            INSERT INTO Pass(PassId, StudentId) VALUES (1, 1);
+            INSERT INTO DatedPass(PassId, ClassCount, StartDate, EndDate) VALUES (1, $classCount, '2026-01-01', '2026-12-31');
+            INSERT INTO PassAlterations(PassId, AlterationCount, AlterationReason) VALUES (1, $alteration, 'test');
+            """, new { classCount, alteration });
     }
 }

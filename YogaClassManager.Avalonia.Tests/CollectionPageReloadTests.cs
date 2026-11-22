@@ -146,4 +146,24 @@ public class CollectionPageReloadTests
 
         Assert.Equal(1, viewModel.RefreshCount);
     }
+
+    /// <summary>Drives MasterDetailView's detail-pane progress bar: on while any ReloadOn load is in
+    /// flight - including a superseded one that hasn't unwound yet - and off once all have.</summary>
+    [Fact]
+    public void IsLoadingDetails_IsOnWhileAnyDetailLoadIsInFlight()
+    {
+        var (viewModel, _) = Create();
+        Assert.False(viewModel.IsLoadingDetails);
+
+        viewModel.Trigger(1);
+        Assert.True(viewModel.IsLoadingDetails);
+
+        viewModel.Trigger(2);
+        viewModel.Pending[1].SetResult();
+        WaitFor(() => viewModel.Applied.Count == 1, "the current load to finish");
+        Assert.True(viewModel.IsLoadingDetails); // the superseded load is still unwinding
+
+        viewModel.Pending[0].SetResult();
+        WaitFor(() => !viewModel.IsLoadingDetails, "every load to finish");
+    }
 }

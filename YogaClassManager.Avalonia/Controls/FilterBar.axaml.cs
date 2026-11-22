@@ -37,6 +37,9 @@ public partial class FilterBar : UserControl
         AvaloniaProperty.Register<FilterBar, object?>(nameof(SelectedSortOrder),
             defaultBindingMode: BindingMode.TwoWay);
 
+    public static readonly StyledProperty<Control?> ActionProperty =
+        AvaloniaProperty.Register<FilterBar, Control?>(nameof(Action));
+
     public static readonly StyledProperty<Control?> BasicFiltersProperty =
         AvaloniaProperty.Register<FilterBar, Control?>(nameof(BasicFilters));
 
@@ -116,5 +119,13 @@ public partial class FilterBar : UserControl
     {
         get => GetValue(ClearFiltersCommandProperty);
         set => SetValue(ClearFiltersCommandProperty, value);
+    }
+
+    /// <summary>The list's primary action (its Add button), placed beside the search box on the
+    /// top row.</summary>
+    public Control? Action
+    {
+        get => GetValue(ActionProperty);
+        set => SetValue(ActionProperty, value);
     }
 }

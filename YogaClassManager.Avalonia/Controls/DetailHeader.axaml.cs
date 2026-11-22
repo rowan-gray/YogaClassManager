@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Material.Icons;
 
 namespace YogaClassManager.Avalonia.Controls;
 
@@ -20,6 +21,9 @@ public partial class DetailHeader : UserControl
 
     public static readonly StyledProperty<string?> PrimaryActionLabelProperty =
         AvaloniaProperty.Register<DetailHeader, string?>(nameof(PrimaryActionLabel));
+
+    public static readonly StyledProperty<MaterialIconKind?> PrimaryActionIconProperty =
+        AvaloniaProperty.Register<DetailHeader, MaterialIconKind?>(nameof(PrimaryActionIcon));
 
     public static readonly StyledProperty<ICommand?> PrimaryActionCommandProperty =
         AvaloniaProperty.Register<DetailHeader, ICommand?>(nameof(PrimaryActionCommand));
@@ -42,6 +46,15 @@ public partial class DetailHeader : UserControl
     {
         get => GetValue(PrimaryActionLabelProperty);
         set => SetValue(PrimaryActionLabelProperty, value);
+    }
+
+    /// <summary>When set (e.g. Pencil for "Edit"), the primary action button shows just this icon
+    /// as a square Button.Icon, and PrimaryActionLabel becomes its tooltip and accessible name instead
+    /// of visible text. Left null for an action with no obvious icon ("Mark new roll").</summary>
+    public MaterialIconKind? PrimaryActionIcon
+    {
+        get => GetValue(PrimaryActionIconProperty);
+        set => SetValue(PrimaryActionIconProperty, value);
     }
 
     /// <summary>The pane's single always-visible action ("Edit", "Mark new roll"). The button hides

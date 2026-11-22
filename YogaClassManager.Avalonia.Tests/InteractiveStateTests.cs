@@ -133,6 +133,28 @@ public class InteractiveStateTests
         Assert.Equal(Resource(expectedKey, ThemeVariant.Light).Color, BackgroundOf(button));
     }
 
+    /// <summary>Regression for a real bug: forcing every Button up to ControlHeight (36, see
+    /// Tokens.axaml) exposed that FluentTheme's default VerticalContentAlignment is Stretch, not
+    /// Center - a stretched TextBlock draws its text from the top of its enlarged bounds rather than
+    /// centering it, so text visibly rode high once a button's height exceeded its content's natural
+    /// size. This only shows up when the button is taller than its content, which is exactly what
+    /// ControlHeight now guarantees - a button sized to its own content would pass even without the
+    /// fix.</summary>
+    [AvaloniaFact]
+    public void AButtonTallerThanItsContent_CentersTheContentVertically()
+    {
+        var button = Show(new Button { Content = "Add student" });
+
+        var text = button.GetVisualDescendants().OfType<TextBlock>().First();
+        var topGap = text.Bounds.Top;
+        var bottomGap = button.Bounds.Height - text.Bounds.Bottom;
+
+        Assert.True(button.Bounds.Height > text.Bounds.Height,
+            "test assumes the button is taller than its content - otherwise this can't catch the bug");
+        Assert.True(Math.Abs(topGap - bottomGap) < 1,
+            $"text is not vertically centered: top gap {topGap}, bottom gap {bottomGap}");
+    }
+
     [AvaloniaFact]
     public void ASelectedNavItem_StaysAccentColouredWhilePressed()
     {
@@ -208,5 +230,62 @@ public class InteractiveStateTests
         var brush = Resource(key, variant);
 
         Assert.Equal(1d, brush.Opacity);
+    }
+
+    /// <summary>Selection and accent surfaces carry ordinary text, which is black in the light theme
+    /// and white in the dark one. The dark theme used to reuse the light theme's pale accent shades,
+    /// leaving white text on a pale background - this keeps every such surface at WCAG AA (4.5:1)
+    /// against its theme's own text colour.</summary>
+    [AvaloniaTheory]
+    [InlineData("Light", "InteractiveSelectedBrush")]
+    [InlineData("Light", "InteractiveSelectedHoverBrush")]
+    [InlineData("Light", "InteractiveSelectedPressedBrush")]
+    [InlineData("Light", "AccentSurfaceBrush")]
+    [InlineData("Dark", "InteractiveSelectedBrush")]
+    [InlineData("Dark", "InteractiveSelectedHoverBrush")]
+    [InlineData("Dark", "InteractiveSelectedPressedBrush")]
+    [InlineData("Dark", "AccentSurfaceBrush")]
+    public void TextOnSelectionAndAccentSurfaces_MeetsAAContrast(string themeName, string key)
+    {
+        var variant = themeName == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
+        var background = Resource(key, variant).Color;
+        Assert.True(Application.Current!.TryGetResource("SystemBaseHighColor", variant, out var text));
+
+        Assert.Equal(255, background.A); // opaque, so the ratio below is what's actually rendered
+        var ratio = ContrastRatio((Color)text!, background);
+        Assert.True(ratio >= 4.5, $"{themeName} {key}: {ratio:F2}:1 against {text}");
+    }
+
+    private static double ContrastRatio(Color a, Color b)
+    {
+        static double Channel(byte value)
+        {
+            var c = value / 255.0;
+            return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+
+        static double Luminance(Color c) =>
+            0.2126 * Channel(c.R) + 0.7152 * Channel(c.G) + 0.0722 * Channel(c.B);
+
+        var (lighter, darker) = (Math.Max(Luminance(a), Luminance(b)), Math.Min(Luminance(a), Luminance(b)));
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    /// <summary>Light theme buttons use a lighter grey than FluentTheme's (whose resting fill was a 20%
+    /// black overlay, with a hover that was lighter still): resting 8% &lt; hover 12% &lt; pressed 18%.</summary>
+    [AvaloniaFact]
+    public void LightThemeButtonFills_AreLight_AndDarkenOnHoverThenPress()
+    {
+        var button = Show(new Button { Content = "Mark roll" });
+        var resting = BackgroundOf(button);
+
+        SetState(button, ":pointerover", true);
+        var hover = BackgroundOf(button);
+        SetState(button, ":pressed", true);
+        var pressed = BackgroundOf(button);
+
+        Assert.Equal(Color.Parse("#14000000"), resting);
+        Assert.True(resting.A < hover.A && hover.A < pressed.A,
+            $"resting {resting}, hover {hover}, pressed {pressed} should darken in that order");
     }
 }

@@ -3,6 +3,7 @@
              xmlns:vm="using:YogaClassManager.Avalonia.ViewModels.Terms"
              xmlns:classes="using:YogaClassManager.Core.Models.Classes"
              xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"
              xmlns:reactiveui="clr-namespace:Avalonia.ReactiveUI;assembly=Avalonia.ReactiveUI"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -12,53 +13,63 @@
              x:TypeArguments="vm:TermsViewModel"
              x:Name="Root">
 
-    <Grid RowDefinitions="Auto,Auto,*" Margin="{StaticResource PagePadding}">
+    <Grid RowDefinitions="Auto,*" Margin="{StaticResource PagePadding}">
         <TextBlock Grid.Row="0" Text="Terms" Classes="PageTitle" Margin="0,0,0,16" />
 
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="{StaticResource HeaderRowMargin}">
-            <controls:FilterBar Grid.Column="0" SearchQuery="{Binding SearchQuery, Mode=TwoWay}"
-                                 SearchWatermark="Search by name..."
-                                 SortOptions="{Binding SortByOptions}" SelectedSort="{Binding SortBy, Mode=TwoWay}"
-                                 SortOrderOptions="{Binding SortOrderOptions}"
-                                 SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}"
-                                 FilterCount="{Binding ActiveFilterCount}"
-                                 ClearFiltersCommand="{Binding ClearFiltersCommand}">
-                <controls:FilterBar.AdvancedFilters>
-                    <CheckBox Content="Show completed" IsChecked="{Binding IncludeCompleted}" />
-                </controls:FilterBar.AdvancedFilters>
-            </controls:FilterBar>
-            <Button Grid.Column="1" Content="Add term" Command="{Binding AddTermCommand}"
-                    Margin="8,0,0,0" Classes="accent" VerticalAlignment="Top" />
-        </Grid>
-
-        <controls:MasterDetailView Grid.Row="2" Items="{Binding Items}" SelectedItem="{Binding Selection}"
+        <controls:MasterDetailView Grid.Row="1" Items="{Binding Items}" SelectedItem="{Binding Selection}"
                                    IsBusy="{Binding IsBusy}" ErrorText="{Binding LastError}"
-                                   EmptyText="No terms match this search."
+                                   EmptyText="No terms match the current search and filters."
                                    NoSelectionText="Select a term to view its details.">
+            <controls:MasterDetailView.ListHeader>
+                <controls:FilterBar SearchQuery="{Binding SearchQuery, Mode=TwoWay}"
+                                     SearchWatermark="Search by name..."
+                                     SortOptions="{Binding SortByOptions}" SelectedSort="{Binding SortBy, Mode=TwoWay}"
+                                     SortOrderOptions="{Binding SortOrderOptions}"
+                                     SelectedSortOrder="{Binding SortOrder, Mode=TwoWay}"
+                                     FilterCount="{Binding ActiveFilterCount}"
+                                     ClearFiltersCommand="{Binding ClearFiltersCommand}">
+                    <controls:FilterBar.AdvancedFilters>
+                        <CheckBox Content="Show completed" IsChecked="{Binding IncludeCompleted}" />
+                    </controls:FilterBar.AdvancedFilters>
+                    <controls:FilterBar.Action>
+                        <Button Command="{Binding AddTermCommand}" Classes="accent Icon"
+                                AutomationProperties.Name="Add term" ToolTip.Tip="Add term">
+                            <materialIcons:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                        </Button>
+                    </controls:FilterBar.Action>
+                </controls:FilterBar>
+            </controls:MasterDetailView.ListHeader>
+
             <controls:MasterDetailView.ListItemTemplate>
                 <DataTemplate DataType="classes:Term">
-                    <!-- Title="{Binding}" (Term.ToString(), "Name: start-end") preserves what this row
-                         showed before the extraction, rather than narrowing it to Name. -->
-                    <controls:RecordListItem Title="{Binding}"
+                    <!-- Term name on the first line, its date range on the second. -->
+                    <controls:RecordListItem Title="{Binding Name}"
                                              FlagLabel="COMPLETED" IsFlagged="{Binding IsCompleted}"
-                                             FlagColor="{DynamicResource TagNeutralBrush}" />
+                                             FlagColor="{DynamicResource TagNeutralBrush}">
+                        <controls:RecordListItem.Subtitle>
+                            <MultiBinding StringFormat="{}{0:dd/MM/yyyy} - {1:dd/MM/yyyy}">
+                                <Binding Path="StartDate" />
+                                <Binding Path="EndDate" />
+                            </MultiBinding>
+                        </controls:RecordListItem.Subtitle>
+                    </controls:RecordListItem>
                 </DataTemplate>
             </controls:MasterDetailView.ListItemTemplate>
 
             <controls:MasterDetailView.DetailTemplate>
                 <DataTemplate DataType="classes:Term">
-                    <ScrollViewer behaviors:ScrollEdgeFade.IsEnabled="True">
+                    <ScrollViewer behaviors:ScrollEdgeShadow.IsEnabled="True">
                         <StackPanel Spacing="{StaticResource SpacingMd}">
                             <StackPanel Spacing="{StaticResource SpacingXs}">
-                                <controls:DetailHeader Title="{Binding Name}" PrimaryActionLabel="Edit"
+                                <controls:DetailHeader Title="{Binding Name}" PrimaryActionLabel="Edit" PrimaryActionIcon="Pencil"
                                         PrimaryActionCommand="{Binding DataContext.EditTermCommand, ElementName=Root}">
                                     <controls:DetailHeader.Actions>
                                         <Button Classes="Overflow">
                                             <Button.Flyout>
-                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                <controls:FadeMenuFlyout Placement="BottomEdgeAlignedRight">
                                                     <MenuItem Header="Delete"
                                                               Command="{Binding DataContext.DeleteTermCommand, ElementName=Root}" />
-                                                </MenuFlyout>
+                                                </controls:FadeMenuFlyout>
                                             </Button.Flyout>
                                         </Button>
                                     </controls:DetailHeader.Actions>
@@ -71,7 +82,7 @@
                             <!-- No Height: this sits inside the pane's own fading ScrollViewer, so it
                                  grows to fit rather than nesting a second scrollbar. -->
                             <controls:LinkedRecordsPanel Header="Linked classes"
-                                    EmptyText="No classes are linked to this term yet."
+                                    EmptyText="No classes linked to this term yet."
                                     ItemsSource="{Binding Classes}"
                                     AddCommand="{Binding DataContext.AddClassLinkCommand, ElementName=Root}"
                                     RemoveCommand="{Binding DataContext.RemoveClassLinkCommand, ElementName=Root}">

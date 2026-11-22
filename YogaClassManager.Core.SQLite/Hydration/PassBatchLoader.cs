@@ -40,13 +40,13 @@ internal static class PassBatchLoader
         var passIds = statusRows.Select(r => r.PassId).ToList();
 
         var alterationRows = await store.QueryAsync(connection => connection.QueryAsync<PassAlterationRow>(
-            "SELECT PassAlterationId, PassId, AlerationCount, AlterationReason FROM PassAlterations WHERE PassId IN @ids",
+            "SELECT PassAlterationId, PassId, AlterationCount, AlterationReason FROM PassAlterations WHERE PassId IN @ids",
             new { ids = passIds }), cancellationToken);
 
         var alterationsByPass = alterationRows
             .GroupBy(a => a.PassId)
             .ToDictionary(g => g.Key, g => new ObservableCollection<PassAlteration>(
-                g.Select(a => new PassAlteration(a.PassAlterationId, a.PassId, a.AlerationCount, a.AlterationReason ?? ""))));
+                g.Select(a => new PassAlteration(a.PassAlterationId, a.PassId, a.AlterationCount, a.AlterationReason ?? ""))));
 
         return statusRows.ToDictionary(row => row.PassId,
             row => PassHydrator.Hydrate(row, alterationsByPass.GetValueOrDefault(row.PassId) ?? []));

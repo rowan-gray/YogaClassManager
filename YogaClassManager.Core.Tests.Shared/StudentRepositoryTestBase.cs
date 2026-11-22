@@ -1,3 +1,5 @@
+using YogaClassManager.Core.Models.Classes;
+using YogaClassManager.Core.Data;
 using System.Collections.ObjectModel;
 using YogaClassManager.Core.Filters;
 using YogaClassManager.Core.Models.Passes;
@@ -48,6 +50,36 @@ public abstract class StudentRepositoryTestBase<TFactory> : IAsyncLifetime
 
         await Factory.Students.RemoveHealthConcernAsync(studentId, "Asthma");
         Assert.Empty(await Factory.Students.GetHealthConcernsAsync(studentId));
+    }
+
+    /// <summary>Saves through a fresh Student object (as the edit dialog does), never the loaded one -
+    /// the in-memory backend would otherwise pass trivially by reference.</summary>
+    [Fact]
+    public async Task UpdateAsync_PersistsEditedDetails_AndKeepsPassesAndHealthConcerns()
+    {
+        var studentId = await Factory.Students.AddAsync(new Student(0, "Grace", "Kim", "0400000000", "grace@example.com", true));
+        await Factory.Students.AddHealthConcernAsync(studentId, "Knee injury");
+        var passId = await Factory.Passes.AddAsync(new CasualPass(0, studentId, 5, new ObservableCollection<PassAlteration>(), 0));
+
+        await Factory.Students.UpdateAsync(new Student(studentId, "Gracie", "Kim-Lee", null, "gracie@example.com", true));
+
+        var reloaded = (await Factory.Students.Query(new StudentFilter { Id = (uint)studentId }).LoadSingle())!;
+        Assert.Equal(("Gracie", "Kim-Lee", (string?)null, "gracie@example.com"),
+            (reloaded.FirstName, reloaded.LastName, reloaded.PhoneNumber, reloaded.Email));
+        Assert.Equal(["Knee injury"], await Factory.Students.GetHealthConcernsAsync(studentId));
+        Assert.Equal(passId, Assert.Single(await Factory.Students.GetPassesAsync(studentId)).Id);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ChangesOnlyTheGivenStudent()
+    {
+        var graceId = await Factory.Students.AddAsync(new Student(0, "Grace", "Kim", null, "grace@example.com", true));
+        var henryId = await Factory.Students.AddAsync(new Student(0, "Henry", "Park", null, "henry@example.com", true));
+
+        await Factory.Students.UpdateAsync(new Student(graceId, "Gracie", "Kim", null, "grace@example.com", true));
+
+        var henry = (await Factory.Students.Query(new StudentFilter { Id = (uint)henryId }).LoadSingle())!;
+        Assert.Equal("Henry", henry.FirstName);
     }
 
     [Fact]
@@ -129,5 +161,91 @@ public abstract class StudentRepositoryTestBase<TFactory> : IAsyncLifetime
 
         Assert.Equal(passId, Assert.Single(loadedPasses).Id);
         Assert.Equal(contactId, Assert.Single(loadedContacts).Id);
+    }
+
+    /// <summary>Every sort key, both directions; students who've never attended sort last whichever
+    /// way Last attendance is sorted.</summary>
+    [Theory]
+    [InlineData(StudentSortOptions.Id, Order.Ascending)]
+    [InlineData(StudentSortOptions.Id, Order.Descending)]
+    [InlineData(StudentSortOptions.FirstName, Order.Ascending)]
+    [InlineData(StudentSortOptions.FirstName, Order.Descending)]
+    [InlineData(StudentSortOptions.LastName, Order.Ascending)]
+    [InlineData(StudentSortOptions.LastName, Order.Descending)]
+    [InlineData(StudentSortOptions.LastAttendance, Order.Ascending)]
+    [InlineData(StudentSortOptions.LastAttendance, Order.Descending)]
+    public async Task Query_SortsByEveryKeyInBothDirections(StudentSortOptions key, Order order)
+    {
+        int[] ids =
+        [
+            await Factory.Students.AddAsync(new Student(0, "Dana", "Adams", null, "dana@example.com", true)),
+            await Factory.Students.AddAsync(new Student(0, "Bea", "Clark", null, "bea@example.com", true)),
+            await Factory.Students.AddAsync(new Student(0, "Cara", "Brown", null, "cara@example.com", true)),
+            await Factory.Students.AddAsync(new Student(0, "Amy", "Drew", null, "amy@example.com", true))
+        ];
+
+        // Last attended: Bea 14 days ago, Dana 7, Amy 1; Cara never.
+        var scheduleId = await Factory.ClassSchedules.AddAsync(new ClassSchedule(0, DayOfWeek.Monday, new TimeOnly(9, 0), false));
+        var schedule = (await Factory.ClassSchedules.Query(new ClassScheduleFilter { Id = (uint)scheduleId }).LoadSingle())!;
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        foreach (var (index, daysAgo) in new[] { (1, 14), (0, 7), (3, 1) })
+        {
+            var student = (await Factory.Students.Query(new StudentFilter { Id = (uint)ids[index] }).LoadSingle())!;
+            await Factory.ClassRolls.AddAsync(new ClassRoll(0, today.AddDays(-daysAgo), schedule, [new ClassRollEntry(student, null)]));
+        }
+
+        int[] expected = (key, order) switch
+        {
+            (StudentSortOptions.FirstName, _) => [3, 1, 2, 0],
+            (StudentSortOptions.LastName, _) => [0, 2, 1, 3],
+            (StudentSortOptions.LastAttendance, Order.Ascending) => [1, 0, 3, 2],
+            (StudentSortOptions.LastAttendance, _) => [3, 0, 1, 2],
+            _ => [0, 1, 2, 3]
+        };
+        if (order == Order.Descending && key != StudentSortOptions.LastAttendance)
+            Array.Reverse(expected);
+
+        var results = await Factory.Students.Query(new StudentFilter
+        {
+            SortBy = new KeyValuePair<StudentSortOptions, Order>(key, order)
+        }).LoadMultiple();
+
+        Assert.Equal(expected.Select(i => ids[i]), results.Select(s => s.Id));
+    }
+
+    [Theory]
+    [InlineData(EmergencyContactSortOptions.Id, Order.Ascending)]
+    [InlineData(EmergencyContactSortOptions.Id, Order.Descending)]
+    [InlineData(EmergencyContactSortOptions.FirstName, Order.Ascending)]
+    [InlineData(EmergencyContactSortOptions.FirstName, Order.Descending)]
+    [InlineData(EmergencyContactSortOptions.LastName, Order.Ascending)]
+    [InlineData(EmergencyContactSortOptions.LastName, Order.Descending)]
+    public async Task EmergencyContactsQuery_SortsByEveryKeyInBothDirections(EmergencyContactSortOptions key, Order order)
+    {
+        var studentId = await Factory.Students.AddAsync(new Student(0, "Test", "Student", null, "test@example.com", true));
+        int[] ids =
+        [
+            await Factory.Identities.AddAsync(new Identity(0, "Dana", "Adams", "0400 000 001", null, true)),
+            await Factory.Identities.AddAsync(new Identity(0, "Bea", null, "0400 000 002", null, true)),
+            await Factory.Identities.AddAsync(new Identity(0, "Cara", "Brown", "0400 000 003", null, true))
+        ];
+        foreach (var id in ids)
+            await Factory.Students.LinkEmergencyContactAsync(studentId, id, Relationship.Parent);
+
+        int[] ascending = key switch
+        {
+            EmergencyContactSortOptions.FirstName => [1, 2, 0],
+            EmergencyContactSortOptions.LastName => [1, 0, 2],
+            _ => [0, 1, 2]
+        };
+
+        var results = await Factory.EmergencyContacts.Query(new EmergencyContactFilter
+        {
+            StudentId = studentId,
+            SortBy = new KeyValuePair<EmergencyContactSortOptions, Order>(key, order)
+        }).LoadMultiple();
+
+        var expected = ascending.Select(i => ids[i]);
+        Assert.Equal(order == Order.Ascending ? expected : expected.Reverse(), results.Select(c => c.Id));
     }
 }

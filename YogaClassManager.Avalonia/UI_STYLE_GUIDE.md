@@ -53,6 +53,29 @@ is) with a reason.
 **Corner radius**: `RadiusSmall` (4, buttons/inputs), `RadiusMedium` (8, cards), `RadiusLarge` (12,
 reserved for larger surfaces — not yet used, available for future dialog/panel work).
 
+**Tile size**: `TileSize` (136) and `TileIconSize` (36) size `Button.Tile`, the Dashboard's square
+action tiles (see "Global control styles").
+
+**Control height**: `ControlHeight` (36) is the `MinHeight` every `Button`, `TextBox`, `ComboBox`,
+`CalendarDatePicker` and `NumericUpDown` gets from `Styles/Controls.axaml` — don't set `Height`/
+`MinHeight` on an individual instance of these. One token means a row mixing any of them (a search
+box beside a `SortByButton`, an accent button beside a `Button.Overflow`) lines up without a
+per-row alignment fix. Because 36 is taller than FluentTheme's content-height default, `Button` and
+`TextBox` also set `VerticalContentAlignment="Center"` there (Fluent's defaults, Stretch/Top, leave the
+text riding high in the extra space); `TextBox[AcceptsReturn=True]` goes back to `Top` so multi-line
+text doesn't drift as it grows. Don't override either per instance. This used to be Overflow-only (FluentTheme's own default is 32 for all five);
+`DetailHeader`'s primary-action-button-beside-Overflow pair was the visible mismatch that came from
+that split. `Button.Overflow` still sets its own `Width` to `ControlHeight` to stay square — that's
+the one place a call site should reference the token directly, since nothing else needs an explicit
+`Height`/`Width` now that the base rules cover it.
+
+Also set on `Button`: `VerticalContentAlignment="Center"`, needed *because* of the above.
+FluentTheme's own default is `Stretch`, which barely showed at the old ~32px natural height, but a
+button whose `MinHeight` now routinely exceeds its content's natural size will stretch its
+`TextBlock` and draw the text from the top of the enlarged bounds instead of centering it — text
+visibly rides high. `InteractiveStateTests.AButtonTallerThanItsContent_CentersTheContentVertically`
+guards this.
+
 **Font weight**: `FontWeightMedium`/`FontWeightSemiBold`/`FontWeightBold`. Bind these
 (`FontWeight="{StaticResource FontWeightMedium}"`) rather than writing `FontWeight="Medium"` — those
 three are the whole set the app uses, and a fourth usually means the type ramp is missing an entry
@@ -65,7 +88,6 @@ instead.
 | `SectionTitle` | 20 / SemiBold | Detail-pane record titles, in-page section headers |
 | `DialogTitle` | 18 / SemiBold, `Margin="0,0,0,8"` | The title line in every `Views/Shared/*` dialog window |
 | `StatValue` | 32 / SemiBold | The single large number on a Dashboard stat tile |
-| `AppTitle` | 16 / Bold | The product name in the nav-rail pane header — chrome, not page content |
 | `Caption` | 12, muted | Secondary/small text: emails under names, attendee counts, sub-labels |
 | `Micro` | 11 | The smallest step: inline flags and metadata on a dense list row (what `Tag` uses) |
 | `Muted` | Opacity `MutedOpacity` (0.7) | Secondary text *at the surrounding size* — pair with `Caption` only if it should also be small |
@@ -77,12 +99,30 @@ matches one of these, or add a new class here if none fit (and document it in th
 beside a record name"; 0.5, 0.6 and 0.7 were previously all in use for that same idea across 16 sites.
 Prefer `Classes="Muted"`; reach for the raw resource only where a `Classes` selector can't apply.
 
+**Missing values show a Muted "n/a"**, not an empty line or a dropped row: a labelled detail field
+(`Phone:`/`Email:` on the Identities and Students detail panes) keeps its label and shows
+`<TextBlock Text="n/a" Classes="Muted" />` in place of the value, toggled with
+`StringConverters.IsNullOrEmpty`/`IsNotNullOrEmpty`. So the row stays put whether or not the value
+is filled in.
+
 **Interactive state palette** — `InteractiveHoverBrush`/`InteractivePressedBrush` (overlay tints for
 controls resting on a custom surface: nav items, overflow buttons, list rows),
-`InteractiveSelected`/`SelectedHover`/`SelectedPressedBrush` (selection),
-`ButtonFillHover`/`Pressed`/`DisabledBrush` (the default filled `Button`), and
+`InteractiveSelected`/`SelectedHover`/`SelectedPressedBrush` (selection: **theme-scoped**: the
+accent's palest `Light3` (hover/pressed `Light2`) under the light theme's dark text, its deep
+`Dark2`/`Dark1` shades under the dark theme's white text; reusing the pale shades in dark mode left
+white text at ~2:1 contrast),
+`ButtonBackground` + `ButtonFillHover`/`Pressed`/`DisabledBrush` (the default filled `Button`, also
+theme-scoped. The light theme overrides FluentTheme's own `ButtonBackground` key with a lighter,
+ordered scale: resting 8% black, hover 12%, pressed 18%, disabled 4%. Fluent's was a 20% resting fill
+with a *lighter* hover. Dark keeps Fluent's values), and
 `AccentAction`/`Hover`/`Pressed`/`DisabledBrush` (primary actions). Every one is `Opacity=1` by
 design — see "The interactive-state invariant" below before adding to or changing these.
+`AccentSurfaceBrush` is the same light/dark split for a non-interactive accent-tinted surface that
+carries ordinary text (the Dashboard's stat cards). Any surface that carries ordinary text must reach
+WCAG AA (4.5:1) against the theme's text colour (`SystemBaseHighColor`) in **both** themes;
+`InteractiveStateTests.TextOnSelectionAndAccentSurfaces_MeetsAAContrast` checks these, so add any new
+one there. Never put a raw `SystemAccentColorLight*` behind text: it's only readable in the light
+theme.
 
 **Semantic status colors** — theme-aware via `ResourceDictionary.ThemeDictionaries` (Light/Dark),
 chosen to clear WCAG AA (≥4.5:1) against each variant's default background:
@@ -90,7 +130,8 @@ chosen to clear WCAG AA (≥4.5:1) against each variant's default background:
 | Resource | Meaning | Light | Dark |
 |---|---|---|---|
 | `StatusErrorBrush` | Validation errors, blocking problems | `#C42B1C` | `#FF8A80` |
-| `StatusWarningBrush` | Depleted passes, non-blocking warnings | `#9D5D00` | `#FFB74D` |
+| `StatusWarningBrush` | Depleted passes, non-blocking warnings, a student's health concerns on Mark Roll's attendee rows (always with the `MedicalBag` icon, never colour alone) | `#9D5D00` | `#FFB74D` |
+| `SkeletonBrush` | Skeleton loading placeholders (`Border.Skeleton`, `SkeletonList`) - the theme's `SystemBaseLowColor`, never animated | theme | theme |
 | `StatusArchivedBrush` | Archived records, expired passes | `#B34700` | `#FFA766` |
 | `StatusSuccessBrush` | Reserved for future positive/success states | `#0F7B0F` | `#81C995` |
 | `StatusInfoBrush` | Info toast message text | `#0B57D0` | `#90CAF9` |
@@ -167,17 +208,53 @@ button" and "what Enter does" can't drift apart.
 row (see "Page layout convention" below for why they share a row). `Title` trims rather than pushing
 the buttons off the edge. `Actions` is a plain control slot — each page puts its own
 `Button Classes="Overflow"` and `MenuFlyout` there, since the items differ per page.
+Set `PrimaryActionIcon` (a `MaterialIconKind`, `Pencil` for every Edit) to make the primary action an
+icon-only `Button.Icon`, with `PrimaryActionLabel` ("Edit", "Edit roll") as its tooltip and accessible
+name. Leave it unset for an action with no clear icon ("Mark new roll"), which keeps a text label.
 
 **`Controls/RecordListItem`** — one row in a `MasterDetailView` master list: `Title`, optional
 `Subtitle`, optional status flag (`FlagLabel`/`IsFlagged`/`FlagColor`, rendered as a `Tag`). Titles and
-subtitles trim; the master column is a fixed 320px and nothing in the app set `TextTrimming` before
+subtitles trim; the master column is at most 320px (never wider than the details pane) and nothing in the app set `TextTrimming` before
 (Avalonia's default is `None`, so long names and emails simply clipped).
+
+**`Controls/PersonSearchBox`** + **`ViewModels/Shared/PersonSearchViewModel<TPerson>`**: the app's one
+"find a person by name" component, used in three places:
+
+- the Mark Roll window's "Add a student" panel (`StudentSearchViewModel`, active students only);
+- `StudentPickerViewModel` (the Dashboard's Add pass / Search student, also students only);
+- `ContactPickerViewModel` (adding an emergency contact: any active person, since a contact needn't
+  be a student; the student and their existing contacts are left out).
+
+Bind the control's `DataContext` to the search view model, which owns the 250ms-debounced search, the
+"Type a name…" / "No … match…" empty text and the keyboard contract: **Enter in the box chooses the
+match only when the search found exactly one person; Enter or a double-click on a row chooses that
+row**. With several matches, Enter in the box does nothing: picking the first of two "Sarah"s was too
+easy to get wrong. Its `onChosen` callback decides what
+choosing means (add to roll, or close the picker). Each result shows the name with phone and email
+underneath (each hidden when missing), so two people with the same name can be told apart.
+
+The per-row action button is optional. Mark Roll shows it (`ActionLabel="Add to roll"
+ActionIcon="Plus"`), and the picker dialogs turn it off (`ShowRowAction="False"`), since there the
+dialog's Select button, Enter, or a double-click does the choosing.
+
+**Whenever a flow needs the user to pick a student or a person, use this** (directly, or via one of the
+pickers as a dialog), not `IdentityPickerViewModel`, so finding someone works the same everywhere. In a
+dialog, the picker sets `DefaultCommand` to the search's own Enter command, so `DialogHost`'s Enter and
+the box's KeyBinding are one action (`StudentPickerViewModelTests` presses a real Enter to prove it
+fires once; `PersonSearchTests` covers the contact picker, the row-button rule and double-click).
 
 ## Global control styles (`Styles/Controls.axaml`)
 
 `Button`, `TextBox`, `ComboBox`, `CalendarDatePicker`, `NumericUpDown` all get `RadiusSmall` corners
 automatically — don't set `CornerRadius` on individual instances of these. `Button` and
-`ListBoxItem` get a 120ms `BrushTransition` on `Background` (hover/pressed feedback) for free.
+`ListBoxItem` get a 120ms `PremultipliedBrushTransition` on `Background` (hover/pressed/selected
+feedback) for free. It's a custom transition (`Styles/PremultipliedBrushTransition.cs`), **not**
+Avalonia's `BrushTransition`. `BrushTransition` blends R/G/B/A independently (straight alpha), so going
+from a translucent white/black hover or pressed tint (or from no background, i.e. transparent white) to
+the opaque selection colour dragged the colour through white/black mid-way, and the selection flashed
+grey each time it changed. Blending premultiplied colour is a true cross-fade of what's on screen, so no
+frame can render outside its two ends (`PremultipliedBrushTransitionTests`). Never use a plain
+`BrushTransition` for a `Background`.
 
 **Gotcha this relies on**: FluentTheme's `:pointerover`/`:pressed`/`:selected` states repaint an
 internal template part (`Button`/`ListBoxItem`'s own `/template/ ContentPresenter#PART_ContentPresenter`)
@@ -191,8 +268,9 @@ this same `/template/`-part targeting for any new hover/selected-reactive style*
 
 ### The interactive-state invariant
 
-> **A `BrushTransition` may only be attached where the app owns an `Opacity=1` brush for every state
-> at both ends of the change.**
+> **A background transition may only be attached where the app owns an `Opacity=1` brush for every
+> state at both ends of the change**, and it must be a `PremultipliedBrushTransition` (above), never a
+> plain `BrushTransition`.
 
 Exactly two control types carry a background transition — `Button` and `ListBoxItem` — and both have
 a complete app-owned palette in `Styles/Tokens.axaml` ("Interactive state palette"). If you give a
@@ -227,7 +305,7 @@ Two corollaries worth knowing:
 `Border.Card` (`Classes="Card"`) is the standard "grouped content" surface: `RadiusMedium` corners,
 a subtle border, `SystemAltHighColor` background, 16px padding. Used for the master-list pane in
 `MasterDetailView`, the list in `LinkedRecordsPanel`, and the Dashboard stat tiles (which override
-`Background` locally to the accent color while keeping the Card's corner/border/padding). Reach for
+`Background` locally to `AccentSurfaceBrush` while keeping the Card's corner/border/padding). Reach for
 `Classes="Card"` before hand-rolling a new bordered container.
 
 **`Controls/FillWrapPanel.cs`** packs children into rows by each child's own `MinWidth` (stretching
@@ -267,64 +345,150 @@ the view/control root — same URI `MainWindow.axaml` uses for nav icons.) Don't
 templated control for this — a shared `Classes="Overflow"` style plus a per-site `MenuFlyout` is
 enough since there's no shared item data model across call sites.
 
-**36, not 32**: this is the sole affordance for every per-record action in the app, and 32 square was
-under the comfortable-target guidance. It stops short of a full 40 because these sit beside ordinary
-`Button`s, whose FluentTheme height is 32 — a 40px square next to those reads as a mismatched control.
+**36 square** (`ControlHeight`, see "Design tokens" above) rather than a full 40: 40 was under
+consideration for the comfortable-target guidance, but a 40px square next to an ordinary 36-tall
+`Button` would read as an oversized, mismatched control.
+
+**`Button.Icon` (`Classes="Icon"`)**: Add and Edit buttons are **icon-only**: `Plus` for Add (each
+page's "Add student"/"Add class"/…, `LinkedRecordsPanel`'s Add) and `Pencil` for Edit (via
+`DetailHeader.PrimaryActionIcon`, above). The style is chrome only: the same 36 square as `Overflow`,
+padding 0, centred content, and **no background override**, so `Classes="accent Icon"` keeps the
+accent palette (and the interactive-state invariant needs nothing new). The call site supplies the
+icon plus the old text as both name and tooltip:
+```xml
+<Button Classes="accent Icon" Command="{Binding AddStudentCommand}"
+        AutomationProperties.Name="Add student" ToolTip.Tip="Add student">
+    <materialIcons:MaterialIcon Kind="Plus" Width="18" Height="18" />
+</Button>
+```
+Tests should find these buttons by `AutomationProperties.GetName`, not by `Content` text (see
+`ViewSmokeTests.ClassSchedulesView_HasAnAddClassButton_BoundToAddClassCommand`).
+
+**The Dashboard header is the studio banner** (`Assets/tracygrayyoga_header.jpg`, from the MAUI
+app), not a text title: an `Image` (`Stretch="Uniform"`, `MaxHeight="200"`) on a white rounded
+`Border`, white in both themes because that's the background the artwork was made for. Clicking it is
+the noot noot easter egg (`NootNootEasterEgg`, wired via `Tapped` in `DashboardView.axaml.cs`). It's a
+plain `Border` with `Cursor="Hand"` rather than a `Button` on purpose: button chrome would paint
+hover/pressed backgrounds over the artwork and give the surprise away. Its accessible name is the
+studio's name. The window/app icon is `Assets/appicon.ico`, rendered from the MAUI app's
+`appicon.svg`; don't reintroduce `avalonia-logo.ico`.
+
+**Exception: the Dashboard's quick actions** ("Add student", "Add pass", "Search student") are
+`Button.Tile`s (below) with a visible text label under the icon. Unlabelled icons on a landing page
+would leave the instructor guessing which is which; the icon-only rule is for Add/Edit buttons that
+sit next to the thing they act on (a page list, a detail header, a linked list), where context
+already says what's being added or edited.
+
+**`Button.Tile` (`Classes="Tile"`)**: a square (`TileSize`, 136) action tile: a large icon
+(`TileIconSize`, 36) centred at the top, centred text below. Used for the Dashboard's quick actions
+and its class-roll tiles: Today's classes (every active schedule for today's weekday: its roll if one
+exists, else a new unsaved one, so a class shows before it's been marked) use `ClipboardCheckOutline` ("Mark roll"), the last 7 days'
+use `ClipboardEditOutline` ("Edit roll") plus the date. Tiles sit in a `WrapPanel` (an
+`ItemsControl`'s `ItemsPanel` for a list) with `Margin="0,0,12,12"` each, so they run left to right and
+wrap. The content is a `StackPanel Classes="TileContent"`, an icon and then `TextBlock`s; the style
+sizes and centres the icon and centres/wraps the text, so don't set those per tile. When the text
+names the subject rather than the action (a class tile shows the class, not "Mark roll"), set the
+action as `ToolTip.Tip` and as the start of `AutomationProperties.Name` ("Mark roll: Monday: 09:00").
+Background and interactive states are the plain `Button`'s. A class tile's title is a
+`TextBlock Classes="TileTitle"` (`TileTitleFontSize`, 11, Medium, no wrapping) inside a
+`Viewbox StretchDirection="DownOnly"`: it must stay on one line, and 11px fits the worst case
+`ClassSchedule.ToString()` can produce ("Wednesday: 12:00 pm"), while the Viewbox only ever shrinks it
+if a font renders wider than expected. Class times read "9:00 am" everywhere: `ClassSchedule.ToString()`/
+`FormatTime` use 12-hour time with lowercase am/pm, not the machine's culture.
 
 `TextBlock.ValidationError` (`Classes="ValidationError"`) sets `Foreground` to `StatusErrorBrush`,
 wraps, carries `GroupGapMargin`, and fades in via an `Opacity` transition — use this for dialog
 validation-error text instead of `Foreground="Red"`, and don't re-set `TextWrapping`/`Margin` at the
 call site (all five previously did, verbatim).
 
-## Scroll edge fade (`Behaviors/ScrollEdgeFade.cs`)
+**`Button.RecordLink` (`Classes="RecordLink"`)** is how a detail pane links to a related record: the
+record's name *is* the button, with a `LinkVariant` icon in front. Use it instead of a plain name
+followed by a separate "View"/"View student" button (the old Identities-page shape). The call site
+sets just the text, the command and a tooltip; the icon comes from the style's `ContentTemplate`:
+```xml
+<Button Classes="RecordLink" ToolTip.Tip="Open student"
+        Content="{Binding FullName}"
+        Command="{Binding DataContext.NavigateToStudentCommand, ElementName=Root}"
+        CommandParameter="{Binding}" />
+```
+`Content` must be the display string: the template renders it with `{Binding}`, and a string
+`Content` also gives the button its accessible name. It's left-aligned so it sizes to the name
+rather than stretching across a card. All of its chrome and states come from the base `Button`
+rules, so it adds nothing to the interactive-state invariant.
 
-Any scrollable area should hint that there's more content above/below with a short top/bottom fade
-(iOS-style), and that hint disappears once there's nothing left to reveal in that direction. Opt in
-with one attribute — don't hand-roll a gradient overlay:
+## Scroll edge shadow (`Behaviors/ScrollEdgeShadow.cs`)
+
+**Layering:** the shadow bars draw into the nearest `AdornerLayer`. A window's own top-level layer
+paints above *all* its regular content, including the `DialogHost` overlay, so on their own the shadows
+showed through open dialogs. Every window that hosts a `DialogHost` (`MainWindow`, `MarkRollWindow`)
+wraps its page content, but **not** the `DialogHost`, in a `<VisualLayerManager>`. That gives the
+page's shadows (and its other adorners) a layer painted underneath the dialog overlay, while shadows
+inside a dialog still use the window's top layer. A new window with a `DialogHost` needs the same
+wrapper; `ScrollEdgeShadowLayeringTests` checks Mark Roll's.
+
+Any scrollable area should hint that there's more content above/below with a short top/bottom
+fade, and that hint disappears once there's nothing left to reveal in that direction. **The fade is the
+colour of the surface the list sits on**, not black: the nearest fully opaque solid background above
+the `ScrollViewer` (a Card, the page, the window), re-resolved when the theme changes, falling back to
+`SystemAltHighColor` (`ScrollEdgeShadow.FadeColorFor`, `ScrollEdgeFadeColorTests`). It used to be
+hard-coded black, a dark smudge over light-theme cards. Opt in with one attribute; don't hand-roll an
+overlay per call site:
 
 ```xml
-<ScrollViewer behaviors:ScrollEdgeFade.IsEnabled="True"> ... </ScrollViewer>
-<ListBox behaviors:ScrollEdgeFade.IsEnabled="True" ItemsSource="..." />
+<ScrollViewer behaviors:ScrollEdgeShadow.IsEnabled="True"> ... </ScrollViewer>
+<ListBox behaviors:ScrollEdgeShadow.IsEnabled="True" ItemsSource="..." />
 ```
 (`xmlns:behaviors="using:YogaClassManager.Avalonia.Behaviors"` on the view/control root.)
 
 Works on a plain `ScrollViewer` directly, or on a `ListBox` (it finds the Fluent-theme template's
-`PART_ScrollViewer` itself). It fades the actual scrolling content's alpha near whichever edge(s)
-still have more to reveal (`ScrollViewer.OpacityMask`, computed from `Extent`/`Viewport`/`Offset` on
-`ScrollChanged` — the same math `GrowableItemsControl.OnScrollChanged` already uses for infinite
-scroll), rather than drawing an overlay `Border`. That means: no `IsHitTestVisible="False"` guard to
-remember (nothing sits on top of the content, and Avalonia doesn't consult render opacity during
-hit-testing anyway), and no light/dark or page-vs-`Border.Card` background color to keep in sync —
-the content just fades into whatever is actually behind it.
+`PART_ScrollViewer` itself). Each edge gets its own thin gradient `Border` (dark near the edge, fading
+to transparent over its own height) mounted in the nearest `AdornerLayer` — every `TopLevel` already
+carries one via its `VisualLayerManager`, so this needs no extra XAML scaffolding — rather than being
+inserted into the `ScrollViewer`'s own visual tree. That's what makes it a drop-*shadow* (a dark tint
+cast over the content) instead of the previous approach of fading the content's own alpha via
+`OpacityMask`, which faded the content to whatever was behind it rather than shadowing it. The overlay
+`Panel` is `IsHitTestVisible="False"` and lives in a separate layer above the page, so it never
+intercepts scroll/click input — see `ShadowOverlay` in `ScrollEdgeShadow.cs` if you need to change how
+it mounts or resizes.
 
-The fade band's *presence* is itself animated (200ms), not a hard cut when the scroll position
-crosses the can-scroll threshold: two private attached doubles (`TopFadeOpacity`/`BottomFadeOpacity`,
-0–1) carry a `DoubleTransition` each, and every intermediate frame of that transition rebuilds the
-`OpacityMask` gradient with the current in-between alpha — see `RebuildBrush`/`EnsureFadeTransitions`
-in `ScrollEdgeFade.cs` if you need to change the duration or add a similar animated-appearance
-pattern elsewhere (the technique — hook an animated attached property's `Changed` to redrive a
-derived value on every frame — generalizes to anything that needs to ease a value Avalonia doesn't
-natively know how to transition, like our gradient stops here).
+**Growth curve**: each edge's shadow height is a pure function of how far the current scroll offset
+has moved away from *that* edge specifically — 0px flush at the edge, easing up towards
+`MaxShadowHeight` (default 16px) the further scrolling gets from it, via `height = maxHeight * (1 -
+e^(-distance / growthDistance))` (`GrowthDistance`, default 60px, is roughly "how many px of scroll it
+takes to reach ~63% of the max"). This is independent per edge — a shadow's height only depends on
+distance from its own edge, not on whether the opposite edge still has content — and it naturally goes
+to 0 with nothing left to reveal in that direction, and to 0 on both edges when the content fits
+entirely (no special-casing needed, since both distances collapse to 0 in that case). Override either
+value per instance (e.g. `MaxShadowHeight="12"` on a directly-authored `ScrollViewer`) if a shallower
+or faster-growing shadow suits a specific panel better; the pure `(extent, viewport, offset, maxHeight,
+growthDistance) → state` math lives in the public `ScrollEdgeShadowMath.Compute` so it's unit-tested in
+`YogaClassManager.Avalonia.Tests` without a live control — extend those tests if you change the curve.
 
-Default fade band is 24px (`ScrollEdgeFade.FadeHeight`) — override per-instance (e.g. `FadeHeight="16"`)
-if a short, fixed-height list makes the default band look too aggressive. Don't add this to a
-scrollable area unless the content can actually overflow (nothing to do on the Dashboard's
-`ItemsControl`, which isn't scrollable at all today). The
-pure `(extent, viewport, offset, fadeHeight) → state` math lives in the public
-`ScrollEdgeFadeMath.Compute` so it's unit-tested in `YogaClassManager.Avalonia.Tests` without a live
-control — extend those tests if you change the fade-position/clamping logic.
+Don't add this to a scrollable area unless the content can actually overflow. (The Dashboard now
+scrolls as one `ScrollViewer` around its stats, quick-action tiles and two sections of class-roll
+tiles, with the shadow enabled; the tile sections themselves aren't separately scrollable.)
 
-**Exception — lists that already live inside one of these fading `ScrollViewer`s**: give them no
+**Exception — lists that already live inside one of these shadowed `ScrollViewer`s**: give them no
 fixed `Height` at all, don't nest a second scroll region. `StudentsView.axaml`'s student detail pane
-is one big `ScrollViewer behaviors:ScrollEdgeFade.IsEnabled="True"` around everything (record
+is one big `ScrollViewer behaviors:ScrollEdgeShadow.IsEnabled="True"` around everything (record
 details, Emergency contacts/Health concerns, Passes, attendance) — none of those inner
 `LinkedRecordsPanel`s carry a `Height`, so each grows to fit its own content and the single outer
-`ScrollViewer` handles all the scrolling. This is a deliberate exception to the general "fixed pixel
+`ScrollViewer` handles all the scrolling. (`LinkedRecordsPanel` also centres each row's content
+vertically against its 36px `...` button, so a one-line row doesn't sit high. An `ItemTemplate`
+doesn't need to add its own vertical centring.) This is a deliberate exception to the general "fixed pixel
 values rather than auto-measuring" convention used elsewhere for genuinely bounded small sets (e.g.
 `FilterBar`'s advanced-filter panel, capped at 200 to fit an animated reveal) — those aren't sitting
 inside another scroll region, so growing them unbounded isn't an option. If a list is already nested
-inside a page-level fading `ScrollViewer`, prefer letting it grow over giving it its own fixed height
+inside a page-level shadowed `ScrollViewer`, prefer letting it grow over giving it its own fixed height
 and a second, redundant inner scrollbar.
+
+**Scrollbars reserve space rather than overlay content** — `Styles/Controls.axaml` sets
+`ScrollViewer.AllowAutoHide="False"` globally (including inside a `ListBox`'s/`ComboBox`'s own
+template, same as the Button rules above), so a visible scrollbar pushes the content over instead of
+floating on top of it. This is layout, not visibility: a `ScrollViewer` with nothing to scroll still
+collapses its bar to zero width/height and the content gets the full pane back, since that part is
+`ScrollBarVisibility="Auto"`'s job, not `AllowAutoHide`'s — don't reach for `AllowAutoHide="True"`
+locally to "restore" the collapse-when-empty behavior, it was never what provided it.
 
 ## Navigation shell
 
@@ -359,20 +523,11 @@ and a second, redundant inner scrollbar.
   collapsed/expanded style switch for anything that has to track the pane's width** — if a future
   change needs state-dependent visuals here, drive them from a property that actually animates in
   step with the pane (not a discrete bool), or accept a one-frame snap consciously.
-- The pane header row (hamburger toggle + "YogaClassManager" title) is a `Grid` with
-  `ColumnDefinitions="Auto,*,Auto"` — **not** a `StackPanel`, and not centered. Centering was tried
-  first and reverted: it made the equal-gaps math work, but it also unpinned the toggle button from
-  the fixed left position the nav items below it always sit at (so the icon column no longer lined
-  up, reading as "pushed right" when open), and centering a shrink-wrapped row whose content width
-  changes discretely (the title's `IsVisible` flips instantly, the pane width doesn't) is exactly
-  what causes a jump when collapsing — the same class of bug as the icon-centering one above, just
-  on the header instead of the nav items. The `Grid` fixes both: column 0 (the button) is a fixed
-  `Auto` width, so it never moves regardless of pane state or animation, matching the nav items'
-  fixed left position; column 2 is an invisible `Border` sized to mirror the button's own footprint
-  (`Width="40"`, matching `Button.NavItem`'s `10+20+10` padding+icon+padding), giving the trailing
-  gap after the title the same size as the leading gap around the icon. Column 2's `IsVisible` is
-  bound to the same `IsPaneOpen` as the title, so both collapse to 0 width together in compact mode
-  — nothing is left over for the two fixed columns to fight for space with the compact pane's 40px.
+- The pane header is just the hamburger toggle: a `Button.NavItem` with `HorizontalAlignment="Left"`
+  and `Margin="8"`, so it sits at the same fixed left position as the nav items' icons below it and
+  never moves as the pane animates. There's deliberately **no product-name title** beside it (the
+  Dashboard banner and the window title carry the name). Don't centre the toggle: centring was tried
+  and reverted, because it unpinned the button from the nav items' icon column.
 
 **Cross-page navigation goes through `Services/IPageNavigator`**, not `Locator.Current.GetService<T>()`
 in a command body. `ToStudent`/`ToIdentity`/`ToClassRoll` resolve the target page and carry a
@@ -433,7 +588,12 @@ Both buttons are dropdown-styled: a `Button` with a `Flyout` (plain `Flyout`, no
 already flips it above the button when there's no room below, so neither control does any manual
 "show above/below" positioning itself.
 
-**`SortByButton`**: content is `"Sort by: {field}"` + an up/down `MaterialIcon` reflecting
+**`SortByButton`**: content is an up/down `MaterialIcon` reflecting `SelectedSortOrder`, then
+the field name: no "Sort by:" prefix (the flyout's heading and `SortDescription`, the
+tooltip/accessible name "Sort by Last Attendance, ascending", still say it in full). The field label is the sort enum member run through
+`Converters/EnumDisplayTextConverter.cs` (Capital Case, a space before each capital: `LastAttendance` →
+"Last Attendance"), applied to the button face, the dropdown items and `SortDescription` alike, so name
+sort enum members as their display words and don't add a separate label mapping. The arrow icons reflect
 `SelectedSortOrder` (`Converters/EnumEqualsConverter.cs`, a two-way "does this value equal this fixed
 option" check — `ConverterParameter` is the already-boxed enum value, e.g. `{x:Static data:Order.Ascending}`,
 not a string to parse, so it works for any enum without the converter needing to know its type up
@@ -463,7 +623,12 @@ filters" button — **disabled** (via the same `FilterCountText`-is-empty check,
 to introspect an arbitrary supplied `Filters` control tree to count "how many filters are active" or
 know how to reset them. The host exposes an `int XxxFilterCount` (summing whichever of its own filter
 fields are non-default — mind the polarity: a checkbox that defaults to *checked* counts as "a filter
-is active" when *un*checked, see `StudentsViewModel.PassFilterCount`, not the other way around — kept
+is active" when *un*checked, and one that defaults to *un*checked counts when checked — see
+`StudentsViewModel.PassFilterCount`, where "Include expired" defaults on and "Include depleted" defaults
+off (depleted passes are hidden by default), so the default view shows no badge. The same applies to
+a non-null default value: `AttendanceFilterCount` treats "from" as active only when it differs from its
+6-months-ago default, and `ClearAttendanceFiltersCommand` resets it to that default, not to null (Class
+Schedules' `RollFilterCount`/`ClearRollFiltersCommand` do the same for its "Class rolls" list) — kept
 current via `WhenAnyValue(...).Subscribe(_ => this.RaisePropertyChanged(nameof(XxxFilterCount)))` on
 those same fields) and a `ClearXxxFiltersCommand` that resets them (which naturally re-triggers
 whatever filter-reload `WhenAnyValue` chain already exists for those fields, same as any other
@@ -475,6 +640,23 @@ two unrelated filter groups collide on the same property name, and don't call a 
 misnamed implementation is a silently-empty badge, not a build error, so it's worth checking by eye
 when adding a filterable list.
 
+**Filter flyout content is one top-down column**: a `StackPanel Spacing="8" MinWidth="200"` holding
+the fields in order. Each labelled input is a `StackPanel Spacing="4"` (label `TextBlock`, then the
+control), and checkboxes sit directly in the column. Don't lay fields out side by side in a
+`WrapPanel`/horizontal row (the Students page's filters once did and read left to right, unlike every
+other page). See the Student page's Passes and Classes attended filters for the shape.
+
+**Dates in a filter use `Controls/DateFilterField`**, not a bare `CalendarDatePicker`: it is the same
+labelled-input shape (`Label`, then the picker) plus a clear (`Close` icon) button beside the picker,
+because a `CalendarDatePicker` can't be emptied once a date is picked and a filter needs a way back to
+"no date". The button is disabled, not hidden, while there's no date, so the picker's width doesn't
+change; its accessible name is "Clear {Label}". `SelectedDate` binds two-way by default, through
+`DateOnlyToDateTimeConverter`, exactly as the picker's own did:
+`<controls:DateFilterField Label="From" SelectedDate="{Binding DateFrom, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}" />`.
+Clearing a date that has a non-null default (e.g. Classes attended's 6-months-ago "From") leaves it
+empty, meaning "no limit", which counts as an active filter; "Clear filters" still restores the default.
+Dates in dialogs (Term/Pass edit, Mark Roll) are required values and keep a plain picker.
+
 `FilterBar` composes `SortByButton`/`FilterButton` plus a search box and an optional `BasicFilters` slot
 (a `Control`-typed property, assigned via XAML property-element syntax, e.g.
 `<controls:FilterBar.BasicFilters><CheckBox .../></controls:FilterBar.BasicFilters>`, not a
@@ -485,22 +667,55 @@ templated content) — its own `SortOptions`/`SelectedSort`/etc. and `AdvancedFi
 belongs in `AdvancedFilters` instead — neither Identities nor Students currently populate `BasicFilters`
 for this reason, so don't assume it's required.
 
-Put `<controls:FilterBar>` (or a standalone `SortByButton`/`FilterButton`) in a `Grid` alongside any
-adjacent primary action button (`ColumnDefinitions="*,Auto"`, the filter control in the `*` column)
-rather than trying to fold that action into the bar itself — e.g. "Add student" is page-specific, not a
-filter.
+**A page's main list keeps its search and action buttons inside the list's own card, above the
+list**, not in a row above the card. Put them in `MasterDetailView.ListHeader`:
+
+**A main list has one sort-and-filter button, not separate sort and filter buttons.** Sort lives
+inside the filter popup: set `FilterButton`'s `SortOptions`/`SelectedSort`/`SortOrderOptions`/
+`SelectedSortOrder` and its popup starts with a "Sort by" section (`Controls/SortOptionsPanel`) above
+"Filters", while the button's tooltip and accessible name become "Sort and filter". That button sits
+immediately left of the Add (`Plus`) button:
+
+- **With a search box** (Students, Identities, Terms): a `FilterBar`, one row: search box, then the
+  sort-and-filter button, then the list's Add button (pass it as `<controls:FilterBar.Action>`).
+  `FilterBar`'s own `SortOptions`/… pass straight through to its `FilterButton`.
+- **Without a search box** (Class Schedules, Class Rolls): a right-aligned horizontal `StackPanel`
+  (`Spacing="{StaticResource SpacingSm}"`) of the sort-and-filter `FilterButton` and then Add (Class
+  Rolls has no Add, so just the button).
+
+`MasterDetailView` gives the header a `4,4,4,8` margin inside the card, so a page doesn't add its
+own, and insets the list (rows, skeleton, empty text) by the same 4px on the left, right and bottom. The rows and the
+selection highlight therefore line up exactly with the search box and buttons, both 8px in from the
+card's edges, and the gap below the list matches the gap above the header (`MasterDetailLayoutTests`). Don't put a header row between the page title and the `MasterDetailView`. This applies to the
+main (master) list only: the detail pane's sub-lists (`LinkedRecordsPanel`: Passes, Classes attended,
+Emergency contacts, …) deliberately keep their title, a **separate** `SortByButton`, the
+`FilterButton` and Add on one header line above their card (below). `SortByButton`'s popup is the same
+`SortOptionsPanel`, so the two sort UIs can't drift apart.
+
+In either popup, section headings ("Sort by", "Filters") are `TextBlock Classes="DialogTitle"
+Margin="0"`, grouped with their content at `SpacingSm` (8px). Without `Margin="0"`, `DialogTitle`'s own
+bottom margin adds to the spacing and leaves too big a gap under the heading.
 
 `LinkedRecordsPanel` (a linked/child list, e.g. the Student page's Passes list, or the Class
-Schedules page's "Class rolls" mini-list) has native sort/filter support built in — the same
+Schedules page's "Class rolls" mini-list) is **not selectable**: its rows are an `ItemsControl` in a
+`ScrollViewer`, not a `ListBox`, because every row action lives in the row's `...` menu and nothing acts
+on a "selected" row, so a click-to-select highlight was meaningless. (Same for `MarkRollWindow`'s
+Attendees list.) Rows reuse Fluent's `ListBoxItemPadding` so spacing matches the selectable lists. Use
+a `ListBox` only where selection drives something: `MasterDetailView`'s master list, the picker dialogs
+and Mark Roll's search results. It has native sort/filter support built in — the same
 `SortOptions`/`SelectedSort`/`SortOrderOptions`/`SelectedSortOrder`/`Filters`/`FilterCount`/
 `ClearFiltersCommand` properties `FilterBar` composes, rendered as a `SortByButton`+`FilterButton`
-pair in its own header row (between the header text and the "Add" button) rather than something a
+pair in its own header row (between the header text and the Add (`Plus`) button) rather than something a
 caller has to assemble itself via `HeaderContent`. Set `SortOptions`/`SelectedSort` etc. directly on
 the panel when the list has a real user-facing sort field (e.g. the Class Rolls mini-list's
 `ClassRollSortOptions.Date/Time/DayOfWeek`); leave them unset to hide the `SortByButton` when it
 doesn't (e.g. the Passes list, whose `PassSortOptions` is still `Id`-only per the carve-out above).
 `HeaderContent` remains a general-purpose slot (rendered after the sort/filter buttons, before Add)
-for anything that doesn't fit that shape.
+for anything that doesn't fit that shape. The row's "..." menu shows View/Edit/Remove for whichever of
+`ViewCommand`/`EditCommand`/`RemoveCommand` are set, and **the "..." button is hidden entirely when none
+are**: an empty menu used to open to nothing, which read as broken. Use `ViewLabel`/`EditLabel` when
+"View"/"Edit" alone wouldn't say what happens (Emergency contacts' "View identity" opens the contact on
+the People page; a class roll's attendees use "Change pass").
 
 ## Empty, loading, and error states
 
@@ -520,11 +735,41 @@ Both compute emptiness via `Controls/CollectionEmptinessWatcher.cs`, which follo
 in place on every refresh, so a one-shot count at bind time would go stale immediately. Reuse the
 watcher rather than re-deriving emptiness if you add a third list control.
 
-Write empty text that reflects *why* it's empty — "No students match this search." beats "No items",
-because on a filtered list the filter is usually the reason. Where "nothing yet" and "nothing matched"
-are genuinely different situations, say which: `MarkRollViewModel.SearchEmptyText` returns "Type a name
-to find a student." before anything is typed and "No students match this search." afterwards, because
-only one of those is a dead end.
+Write empty text that reflects *why* it's empty — "No students match the current search." beats "No
+items", because on a filtered list the filter is usually the reason. Where "nothing yet" and "nothing
+matched" are genuinely different situations, say which: the student search (`PersonSearchViewModel.SearchEmptyText`)
+shows "Type a name to find a student." before anything is typed and "No students match the current
+search." afterwards, because only one of those is a dead end.
+
+**Empty-state copy follows one pattern**, so the lines read as a set:
+
+- Start with "No {things}", in sentence case, with a full stop. Name the things as the screen does
+  ("identities", the page's name; "class rolls"; "students").
+- **The list can be narrowed** (search box and/or filters, including a filter with a non-empty default
+  such as Classes attended's 6-months-ago "From"): "No {things} match the current search." / "…the
+  current filters." / "…the current search and filters.", choosing the phrase by which controls the list
+  has. Always "the current", never "this search" or "these filters".
+- **Nothing has been recorded** (no search or filter): "No {things} {past participle}", without "are"/"were"
+  ("No emergency contacts recorded.", "No students marked present for this roll."). Add "yet" only
+  where more are expected to come ("No classes linked to this term yet.", "No students marked present
+  yet." in Mark Roll); a student may never have health concerns, so that one has no "yet".
+- No-selection prompts: "Select a {thing} to view its/their {details|rolls|attendees}."
+
+| Where | Text |
+|---|---|
+| Students / Identities / Terms lists | No students / identities / terms match the current search and filters. |
+| Class Schedules / Class Rolls lists | No class schedules / class rolls match the current filters. |
+| Student: Passes, Classes attended | No passes match the current filters. / No classes match the current filters. |
+| Student: Emergency contacts, Health concerns | No emergency contacts recorded. / No health concerns recorded. |
+| Class schedule: Class rolls | No class rolls match the current filters. |
+| Class roll: attendees | No students marked present for this roll. |
+| Term: classes | No classes linked to this term yet. |
+| Pass: usage | No classes attended with this pass yet. |
+| Pass edit: alterations | No alterations recorded. |
+| Mark Roll: attendees | No students marked present yet. |
+| Student / identity / contact pickers | No students / identities / people match the current search. |
+| Pass picker | No usable passes for this class. |
+| Dashboard | No classes scheduled for today. / No classes in the last 7 days. |
 
 Lists that aren't hosted by either control (the identity/pass pickers, Mark Roll's two columns) carry
 their own empty line in the same shape — a `Caption`-styled `TextBlock` centred behind the list, so an
@@ -543,7 +788,58 @@ than hand-writing the equivalent chain:
   current values on subscription, and without it every page reloads redundantly right after
   construction, visibly resetting the selection.
 - **`ReloadOn(trigger, load, whatFailed)`** — reload a selection-dependent *child* list (linked passes,
-  emergency contacts, rolls).
+  emergency contacts, rolls). While any such load is in flight, `IsLoadingDetails` is true; bind it to
+  each such `LinkedRecordsPanel`'s `IsLoading` (`IsLoading="{Binding DataContext.IsLoadingDetails,
+  ElementName=Root}"`), which shows skeleton rows instead of the empty text while it loads.
+
+**Loading content shows skeletons, not progress bars.** While data that has a known shape loads,
+grey placeholders in that shape stand in for it, so a fast load turns "shape" into "content" rather
+than flashing a bar:
+
+- **Lists**: `Controls/SkeletonList` (`Rows`, `ShowSubtitle`): rows of grey bars padded like real
+  list rows. `MasterDetailView` shows one in its master list while `IsBusy` and the list is empty;
+  `LinkedRecordsPanel` shows one while `IsLoading` (`SkeletonRows`, default 3, set per panel to a
+  typical record's count - the Student page uses 1 emergency contact, health concern and pass, 8 classes;
+  `SkeletonShowsSubtitle="False"` for one-line lists like Health concerns) and hides its empty text
+  meanwhile. **Only while the list is empty**: refreshing a list that already has rows (re-filtering,
+  re-sorting) keeps the rows rather than swapping them for grey bars, which would bring the flicker back.
+- **Anything else**: `Border Classes="Skeleton"` blocks sized like the real content. The Dashboard
+  swaps each stat count and each class section's tiles for skeleton blocks while `IsBusy`, while the
+  headings and quick actions show immediately; its "No classes…" lines wait until loading ends.
+
+Skeletons are **static**: no shimmer or pulse, since a looping animation would break the ~200ms
+ceiling under "Animation". `SkeletonBrush` (the theme's `SystemBaseLowColor`) fills them. A plain
+`ProgressBar` remains only where there's no content shape to mimic: Mark Roll's pass lookup and the
+database window.
+
+**Loads are debounced** (`ViewModelBase.LoadDebounce`, 200ms). A page's first load waits it out with
+its list skeleton showing, and is skipped if you've already moved to another page by then
+(`DebounceLoadAsync`: the Dashboard does the same). A selection-triggered detail load
+(`ReloadOn(..., debounce: true, clearNow: ...)` on Students, Class Schedules and People) clears its lists the
+instant the selection changes, so the skeletons show at once, then waits. Each new selection cancels
+the previous wait, so clicking quickly through records only fetches the one you stop on. Terms and
+Class Rolls have nothing to fetch on selection (their details come with the list item), so only their
+first load is debounced. A page's busy state is set synchronously inside the refresh, not from
+`RefreshCommand.IsExecuting` (which arrives a UI-scheduler tick later and left the debounce with no
+skeleton). While the main list loads with nothing selected yet, `MasterDetailView`'s details pane shows a
+details skeleton (title, two lines, a card of rows) instead of its "Select a ..." prompt, since the first
+record is about to be auto-selected. The prompt itself, once shown, is centred both ways in the pane.
+The Identities page's Student / Emergency contact for cards get one placeholder card while the
+links load, since which card will appear isn't known yet. **A skeleton must be exactly as tall as what
+replaces it**, or the pane jumps when the data arrives, and fixed bar heights drift from the real
+row heights (which come from font metrics and control padding). So each of that card's bars sits
+centred over an invisible, inert copy of the control it stands in for (`Opacity="0"`, not focusable or
+hit-testable, `AutomationProperties.AccessibilityView="Raw"`), which sizes the row
+(`IdentityCardSpacingTests`). Tests run with the debounce off
+(`TestDefaults` module initializer); `LoadDebounceTests` turns it on in a non-parallel collection.
+
+**Loading indicators need the UI thread free.** `IsBusy` (the main list's progress bar,
+`MasterDetailView.IsBusy`) and `IsLoadingDetails` only help if the window can repaint while data loads.
+`SqliteDataStore` runs every query, transaction and the startup migration on the thread pool (Microsoft.Data.Sqlite's
+"async" calls are really synchronous; awaited directly from the UI thread they froze the window on every
+page change). Keep it that way, and never block on a repository call from the UI thread (`.Result`,
+`.Wait()`, `GetAwaiter().GetResult()`): the store resumes on the UI thread to release its gate, so that
+deadlocks. `StoreThreadingTests` checks the store hands control back while a query is still running.
 
 `ReloadOn` is worth reading before writing your own version, because two things about it are easy to
 get wrong and both were wrong before:
@@ -642,7 +938,14 @@ is how `DialogHost` drives them without knowing each dialog's `TResult`.
 
 Don't re-implement any of this per dialog:
 
-- **Escape** — and a click on the dimmed backdrop — runs `CancelCommand`.
+- **Closing fades the whole card out, content intact.** The card renders `DialogHost.DisplayedDialog`,
+  which holds the closing dialog through the overlay's 150ms fade-out. Rendering `ActiveDialog`
+  directly emptied the card instantly, leaving a small empty square (just its padding and border)
+  behind every Cancel/OK. A newly opened dialog replaces it immediately.
+- **Escape** runs `CancelCommand`. **Clicking the dimmed backdrop does not close the dialog**: only
+  choosing one of its actions does (or Escape, the keyboard Cancel), so a stray click outside can't
+  throw away a half-filled form. The backdrop still swallows the click, so the page behind doesn't
+  react. Don't reintroduce click-outside-to-close.
 - **Enter** runs `DefaultCommand`, but only when its own `CanExecute` allows, so a half-filled form
   doesn't submit. A multi-line `TextBox` keeps Enter for itself; anything else with a claim on the key
   (`NumericUpDown` committing typed text, an open `ComboBox`/`Flyout`, a focused `Button`) has already
@@ -745,6 +1048,11 @@ pseudoclasses, rather than FluentTheme's stock notification colors.
 Motion is intentionally minimal: a ~120ms background-color transition on buttons/list rows (hover
 feedback — see the `/template/ ContentPresenter` gotcha under "Global control styles" above if you're
 adding a new one of these), a ~150ms opacity fade on validation errors, and a 150ms cross-fade
-between routed pages (`RoutedViewHost.PageTransition` in `MainWindow.axaml`). `SplitView`'s pane
+between routed pages (`RoutedViewHost.PageTransition` in `MainWindow.axaml`), and a 120ms fade for
+drop-downs. **Every flyout is a `controls:FadeMenuFlyout` / `controls:FadeFlyout`** (`Controls/FadeFlyouts.cs`),
+not a plain `MenuFlyout`/`Flyout`: they fade in on open and fade out before closing (a close request,
+whether a menu item, Escape or a click outside, is held until the fade has played). A `ComboBox`
+drop-down fades in only (a style animation on its `PopupBorder` in `Styles/Controls.axaml`), since its
+popup closes instantly with no hook to delay it. `SplitView`'s pane
 open/close animation is Avalonia's built-in default — don't add a custom one. Keep any new motion in
 this same short, subtle range; nothing in this app should have a animation longer than ~200ms.

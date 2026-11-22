@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Diagnostics;
 #endif
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using ReactiveUI;
 using Splat;
 using YogaClassManager.Avalonia.Services;
@@ -43,7 +44,11 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        ConfigureErrorLogging();
         ConfigureServices();
+
+        // The saved Appearance choice, before the first window shows (so it never flashes the wrong theme).
+        Locator.Current.GetService<IThemeService>()!.ApplySaved();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -71,6 +76,21 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>Turns the error log on (Services/ErrorLog.cs - YCM_LOG_DIR overrides the folder, like
+    /// YCM_SETTINGS_DIR does for settings) and makes sure crashes nothing else catches still get written
+    /// down: an exception escaping a UI-thread callback, any other thread, or an unobserved Task.</summary>
+    private static void ConfigureErrorLogging()
+    {
+        ErrorLog.Configure(Environment.GetEnvironmentVariable("YCM_LOG_DIR") ?? ErrorLog.DefaultDirectory);
+
+        Dispatcher.UIThread.UnhandledException += (_, e) =>
+            ErrorLog.Error("Unhandled exception on the UI thread", e.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            ErrorLog.Error($"Unhandled exception (terminating: {e.IsTerminating})", e.ExceptionObject as Exception);
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+            ErrorLog.Error("Unobserved task exception", e.Exception);
     }
 
     private static void OnDatabaseReady(IClassicDesktopStyleApplicationLifetime desktop, DatabaseGateWindow gateWindow)
@@ -123,6 +143,12 @@ public partial class App : Application
         locator.RegisterLazySingleton<AppScreen>(() => new AppScreen());
         locator.RegisterLazySingleton<IDialogService>(() => new DialogService());
         locator.RegisterLazySingleton<IToastService>(() => new ToastService());
+        locator.RegisterLazySingleton<ISoundPlayer>(() => new SystemSoundPlayer());
+        locator.RegisterLazySingleton<IFolderLauncher>(() => new FolderLauncher());
+        locator.RegisterLazySingleton<IThemeService>(() =>
+            new ThemeService(Locator.Current.GetService<IAppSettingsService>()!));
+        locator.RegisterLazySingleton<NootNootEasterEgg>(() =>
+            new NootNootEasterEgg(Locator.Current.GetService<ISoundPlayer>()!));
         RxApp.DefaultExceptionHandler = new ToastExceptionHandler(Locator.Current.GetService<IToastService>()!);
 
         // Resolves page ViewModels through Splat itself, which is what keeps that lookup - and the
@@ -148,8 +174,14 @@ public partial class App : Application
             Locator.Current.GetService<IStudentRepository>()!,
             Locator.Current.GetService<IClassScheduleRepository>()!,
             Locator.Current.GetService<IClassRollRepository>()!,
+            Locator.Current.GetService<IIdentityRepository>()!,
+            Locator.Current.GetService<IPassRepository>()!,
+            Locator.Current.GetService<ITermRepository>()!,
             Locator.Current.GetService<IRollWindowService>()!,
-            Locator.Current.GetService<IToastService>()!));
+            Locator.Current.GetService<IDialogService>()!,
+            Locator.Current.GetService<IToastService>()!,
+            Locator.Current.GetService<IPageNavigator>()!,
+            Locator.Current.GetService<NootNootEasterEgg>()!));
 
         locator.Register<IdentitiesViewModel>(() => new IdentitiesViewModel(
             Locator.Current.GetService<AppScreen>()!,
@@ -183,6 +215,9 @@ public partial class App : Application
         locator.Register<ClassRollsViewModel>(() => new ClassRollsViewModel(
             Locator.Current.GetService<AppScreen>()!,
             Locator.Current.GetService<IClassRollRepository>()!,
+            Locator.Current.GetService<IStudentRepository>()!,
+            Locator.Current.GetService<IPassRepository>()!,
+            Locator.Current.GetService<ITermRepository>()!,
             Locator.Current.GetService<IDialogService>()!,
             Locator.Current.GetService<IToastService>()!,
             Locator.Current.GetService<IRollWindowService>()!,
@@ -202,7 +237,9 @@ public partial class App : Application
             Locator.Current.GetService<IFilePickerService>()!,
             Locator.Current.GetService<IRollWindowService>()!,
             Locator.Current.GetService<IDialogService>()!,
-            Locator.Current.GetService<IToastService>()!));
+            Locator.Current.GetService<IToastService>()!,
+            Locator.Current.GetService<IFolderLauncher>()!,
+            Locator.Current.GetService<IThemeService>()!));
 
         locator.RegisterLazySingleton<MainWindowViewModel>(() =>
             new MainWindowViewModel(Locator.Current.GetService<AppScreen>()!,

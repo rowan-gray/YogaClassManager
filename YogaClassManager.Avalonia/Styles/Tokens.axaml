@@ -29,6 +29,12 @@
             <Thickness x:Key="TagPadding">6,2</Thickness>
             <Thickness x:Key="GroupGapMargin">0,8,0,0</Thickness>
             <Thickness x:Key="HeaderRowMargin">0,0,0,8</Thickness>
+            <!-- The gap between a reserved-space ScrollBar and the content it scrolls (Controls.axaml's
+                 ScrollBar:vertical/:horizontal rules) - same 4px as SpacingXs, hand-written per the
+                 Thickness-can't-reference-a-double-resource note above; keep in step with SpacingXs if
+                 that ever changes. -->
+            <Thickness x:Key="ScrollBarVerticalGapMargin">4,0,0,0</Thickness>
+            <Thickness x:Key="ScrollBarHorizontalGapMargin">0,4,0,0</Thickness>
 
             <!--
                 Font weights as tokens, because FontWeight was hand-written 20+ times with no shared
@@ -47,6 +53,27 @@
             <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
             <CornerRadius x:Key="RadiusMedium">8</CornerRadius>
             <CornerRadius x:Key="RadiusLarge">12</CornerRadius>
+
+            <!-- The one shared control height for every input-shaped control in a filter/action row -
+                 Button, TextBox, ComboBox, CalendarDatePicker, NumericUpDown (set in Controls.axaml).
+                 Previously only Button.Overflow used 36 (FluentTheme's own default is 32 for all of
+                 these), so an overflow "..." button sitting beside an ordinary Button - e.g.
+                 DetailHeader's primary-action + Overflow pair - mismatched height. One token means a
+                 row mixing any of these controls lines up without per-row alignment fixes. -->
+            <x:Double x:Key="ControlHeight">36</x:Double>
+
+            <!-- Button.Tile's side length (Dashboard quick actions and class-roll tiles), and the size
+                 of the large icon centred at its top. Square, so a WrapPanel of them reads as a grid. -->
+            <x:Double x:Key="TileSize">136</x:Double>
+            <x:Double x:Key="TileIconSize">36</x:Double>
+            <!-- A class tile's one-line title - sized for the worst case, "Wednesday: 12:00 pm". -->
+            <x:Double x:Key="TileTitleFontSize">11</x:Double>
+
+            <!-- Skeleton loading placeholders (Border.Skeleton, Controls/SkeletonList): the theme's own
+                 low-contrast base tone, so they read as "something goes here" in both themes. Never
+                 animated (no BrushTransition), so its translucency doesn't touch the
+                 interactive-state invariant. -->
+            <SolidColorBrush x:Key="SkeletonBrush" Color="{DynamicResource SystemBaseLowColor}" />
 
             <!--
                 Solid fills for Controls/Tag.axaml (rounded colored-background status badges), always
@@ -96,17 +123,11 @@
             <SolidColorBrush x:Key="InteractiveHoverBrush" Color="{DynamicResource SystemListLowColor}" />
             <SolidColorBrush x:Key="InteractivePressedBrush" Color="{DynamicResource SystemListMediumColor}" />
 
-            <!-- Selection, used by list rows and the selected nav item. -->
-            <SolidColorBrush x:Key="InteractiveSelectedBrush" Color="{DynamicResource SystemAccentColorLight2}" />
-            <SolidColorBrush x:Key="InteractiveSelectedHoverBrush" Color="{DynamicResource SystemAccentColorLight1}" />
-            <!-- Same as hover: a press on an already-selected row previously fell through to the
-                 plain grey :pressed rule, which read as the selection briefly vanishing. -->
-            <SolidColorBrush x:Key="InteractiveSelectedPressedBrush" Color="{DynamicResource SystemAccentColorLight1}" />
+            <!-- Selection (list rows and the selected nav item) and AccentSurfaceBrush (the Dashboard's
+                 stat cards) are theme-scoped - see ThemeDictionaries below. -->
 
-            <!-- The default, filled Button. Its resting fill is already a 0x33 overlay, so pressed has
-                 to go darker than the overlay set above to register at all. -->
-            <SolidColorBrush x:Key="ButtonFillHoverBrush" Color="{DynamicResource SystemListLowColor}" />
-            <SolidColorBrush x:Key="ButtonFillDisabledBrush" Color="{DynamicResource SystemListMediumColor}" />
+            <!-- The default, filled Button's resting/hover/pressed/disabled fills are theme-scoped - see
+                 ThemeDictionaries below (ButtonBackground, ButtonFill*Brush). -->
 
             <!-- Accent (primary action) buttons. FluentTheme's own accent brushes are already
                  Opacity=1, so these preserve the existing look exactly; they are owned here so the
@@ -118,10 +139,29 @@
 
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
-                    <!-- The one interactive value with no System* equivalent: a filled Button's
-                         pressed state, which has to sit below its own 0x33 resting overlay.
-                         Matches FluentTheme's ButtonBackgroundPressed exactly. -->
-                    <SolidColorBrush x:Key="ButtonFillPressedBrush" Color="#66000000" />
+                    <!-- The default, filled Button, lighter than FluentTheme's: its resting fill was a 20%
+                         black overlay (#33000000) - a heavy grey behind black text - with a 10% hover
+                         (so hovering *lightened* it), a 40% press, and disabled identical to resting.
+                         Now one lighter, ordered scale: resting 8% < hover 12% < pressed 18%, and
+                         disabled 4% so it reads as faded. Overriding Fluent's own ButtonBackground key
+                         restyles every button's resting fill (this dictionary is merged after
+                         FluentTheme, so it wins). All Opacity=1 - see the interactive-state invariant. -->
+                    <SolidColorBrush x:Key="ButtonBackground" Color="#14000000" />
+                    <SolidColorBrush x:Key="ButtonFillHoverBrush" Color="#1F000000" />
+                    <SolidColorBrush x:Key="ButtonFillPressedBrush" Color="#2E000000" />
+                    <SolidColorBrush x:Key="ButtonFillDisabledBrush" Color="#0A000000" />
+
+                    <!-- Selection: a pale accent under the light theme's dark text. Hover/pressed step
+                         one shade stronger; pressed matches hover, because a press on an
+                         already-selected row previously fell through to the plain grey :pressed rule,
+                         which read as the selection briefly vanishing. -->
+                    <!-- The accent's palest shade for the selection itself (Light3, default blue #A6D8FF -
+                         Light2 was heavy enough to dull black text), hover/pressed one shade stronger. -->
+                    <SolidColorBrush x:Key="InteractiveSelectedBrush" Color="{DynamicResource SystemAccentColorLight3}" />
+                    <SolidColorBrush x:Key="InteractiveSelectedHoverBrush" Color="{DynamicResource SystemAccentColorLight2}" />
+                    <SolidColorBrush x:Key="InteractiveSelectedPressedBrush" Color="{DynamicResource SystemAccentColorLight2}" />
+                    <!-- An accent-tinted surface carrying ordinary text (Dashboard stat cards). -->
+                    <SolidColorBrush x:Key="AccentSurfaceBrush" Color="{DynamicResource SystemAccentColorLight2}" />
 
                     <SolidColorBrush x:Key="StatusErrorBrush" Color="#C42B1C" />
                     <SolidColorBrush x:Key="StatusWarningBrush" Color="#9D5D00" />
@@ -130,7 +170,20 @@
                     <SolidColorBrush x:Key="StatusInfoBrush" Color="#0B57D0" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
+                    <!-- Dark theme keeps FluentTheme's values (resting matches its ButtonBackground). -->
+                    <SolidColorBrush x:Key="ButtonBackground" Color="#33FFFFFF" />
+                    <SolidColorBrush x:Key="ButtonFillHoverBrush" Color="{DynamicResource SystemListLowColor}" />
                     <SolidColorBrush x:Key="ButtonFillPressedBrush" Color="#66FFFFFF" />
+                    <SolidColorBrush x:Key="ButtonFillDisabledBrush" Color="{DynamicResource SystemListMediumColor}" />
+
+                    <!-- Dark theme text is white, so the pale Light shades read badly under it (poor
+                         contrast) - use the accent's Dark shades instead (default blue: Dark2 #004275
+                         is ~10:1 against white, Dark1 #005A9E ~7:1). InteractiveStateTests checks
+                         both themes against their text colour. -->
+                    <SolidColorBrush x:Key="InteractiveSelectedBrush" Color="{DynamicResource SystemAccentColorDark2}" />
+                    <SolidColorBrush x:Key="InteractiveSelectedHoverBrush" Color="{DynamicResource SystemAccentColorDark1}" />
+                    <SolidColorBrush x:Key="InteractiveSelectedPressedBrush" Color="{DynamicResource SystemAccentColorDark1}" />
+                    <SolidColorBrush x:Key="AccentSurfaceBrush" Color="{DynamicResource SystemAccentColorDark2}" />
 
                     <SolidColorBrush x:Key="StatusErrorBrush" Color="#FF8A80" />
                     <SolidColorBrush x:Key="StatusWarningBrush" Color="#FFB74D" />
@@ -168,13 +221,6 @@
          FontSize="11" at five sites. -->
     <Style Selector="TextBlock.Micro">
         <Setter Property="FontSize" Value="11" />
-    </Style>
-
-    <!-- The product name in the nav rail's pane header - the one piece of chrome that isn't page
-         content, so it sits outside the PageTitle/SectionTitle/DialogTitle progression. -->
-    <Style Selector="TextBlock.AppTitle">
-        <Setter Property="FontSize" Value="16" />
-        <Setter Property="FontWeight" Value="{StaticResource FontWeightBold}" />
     </Style>
 
     <!-- The single large number on a Dashboard stat tile. -->

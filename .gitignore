@@ -5,3 +5,14 @@
 
 /**/obj
 /**/bin
+
+/**/TestResults
+
+.mcp.json
+
+# IDE per-user settings
+*.DotSettings.user
+*.user
+
+# MSBuild SDK resolver backup files
+*.Backup.tmp

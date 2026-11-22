@@ -29,11 +29,6 @@ public partial class Pass : ObservableObject, IIdentifiable
     public virtual bool IsExpired => false;
     public virtual string PassName => "Pass";
 
-    /// <summary>Formatted effective-to-expiry range for passes that have one (e.g. DatedPass); null
-    /// otherwise. Exists so UI can bind to it directly without a type cast - Avalonia's classic
-    /// (non-compiled) bindings, used throughout this app, can't resolve XAML type-cast binding paths.</summary>
-    public virtual string? DateRangeDisplay => null;
-
     /// <summary>The date this pass stops being usable, for passes that have one; null otherwise (e.g.
     /// CasualPass, which only depletes by class count). Mirrors the date each subtype's own IsExpired
     /// getter compares against, so the two stay consistent by construction.</summary>

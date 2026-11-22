@@ -15,7 +15,7 @@ public class InMemoryIdentityRepository : IIdentityRepository
         this.store = store;
     }
 
-    public IDbModel<Identity, IdentityFilter> Query(IdentityFilter filter)
+    public IReadOnlyDbModel<Identity, IdentityFilter> Query(IdentityFilter filter)
     {
         return new InMemoryIdentityDbModel(filter, store);
     }
@@ -176,7 +176,7 @@ public class InMemoryIdentityRepository : IIdentityRepository
     }
 }
 
-internal class InMemoryIdentityDbModel : IDbModel<Identity, IdentityFilter>
+internal class InMemoryIdentityDbModel : IReadOnlyDbModel<Identity, IdentityFilter>
 {
     private readonly InMemoryDataStore store;
 
@@ -204,30 +204,6 @@ internal class InMemoryIdentityDbModel : IDbModel<Identity, IdentityFilter>
     public Task<bool> Refresh(Identity model, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(store.People.ContainsKey(model.Id));
-    }
-
-    public Task Save(Identity model, SaveOptions saveOptions = SaveOptions.CreateOrReplace,
-        CancellationToken cancellationToken = default)
-    {
-        var exists = store.People.ContainsKey(model.Id);
-
-        if (exists && saveOptions == SaveOptions.Create)
-            throw new ModelExistsException();
-        if (!exists && saveOptions == SaveOptions.Replace)
-            throw new ModelDoesNotExistException();
-
-        if (exists)
-            store.People[model.Id].Update(model);
-        else
-            store.People[model.Id == 0 ? store.NextId() : model.Id] = model;
-
-        return Task.CompletedTask;
-    }
-
-    public Task Delete(Identity model, CancellationToken cancellationToken = default)
-    {
-        store.People.Remove(model.Id);
-        return Task.CompletedTask;
     }
 
     private IEnumerable<Identity> Matching()

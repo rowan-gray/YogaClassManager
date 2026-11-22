@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="using:Avalonia.Data.Converters"
         xmlns:controls="using:YogaClassManager.Avalonia.Controls"
+        xmlns:transitions="using:YogaClassManager.Avalonia.Transitions"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
 
     <!--
@@ -20,14 +21,32 @@
         between them runs alpha 0x33->0xFF while opacity runs 1.0->0.1, so the midpoint renders at
         ~0.33 alpha - darker than *either* endpoint - then settles. That overshoot is the grey flash.
 
+        A SECOND FLASH, same symptom, different cause: BrushTransition also blends R/G/B and A
+        independently (straight alpha). The hover/pressed tints are translucent white (dark theme) or
+        black (light theme) and "no background" is transparent white, so blending one of them towards
+        the opaque selection colour drags the colour through white/black while alpha is still rising -
+        mid-way it renders lighter (dark theme) or darker (light theme) than either end, every time the
+        selection changes. Every interactive Background transition is therefore a
+        transitions:PremultipliedBrushTransition (Styles/PremultipliedBrushTransition.cs), which blends
+        premultiplied colour - a true cross-fade of what's on screen - instead of BrushTransition.
+        Don't use a plain BrushTransition for a Background here.
+
         These rules assign only Background (the sole animated property); Foreground and BorderBrush
         stay on FluentTheme, which keeps disabled/focus affordances intact.
     -->
     <Style Selector="Button">
         <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+        <!-- FluentTheme's own default VerticalContentAlignment is Stretch, not Center. At the old
+             ~32px natural height (barely above the content's own size) that was nearly invisible, but
+             MinHeight above now routinely leaves spare vertical space, and a stretched TextBlock draws
+             its text from the top of its enlarged bounds rather than centering it - text visibly rides
+             high. Explicit Center here is what actually centers content once a button is taller than
+             its content demands. -->
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                <transitions:PremultipliedBrushTransition Property="Background" Duration="0:0:0.12" />
             </Transitions>
         </Setter>
     </Style>
@@ -47,7 +66,7 @@
     <Style Selector="Button /template/ ContentPresenter">
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                <transitions:PremultipliedBrushTransition Property="Background" Duration="0:0:0.12" />
             </Transitions>
         </Setter>
     </Style>
@@ -82,25 +101,59 @@
 
     <Style Selector="TextBox">
         <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+        <!-- Same reason as Button's VerticalContentAlignment above: FluentTheme's TextBox defaults to
+             Top, so once MinHeight lifts the box above its natural ~32px the text and watermark ride
+             high (most visible in the search boxes). Multi-line boxes keep Top below - centring a
+             growing block of text would make it drift as lines are added. -->
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBox[AcceptsReturn=True]">
+        <Setter Property="VerticalContentAlignment" Value="Top" />
     </Style>
 
     <Style Selector="ComboBox">
         <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
     </Style>
 
     <Style Selector="CalendarDatePicker">
         <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
     </Style>
 
     <Style Selector="NumericUpDown">
         <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+    </Style>
+
+    <!-- FluentTheme's default scrollbars auto-hide and float on top of the content (they only expand
+         into their own space on hover), so text near the trailing edge sits under the bar. Disabling
+         auto-hide makes an Auto-visibility scrollbar reserve its own column/row instead of overlaying
+         - it still collapses to zero width/height (and the content gets the full pane back) whenever
+         there's nothing to scroll, since that's driven by ScrollBarVisibility="Auto", not by this
+         setting. Matches every ScrollViewer in the app, including the ones inside a ListBox's/
+         ComboBox's own control template (same reasoning as the Button rules above). -->
+    <Style Selector="ScrollViewer">
+        <Setter Property="AllowAutoHide" Value="False" />
+    </Style>
+
+    <!-- A reserved-space bar sitting flush against the content it scrolls reads as a stray line down
+         the edge of the pane. The margin goes on the bar itself (not padding on the ScrollViewer's
+         content) so the gap only exists when the bar is actually laid out - nothing to leave behind
+         once ScrollBarVisibility="Auto" collapses it away. -->
+    <Style Selector="ScrollBar:vertical">
+        <Setter Property="Margin" Value="{StaticResource ScrollBarVerticalGapMargin}" />
+    </Style>
+    <Style Selector="ScrollBar:horizontal">
+        <Setter Property="Margin" Value="{StaticResource ScrollBarHorizontalGapMargin}" />
     </Style>
 
     <Style Selector="ListBoxItem">
         <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                <transitions:PremultipliedBrushTransition Property="Background" Duration="0:0:0.12" />
             </Transitions>
         </Setter>
     </Style>
@@ -110,7 +163,7 @@
     <Style Selector="ListBoxItem /template/ ContentPresenter">
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                <transitions:PremultipliedBrushTransition Property="Background" Duration="0:0:0.12" />
             </Transitions>
         </Setter>
     </Style>
@@ -151,18 +204,16 @@
          only - each call site supplies its own icon content and MenuFlyout since the items/commands
          differ per usage. Toolbar instances (detail-pane action rows) use the default Button
          background; per-row instances inside a list (LinkedRecordsPanel) override back to
-         Background="Transparent" locally, since an opaque button per row reads as too busy sitting
-         inside a ListBoxItem that already has its own hover/selected background. -->
-    <!-- 36, up from 32: this is the sole affordance for every per-record action in the app, and 32
-         square was under the ~40px comfortable-target guidance. 36 rather than a full 40 because these
-         sit in a row beside ordinary Buttons, whose FluentTheme height is 32 - a 40px square next to
-         those reads as a mismatched, oversized control. -->
+         Background="Transparent" locally, since an opaque button on every row of a list reads as
+         too busy. -->
+    <!-- Height (36) comes from the base Button rule above, shared by every button and input in the
+         app - see ControlHeight in Tokens.axaml. Only Width needs setting here, to make the control
+         square; up from FluentTheme's 32 default, which was under the ~40px comfortable-target
+         guidance, but short of a full 40 so it doesn't read as oversized next to an ordinary Button. -->
     <Style Selector="Button.Overflow">
-        <Setter Property="Width" Value="36" />
-        <Setter Property="Height" Value="36" />
+        <Setter Property="Width" Value="{StaticResource ControlHeight}" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
 
         <!--
             The dots icon and its accessible name are defaults, not fixtures: this exact block
@@ -189,6 +240,99 @@
     </Style>
     <Style Selector="Button.Overflow:pressed /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+
+    <!-- Icon-only action button (Add = Plus, Edit = Pencil): the same 36x36 square as Overflow, but
+         chrome only - no background override, so it keeps whatever palette its other classes give it
+         (Classes="accent Icon" for a primary action). The call site supplies the MaterialIcon as
+         Content plus AutomationProperties.Name and ToolTip.Tip carrying the old text label ("Add
+         student"), since there's no visible text left to name it. -->
+    <Style Selector="Button.Icon">
+        <Setter Property="Width" Value="{StaticResource ControlHeight}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- Drop-downs fade in. Flyouts (the "..." menus, sort/filter popups) do it themselves, in and out
+         - see Controls/FadeFlyouts.cs. A ComboBox's drop-down closes instantly with no hook to delay it,
+         so it fades in only: this selector becomes active each time it opens, which replays the
+         animation. 120ms, inside the ~200ms animation ceiling. -->
+    <Style Selector="ComboBox[IsDropDownOpen=True] /template/ Border#PopupBorder">
+        <Style.Animations>
+            <Animation Duration="0:0:0.12" FillMode="Forward">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1" />
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+
+    <!-- A skeleton loading placeholder block - a grey rounded bar or tile standing in for content that
+         is still loading (see Controls/SkeletonList and the Dashboard). Static: no shimmer animation. -->
+    <Style Selector="Border.Skeleton">
+        <Setter Property="Background" Value="{DynamicResource SkeletonBrush}" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    </Style>
+
+    <!-- Square action tile (Dashboard): a large icon centred at the top with its text centred below.
+         Chrome only - the call site supplies a StackPanel Classes="TileContent" (icon, then text) as
+         Content, plus AutomationProperties.Name/ToolTip.Tip when the text alone doesn't say what
+         clicking does (the class-roll tiles show the class, not "Mark roll"). Ordinary Button
+         background and states, so the interactive-state invariant needs nothing new. -->
+    <Style Selector="Button.Tile">
+        <Setter Property="Width" Value="{StaticResource TileSize}" />
+        <Setter Property="Height" Value="{StaticResource TileSize}" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.Tile StackPanel.TileContent">
+        <Setter Property="Spacing" Value="{StaticResource SpacingSm}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.Tile StackPanel.TileContent materialIcons|MaterialIcon">
+        <Setter Property="Width" Value="{StaticResource TileIconSize}" />
+        <Setter Property="Height" Value="{StaticResource TileIconSize}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.Tile StackPanel.TileContent TextBlock">
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <!-- A class tile's title ("Wednesday: 12:00 pm" at worst - see ClassSchedule.ToString) must stay on
+         one line. 11px Medium fits that worst case in the tile's ~118px of text width (Inter: ~10.3em),
+         and the call site also wraps it in a Viewbox StretchDirection="DownOnly" so an unexpectedly
+         wide font shrinks it rather than wrapping. -->
+    <Style Selector="Button.Tile StackPanel.TileContent TextBlock.TileTitle">
+        <Setter Property="FontSize" Value="{StaticResource TileTitleFontSize}" />
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightMedium}" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="None" />
+    </Style>
+
+    <!-- A related record's name that is itself the way to open it: link icon + the name, in place of
+         a plain name followed by a separate "View" button. Call sites set Content to the record's
+         display text (Content="{Binding FullName}") plus the navigate Command - the icon comes from
+         this ContentTemplate, which builds a fresh icon per button just like Overflow's Template
+         setter. Chrome and every interactive state are the plain base Button's, so no extra state
+         rules (and no new transition endpoints) are needed. -->
+    <Style Selector="Button.RecordLink">
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="ContentTemplate">
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSm}">
+                    <materialIcons:MaterialIcon Kind="LinkVariant" Width="16" Height="16"
+                                                VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                </StackPanel>
+            </DataTemplate>
+        </Setter>
     </Style>
 
     <!--

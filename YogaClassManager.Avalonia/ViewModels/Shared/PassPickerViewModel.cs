@@ -1,3 +1,4 @@
+using YogaClassManager.Avalonia.Services;
 using System.Reactive;
 using System.Reactive.Linq;
 using ReactiveUI;
@@ -22,7 +23,7 @@ public class PassPickerViewModel : DialogViewModelBase<Pass>
     {
         StudentName = studentName;
         Results = rankedCandidates
-            .Select(pass => new PassPickerRow(pass, MarkRollViewModel.IsRecentlyExpired(pass, schedule, date)))
+            .Select(pass => new PassPickerRow(pass, RollPassResolver.IsRecentlyExpired(pass, schedule, date)))
             .ToList();
         selectedRow = Results.FirstOrDefault();
 

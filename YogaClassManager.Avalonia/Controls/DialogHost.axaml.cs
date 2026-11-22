@@ -15,7 +15,10 @@ namespace YogaClassManager.Avalonia.Controls;
 ///     ActiveDialog - plus the keyboard behaviour that makes a dialog usable without a mouse:
 ///
 ///     <list type="bullet">
-///         <item>Escape (and a backdrop click) runs the dialog's CancelCommand.</item>
+///         <item>Escape runs the dialog's CancelCommand (the keyboard equivalent of its Cancel button).
+///               Clicking the dimmed backdrop does <b>not</b> close the dialog - only choosing one of its
+///               actions does, so a stray click outside can't throw away what's been typed. The backdrop
+///               still swallows the click, so nothing behind the modal reacts to it either.</item>
 ///         <item>Enter runs its DefaultCommand, when that command's own CanExecute allows it.</item>
 ///         <item>Opening a dialog moves focus to its first focusable control; closing puts focus back
 ///               where it was, so the keyboard doesn't lose its place mid-task.</item>
@@ -38,7 +41,15 @@ public partial class DialogHost : UserControl
     public static readonly StyledProperty<double> MaxDialogHeightProperty =
         AvaloniaProperty.Register<DialogHost, double>(nameof(MaxDialogHeight), 700);
 
+    public static readonly DirectProperty<DialogHost, object?> DisplayedDialogProperty =
+        AvaloniaProperty.RegisterDirect<DialogHost, object?>(nameof(DisplayedDialog), o => o.DisplayedDialog);
+
+    /// <summary>Outlasts the overlay's 150ms fade-out (Border.DialogOverlay in Styles/Controls.axaml).</summary>
+    private static readonly TimeSpan FadeOutHold = TimeSpan.FromMilliseconds(200);
+
     private IDialogService? subscribed;
+    private object? displayedDialog;
+    private CancellationTokenSource? pendingClear;
     private IInputElement? focusBeforeDialog;
     private bool isAttached;
     private bool isTrappingFocus;
@@ -71,6 +82,20 @@ public partial class DialogHost : UserControl
     {
         get => GetValue(DialogServiceProperty);
         set => SetValue(DialogServiceProperty, value);
+    }
+
+    /// <summary>
+    ///     What the card renders - the active dialog, but held on through the overlay's fade-out after
+    ///     it closes. Rendering ActiveDialog directly emptied the card the instant a dialog closed, so
+    ///     for the 150ms fade the card shrank to just its padding and border: a small square left in
+    ///     the middle of the screen after every Cancel/OK. The held dialog can't be interacted with -
+    ///     the overlay stops being hit-testable as soon as it starts closing, and keyboard handling
+    ///     follows ActiveDialog - and a newly opened dialog replaces it immediately.
+    /// </summary>
+    public object? DisplayedDialog
+    {
+        get => displayedDialog;
+        private set => SetAndRaise(DisplayedDialogProperty, ref displayedDialog, value);
     }
 
     public double MaxDialogWidth
@@ -128,6 +153,7 @@ public partial class DialogHost : UserControl
 
     private void UpdateForDialogState()
     {
+        UpdateDisplayedDialog();
         var isOpen = subscribed?.IsDialogOpen == true;
 
         if (isOpen && !isTrappingFocus)
@@ -151,6 +177,34 @@ public partial class DialogHost : UserControl
         // or a nested one closing to reveal its parent) - focus belongs in whatever is on top now.
         if (isOpen)
             QueueInitialFocus();
+    }
+
+    private void UpdateDisplayedDialog()
+    {
+        pendingClear?.Cancel();
+        pendingClear = null;
+
+        if (subscribed?.ActiveDialog is { } active)
+        {
+            DisplayedDialog = active;
+            return;
+        }
+
+        if (subscribed is null || DisplayedDialog is null)
+        {
+            DisplayedDialog = null; // detached, or nothing showing: no fade to wait for
+            return;
+        }
+
+        // Closed: keep the last dialog in the card until the overlay has faded out, then clear it -
+        // unless another dialog opened in the meantime (which replaces it straight away, above).
+        var cancellation = pendingClear = new CancellationTokenSource();
+        _ = Task.Delay(FadeOutHold, cancellation.Token).ContinueWith(_ =>
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!cancellation.IsCancellationRequested && subscribed?.ActiveDialog is null)
+                    DisplayedDialog = null;
+            }), TaskContinuationOptions.OnlyOnRanToCompletion);
     }
 
     private void QueueInitialFocus()
@@ -207,17 +261,6 @@ public partial class DialogHost : UserControl
         foreach (var sibling in panel.Children)
             if (!ReferenceEquals(sibling, this))
                 KeyboardNavigation.SetTabNavigation(sibling, mode);
-    }
-
-    private void OnBackdropPressed(object? sender, PointerPressedEventArgs e)
-    {
-        // Only a press on the backdrop itself dismisses - a press anywhere inside the card bubbles up
-        // here too, and dismissing on that would make the dialog impossible to use.
-        if (e.Source is Visual source && PART_Card.IsVisualAncestorOf(source))
-            return;
-
-        if (subscribed?.ActiveDialog is IDialogViewModel dialog)
-            TryInvoke(dialog.CancelCommand, () => e.Handled = true);
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)

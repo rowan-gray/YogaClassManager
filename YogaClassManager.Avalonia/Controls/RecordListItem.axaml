@@ -6,7 +6,7 @@
              x:Name="Control">
 
     <StackPanel Margin="8,4">
-        <!-- Grid, not a horizontal StackPanel: the master column is a fixed 320px, and only a starred
+        <!-- Grid, not a horizontal StackPanel: the master column is at most 320px wide, and only a starred
              column makes the title actually trim instead of running under the flag. -->
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Text="{Binding Title, ElementName=Control}"

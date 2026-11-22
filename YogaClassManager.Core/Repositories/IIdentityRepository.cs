@@ -7,7 +7,7 @@ namespace YogaClassManager.Core.Repositories;
 
 public interface IIdentityRepository
 {
-    IDbModel<Identity, IdentityFilter> Query(IdentityFilter filter);
+    IReadOnlyDbModel<Identity, IdentityFilter> Query(IdentityFilter filter);
 
     Task<int> AddAsync(Identity identity, CancellationToken cancellationToken = default);
     Task UpdateAsync(Identity identity, CancellationToken cancellationToken = default);
