@@ -792,6 +792,16 @@ than hand-writing the equivalent chain:
   each such `LinkedRecordsPanel`'s `IsLoading` (`IsLoading="{Binding DataContext.IsLoadingDetails,
   ElementName=Root}"`), which shows skeleton rows instead of the empty text while it loads.
 
+**Anything that runs after `RefreshCommand.Execute()` must `ObserveOn(RxApp.MainThreadScheduler)`
+first.** The SQLite store runs queries on the thread pool, and `Execute()`'s result arrives on whichever
+thread the load finished on: it is *not* marshalled back to the UI thread (only the command's own
+`IObservable` is). Setting `Selection` there starts every `ReloadOn` detail load on that thread too, and
+the first write to a bound list crashed the app ("Call from invalid thread"). The "select this record on
+arrival" hand-offs (`TakePending*`) on Students, People, Class Schedules and Class Rolls all do this. The
+in-memory test repositories complete synchronously and can't catch it; `SqliteUiThreadTests` runs pages
+against real SQLite to cover it. (`ToastService` can be called from any thread - it marshals itself - so
+a background failure shows its toast instead of crashing.)
+
 **Loading content shows skeletons, not progress bars.** While data that has a known shape loads,
 grey placeholders in that shape stand in for it, so a fast load turns "shape" into "content" rather
 than flashing a bar:
