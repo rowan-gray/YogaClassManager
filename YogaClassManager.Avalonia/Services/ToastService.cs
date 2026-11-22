@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
+using Avalonia.Threading;
 using YogaClassManager.Avalonia.Controls;
 
 namespace YogaClassManager.Avalonia.Services;
@@ -37,8 +38,17 @@ public class ToastService : IToastService
         Show(message, NotificationType.Error);
     }
 
+    /// <summary>Safe from any thread: a toast is a control, which can only be created on the UI thread, and
+    /// errors are often reported from wherever a failed background operation finished. Throwing here
+    /// would turn "show the user an error" into a crash.</summary>
     private void Show(string message, NotificationType type)
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => Show(message, type));
+            return;
+        }
+
         manager?.Show(new ToastContent(type, message), type);
     }
 }

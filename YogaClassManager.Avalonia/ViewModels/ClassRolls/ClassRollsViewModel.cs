@@ -73,7 +73,11 @@ public class ClassRollsViewModel : CollectionPageModelBase<ClassRoll>, IRoutable
 
         // Switch + onError for the same reasons as CollectionPageModelBase.ReloadOn: this runs once at
         // construction, but a throw here would otherwise be an unhandled Rx exception on the UI thread.
+        // ObserveOn before starting OpenPendingRollAsync: Execute()'s result arrives on a thread-pool
+        // thread with the SQLite store, and the roll must be selected and its window opened on the UI
+        // thread. See UI_STYLE_GUIDE.md's List page ViewModels.
         RefreshCommand.Execute()
+            .ObserveOn(RxApp.MainThreadScheduler)
             .Select(_ => Observable.FromAsync(OpenPendingRollAsync))
             .Switch()
             .Subscribe(_ => { },

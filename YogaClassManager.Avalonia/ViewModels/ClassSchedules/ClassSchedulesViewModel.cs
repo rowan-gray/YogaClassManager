@@ -77,7 +77,11 @@ public class ClassSchedulesViewModel : CollectionPageModelBase<ClassSchedule>, I
         this.WhenAnyValue(x => x.RollDateFrom, x => x.RollDateTo, x => x.RollDayOfWeek)
             .Subscribe(_ => this.RaisePropertyChanged(nameof(RollFilterCount)));
 
+        // ObserveOn: Execute()'s result arrives on whichever thread the load finished on - a thread-pool
+        // thread with the SQLite store - and setting Selection there starts the detail loads off the UI
+        // thread too ("Call from invalid thread" crash). See UI_STYLE_GUIDE.md's List page ViewModels.
         RefreshCommand.Execute()
+            .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(_ =>
             {
                 if (navigator.TakePendingClassScheduleSelection() is { } pendingScheduleId)
