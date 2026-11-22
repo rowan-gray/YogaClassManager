@@ -85,8 +85,11 @@ public class IdentityCardSpacingTests
     {
         var window = await RenderJudiAsync();
         var studentCard = CardWithHeading(window, "Student");
-        var placeholderCard = window.GetVisualDescendants().OfType<Border>()
-            .Single(b => b.Classes.Contains("Card") && b.GetVisualDescendants().OfType<Border>().Any(s => s.Classes.Contains("Skeleton")));
+        // The placeholder is the card holding the invisible "Student" caption that sizes its heading bar.
+        // (Matching "any Card containing a Skeleton" also hits MasterDetailView's own detail skeleton.)
+        var placeholderCaption = window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(t => t.Text == "Student" && t.Opacity == 0);
+        var placeholderCard = placeholderCaption.GetVisualAncestors().OfType<Border>().First(b => b.Classes.Contains("Card"));
 
         // Loading has finished, so the placeholder is hidden; show it alongside the real card to measure both.
         placeholderCard.IsVisible = true;

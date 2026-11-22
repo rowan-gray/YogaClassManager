@@ -44,7 +44,6 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        ConfigureErrorLogging();
         ConfigureServices();
 
         // The saved Appearance choice, before the first window shows (so it never flashes the wrong theme).
@@ -55,6 +54,8 @@ public partial class App : Application
 #if DEBUG
             this.AttachDevTools();
 #endif
+            MacAppMenu.Attach();
+
             // The startup gate runs before MainWindow (and therefore before any page/repository) is
             // touched: no database file is resolved yet, so nothing that depends on one can safely be
             // constructed. The gate becomes the temporary MainWindow itself (so the desktop lifetime
@@ -80,8 +81,11 @@ public partial class App : Application
 
     /// <summary>Turns the error log on (Services/ErrorLog.cs - YCM_LOG_DIR overrides the folder, like
     /// YCM_SETTINGS_DIR does for settings) and makes sure crashes nothing else catches still get written
-    /// down: an exception escaping a UI-thread callback, any other thread, or an unobserved Task.</summary>
-    private static void ConfigureErrorLogging()
+    /// down: an exception escaping a UI-thread callback, any other thread, or an unobserved Task.
+    /// Called from Program.Main (AfterSetup), not from this class's startup: the tests and the XAML
+    /// designer boot App too, and must neither write to the real log folder nor - for the tests -
+    /// switch the static log over to it in the middle of a test that has configured its own.</summary>
+    internal static void ConfigureErrorLogging()
     {
         ErrorLog.Configure(Environment.GetEnvironmentVariable("YCM_LOG_DIR") ?? ErrorLog.DefaultDirectory);
 
@@ -95,16 +99,20 @@ public partial class App : Application
 
     private static void OnDatabaseReady(IClassicDesktopStyleApplicationLifetime desktop, DatabaseGateWindow gateWindow)
     {
+        // The user quit from the gate while the file was still opening: the app is shutting down.
+        if (gateWindow.IsClosed)
+            return;
+
         var mainWindowViewModel = Locator.Current.GetService<MainWindowViewModel>()!;
         var mainWindow = new MainWindow { DataContext = mainWindowViewModel };
 
-        // Reassign desktop.MainWindow to the REAL window *before* force-closing the gate window -
+        // Reassign desktop.MainWindow to the REAL window *before* closing the gate window -
         // ShutdownMode.OnMainWindowClose tracks whichever window is currently desktop.MainWindow;
         // closing the gate while it's still the tracked MainWindow would shut the whole app down
         // instead of handing off to the real window.
         desktop.MainWindow = mainWindow;
         mainWindow.Show();
-        gateWindow.CloseForced();
+        gateWindow.Close();
     }
 
     private static void ConfigureServices()

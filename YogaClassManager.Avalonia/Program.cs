@@ -14,7 +14,11 @@ sealed class Program
     {
         try
         {
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            // Error logging is turned on here, by the real app's entry point only - see
+            // App.ConfigureErrorLogging. AfterSetup runs once the platform is up, before App's startup.
+            BuildAvaloniaApp()
+                .AfterSetup(_ => App.ConfigureErrorLogging())
+                .StartWithClassicDesktopLifetime(args);
         }
         catch (Exception exception)
         {

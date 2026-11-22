@@ -3,6 +3,7 @@
              x:Class="YogaClassManager.Avalonia.App"
              xmlns:local="using:YogaClassManager.Avalonia"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             Name="Yoga Class Manager"
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 

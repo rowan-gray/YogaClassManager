@@ -46,15 +46,14 @@ public class PersonSearchTests
     }
 
     [Fact]
-    public void ContactPicker_FindsAnyPerson_LeavesOutTheExcluded_AndEnterPicksTheOnlyMatch()
+    public async Task ContactPicker_FindsAnyPerson_LeavesOutTheExcluded_AndEnterPicksTheOnlyMatch()
     {
+        var store = CreateStore();
+        var studentId = await store.Students.AddAsync(new Student(0, "Kenneth", "Student", "0400000000", null, true));
+        var parentId = await store.Identities.AddAsync(new Identity(0, "Kenneth", "Parent", "0411111111", null, true));
+
         WithTestScheduler(scheduler =>
         {
-            var store = CreateStore();
-            var studentId = store.Students.AddAsync(new Student(0, "Kenneth", "Student", "0400000000", null, true))
-                .GetAwaiter().GetResult();
-            var parentId = store.Identities.AddAsync(new Identity(0, "Kenneth", "Parent", "0411111111", null, true))
-                .GetAwaiter().GetResult();
 
             var picker = new ContactPickerViewModel(store.Identities, "Select an emergency contact",
                 excludeIds: [studentId]);
@@ -78,12 +77,13 @@ public class PersonSearchTests
             .SelectMany(box => box.GetVisualDescendants().OfType<Button>()).ToList();
 
     [AvaloniaFact]
-    public void Pickers_HideTheRowButton_MarkRollKeepsIt()
+    public async Task Pickers_HideTheRowButton_MarkRollKeepsIt()
     {
+        var store = CreateStore();
+        await store.Students.AddAsync(new Student(0, "Ada", "Tester", "0400000000", null, true));
+
         WithTestScheduler(scheduler =>
         {
-            var store = CreateStore();
-            store.Students.AddAsync(new Student(0, "Ada", "Tester", "0400000000", null, true)).GetAwaiter().GetResult();
 
             var studentPicker = new StudentPickerViewModel(store.Students);
             var studentView = new StudentPickerView { DataContext = studentPicker };
@@ -121,12 +121,13 @@ public class PersonSearchTests
     }
 
     [AvaloniaFact]
-    public void DoubleClickingAResult_ChoosesIt()
+    public async Task DoubleClickingAResult_ChoosesIt()
     {
+        var store = CreateStore();
+        await store.Students.AddAsync(new Student(0, "Ada", "Tester", "0400000000", null, true));
+
         WithTestScheduler(scheduler =>
         {
-            var store = CreateStore();
-            store.Students.AddAsync(new Student(0, "Ada", "Tester", "0400000000", null, true)).GetAwaiter().GetResult();
 
             var picker = new StudentPickerViewModel(store.Students);
             Student? closedWith = null;

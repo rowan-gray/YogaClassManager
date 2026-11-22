@@ -5,31 +5,23 @@ namespace YogaClassManager.Avalonia.Views.Bootstrap;
 /// <summary>
 ///     The startup gate: a real Window (not a DialogHost overlay - see UI_STYLE_GUIDE.md's Dialogs
 ///     section) shown before MainWindow/DialogHost exist at all, since no repository can be
-///     constructed until a database file is resolved. Modeled directly on MarkRollWindow's
-///     OnClosing-cancel pattern, but with the opposite modality stance: MarkRollWindow is deliberately
-///     non-modal and always closable; this window is fully modal and cannot be dismissed - no Escape,
-///     no title-bar close button, no Alt+F4 - until App.axaml.cs calls CloseForced() once a database
-///     has actually been bound.
+///     constructed until a database file is resolved.
+///
+///     Closing it (title-bar close, Cmd+Q, Dock > Quit, Alt+F4) quits the app: it's desktop.MainWindow
+///     until a database is bound, under ShutdownMode.OnMainWindowClose. That's what keeps the main app
+///     from ever running without a database - so the close is never cancelled; an earlier version that
+///     cancelled it left no way to quit at all short of force-quitting. Migrations run in transactions,
+///     so quitting while a file is still opening is safe; App.axaml.cs checks <see cref="IsClosed" />
+///     before handing off, so a bind that finishes after the user quit doesn't open MainWindow.
 /// </summary>
 public partial class DatabaseGateWindow : Window
 {
-    private bool forceClose;
-
     public DatabaseGateWindow()
     {
         InitializeComponent();
-        Closing += OnClosing;
+        Closed += (_, _) => IsClosed = true;
     }
 
-    private void OnClosing(object? sender, WindowClosingEventArgs e)
-    {
-        if (!forceClose)
-            e.Cancel = true;
-    }
-
-    public void CloseForced()
-    {
-        forceClose = true;
-        Close();
-    }
+    /// <summary>True once the window has closed - by the user quitting, or by the hand-off to MainWindow.</summary>
+    public bool IsClosed { get; private set; }
 }

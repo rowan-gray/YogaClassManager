@@ -103,22 +103,24 @@
                              Each bar sits over an invisible copy of the real control it stands in for (a
                              Caption TextBlock, a RecordLink Button), which sizes the row - so the card is
                              exactly as tall as the real one whatever the font metrics, instead of fixed bar
-                             heights that came out a few pixels short. The copies are inert: not focusable,
+                             heights that came out a few pixels off. The bars have no Height of their own - they
+                             stretch to the copy (inset by a margin), since a fixed-height bar taller than its
+                             copy would size the row itself. The copies are inert: not focusable,
                              not hit-testable and hidden from screen readers. -->
                         <Border Classes="Card" IsVisible="{Binding DataContext.IsLoadingDetails, ElementName=Root}">
                             <StackPanel Spacing="4">
                                 <Grid>
                                     <TextBlock Classes="Caption" Text="Student" Opacity="0"
                                                AutomationProperties.AccessibilityView="Raw" />
-                                    <Border Classes="Skeleton" Width="64" Height="12"
-                                            HorizontalAlignment="Left" VerticalAlignment="Center" />
+                                    <Border Classes="Skeleton" Width="64" Margin="0,2"
+                                            HorizontalAlignment="Left" VerticalAlignment="Stretch" />
                                 </Grid>
                                 <Grid HorizontalAlignment="Left">
                                     <Button Classes="RecordLink" Content="Placeholder" Opacity="0"
                                             IsHitTestVisible="False" Focusable="False" IsTabStop="False"
                                             AutomationProperties.AccessibilityView="Raw" />
-                                    <Border Classes="Skeleton" Width="160" Height="28"
-                                            HorizontalAlignment="Left" VerticalAlignment="Center" />
+                                    <Border Classes="Skeleton" Width="160"
+                                            HorizontalAlignment="Left" VerticalAlignment="Stretch" />
                                 </Grid>
                             </StackPanel>
                         </Border>

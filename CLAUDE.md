@@ -55,7 +55,12 @@ dotnet test  YogaClassManager.Core.SQLite.Tests/YogaClassManager.Core.SQLite.Tes
 dotnet build YogaClassManager.Avalonia/YogaClassManager.Avalonia.csproj
 dotnet test  YogaClassManager.Avalonia.Tests/YogaClassManager.Avalonia.Tests.csproj
 dotnet run   --project YogaClassManager.Avalonia/YogaClassManager.Avalonia.csproj   # launches the desktop app
+dotnet publish YogaClassManager.Avalonia -c Release -r osx-arm64                    # macOS .app (osx-x64 for Intel)
 ```
+Publishing for an `osx-*` runtime is self-contained and also builds a signed (ad-hoc) app bundle at
+`YogaClassManager.Avalonia/bin/Release/net8.0/<rid>/Yoga Class Manager.app`, via the `BundleMacApp`
+target in the `.csproj` (bundle name/id/version are properties there; the icon is
+`Platforms/macOS/AppIcon.icns`).
 While the app is running it locks `YogaClassManager.Avalonia/bin/.../YogaClassManager.Avalonia.exe`,
 so building Avalonia.Tests fails with `MSB3027`; build the tests elsewhere with
 `--artifacts-path <some temp dir>` instead of closing the app.

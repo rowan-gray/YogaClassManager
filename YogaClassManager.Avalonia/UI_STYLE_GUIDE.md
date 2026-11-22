@@ -830,7 +830,9 @@ replaces it**, or the pane jumps when the data arrives, and fixed bar heights dr
 row heights (which come from font metrics and control padding). So each of that card's bars sits
 centred over an invisible, inert copy of the control it stands in for (`Opacity="0"`, not focusable or
 hit-testable, `AutomationProperties.AccessibilityView="Raw"`), which sizes the row
-(`IdentityCardSpacingTests`). Tests run with the debounce off
+(`IdentityCardSpacingTests`). The bars themselves have **no `Height`**: they use
+`VerticalAlignment="Stretch"` plus a vertical `Margin` to inset them, because a fixed-height bar taller
+than its copy would size the row itself (a 28px bar over a 26px button made the card 2px too tall). Tests run with the debounce off
 (`TestDefaults` module initializer); `LoadDebounceTests` turns it on in a non-parallel collection.
 
 **Loading indicators need the UI thread free.** `IsBusy` (the main list's progress bar,
@@ -989,11 +991,13 @@ opposite reason.** It's the startup gate `App.axaml.cs` shows before `MainWindow
 all — no repository can be constructed until a database file is resolved (see
 `Services/Database/IAppDataStoreProvider.cs`), so it structurally *cannot* be a `DialogHost` overlay
 (there's no host to render into yet). Where `MarkRollWindow` is deliberately **non-modal** (the rest of
-the app stays usable while it's open), `DatabaseGateWindow` is deliberately **fully modal and
-uncancellable**: its `Closing` handler always sets `e.Cancel = true` unless `App.axaml.cs` has called
-its own `CloseForced()` after `IAppDataStoreProvider.InitializeAsync` has actually succeeded — no
-Escape, no title-bar close, no Alt+F4. It has no `DialogViewModelBase<TResult>`/`CancelCommand` at all
-(there's nothing to cancel to). Don't treat either of these two exceptions as precedent for a third —
+the app stays usable while it's open), `DatabaseGateWindow` is the **only** window until a database is
+bound: there's nothing behind it to cancel back to, so it has no `DialogViewModelBase<TResult>`/
+`CancelCommand`, and **closing it quits the app** (it's `desktop.MainWindow` under
+`ShutdownMode.OnMainWindowClose`). Never cancel its `Closing` to "force" a choice — that's what an earlier
+version did, and it left no way to quit (title-bar close, Cmd+Q and Dock > Quit all silently refused).
+Quitting is what keeps the app from running without a database; `App.axaml.cs`'s hand-off checks
+`IsClosed` so a file that finishes opening after the user quit doesn't open `MainWindow`. Don't treat either of these two exceptions as precedent for a third —
 they cover opposite, narrowly-justified structural needs, not a general "some dialogs can be windows"
 allowance.
 

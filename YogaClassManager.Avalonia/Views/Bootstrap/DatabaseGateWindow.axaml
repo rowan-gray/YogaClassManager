@@ -9,7 +9,7 @@
         x:Class="YogaClassManager.Avalonia.Views.Bootstrap.DatabaseGateWindow"
         x:DataType="vm:DatabaseGateViewModel"
         Icon="/Assets/appicon.ico"
-        Title="YogaClassManager"
+        Title="Yoga Class Manager"
         Width="440" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True">
@@ -25,12 +25,12 @@
         </StackPanel>
 
         <!-- NeedsSelection: first launch (no ErrorMessage), or the configured/attempted file could not
-             be opened (ErrorMessage set) - the window cannot be dismissed until one of these succeeds. -->
+             be opened (ErrorMessage set). Closing the window here quits the app. -->
         <StackPanel Spacing="{StaticResource SpacingMd}"
                     IsVisible="{Binding State, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:GateState.NeedsSelection}}">
             <TextBlock Text="Select a database file" Classes="SectionTitle" />
             <TextBlock TextWrapping="Wrap" Classes="Muted"
-                       Text="YogaClassManager needs a database file to store your data in. Choose an existing file or create a new one to get started." />
+                       Text="Yoga Class Manager needs a database file to store your data in. Choose an existing file or create a new one to get started." />
 
             <TextBlock Text="{Binding ErrorMessage}" Classes="ValidationError" TextWrapping="Wrap"
                        IsVisible="{Binding ErrorMessage, Converter={x:Static objConv:ObjectConverters.IsNotNull}}" />

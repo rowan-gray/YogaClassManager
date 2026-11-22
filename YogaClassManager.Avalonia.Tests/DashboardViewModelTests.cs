@@ -27,7 +27,7 @@ public class DashboardViewModelTests
         FakeNavigator Navigator,
         FakeSoundPlayer Sounds);
 
-    private static Fixture Create(Action<Fixture>? seed = null)
+    private static async Task<Fixture> CreateAsync(Func<Fixture, Task>? seed = null)
     {
         var store = new InMemoryDataStore();
         var identities = new InMemoryIdentityRepository(store);
@@ -45,7 +45,8 @@ public class DashboardViewModelTests
 
         // Seed before constructing: the dashboard loads in its constructor.
         var seedOnly = new Fixture(null!, students, schedules, rolls, dialogs, navigator, sounds);
-        seed?.Invoke(seedOnly);
+        if (seed is not null)
+            await seed(seedOnly);
 
         var viewModel = new DashboardViewModel(new AppScreen(), students, schedules, rolls, identities, passes,
             new InMemoryTermRepository(store), new FakeRollWindowService(), dialogs, new FakeToastService(),
@@ -53,23 +54,22 @@ public class DashboardViewModelTests
         return seedOnly with { ViewModel = viewModel };
     }
 
-    private static int AddStudent(InMemoryStudentRepository students, string firstName) =>
-        students.AddAsync(new Student(0, firstName, "Example", "0400000000", null, true)).GetAwaiter().GetResult();
+    private static Task<int> AddStudentAsync(InMemoryStudentRepository students, string firstName) =>
+        students.AddAsync(new Student(0, firstName, "Example", "0400000000", null, true));
 
     [Fact]
-    public void RecentClasses_AreEveryClassFromTheLastSevenDays_NewestFirst()
+    public async Task RecentClasses_AreEveryClassFromTheLastSevenDays_NewestFirst()
     {
         var today = DateOnly.FromDateTime(DateTime.Now);
-        var fixture = Create(f =>
+        var fixture = await CreateAsync(async f =>
         {
-            var scheduleId = f.Schedules.AddAsync(new ClassSchedule(0, DayOfWeek.Monday, new TimeOnly(9, 0), false))
-                .GetAwaiter().GetResult();
-            var schedule = f.Schedules.Query(new() { Id = (uint)scheduleId }).LoadSingle().GetAwaiter().GetResult()!;
+            var scheduleId = await f.Schedules.AddAsync(new ClassSchedule(0, DayOfWeek.Monday, new TimeOnly(9, 0), false));
+            var schedule = (await f.Schedules.Query(new() { Id = (uint)scheduleId }).LoadSingle())!;
 
-            f.Rolls.AddAsync(new ClassRoll(0, today, schedule, [])).GetAwaiter().GetResult(); // today: excluded
+            await f.Rolls.AddAsync(new ClassRoll(0, today, schedule, [])); // today: excluded
             // Day 8 is just outside the window.
             for (var daysAgo = 1; daysAgo <= DashboardViewModel.RecentClassDays + 1; daysAgo++)
-                f.Rolls.AddAsync(new ClassRoll(0, today.AddDays(-daysAgo), schedule, [])).GetAwaiter().GetResult();
+                await f.Rolls.AddAsync(new ClassRoll(0, today.AddDays(-daysAgo), schedule, []));
         });
 
         Assert.Equal(
@@ -81,28 +81,26 @@ public class DashboardViewModelTests
     /// <summary>A roll only exists once it's saved, so Today's classes must come from the schedule:
     /// a class on today's weekday shows (as a new, unsaved roll) before anyone has marked it.</summary>
     [Fact]
-    public void TodaysClasses_IncludeScheduledClassesNotMarkedYet_ByTime()
+    public async Task TodaysClasses_IncludeScheduledClassesNotMarkedYet_ByTime()
     {
         var today = DateOnly.FromDateTime(DateTime.Now);
         var otherDay = today.AddDays(1).DayOfWeek;
         int markedId = 0, unmarkedId = 0;
-        var fixture = Create(f =>
+        var fixture = await CreateAsync(async f =>
         {
-            ClassSchedule Add(DayOfWeek day, int hour, bool archived = false)
+            async Task<ClassSchedule> Add(DayOfWeek day, int hour, bool archived = false)
             {
-                var id = f.Schedules.AddAsync(new ClassSchedule(0, day, new TimeOnly(hour, 0), archived))
-                    .GetAwaiter().GetResult();
-                return f.Schedules.Query(new() { Id = (uint)id, IncludeArchived = true }).LoadSingle()
-                    .GetAwaiter().GetResult()!;
+                var id = await f.Schedules.AddAsync(new ClassSchedule(0, day, new TimeOnly(hour, 0), archived));
+                return (await f.Schedules.Query(new() { Id = (uint)id, IncludeArchived = true }).LoadSingle())!;
             }
 
-            var evening = Add(today.DayOfWeek, 18);
+            var evening = await Add(today.DayOfWeek, 18);
             markedId = evening.Id;
-            unmarkedId = Add(today.DayOfWeek, 8).Id;
-            Add(today.DayOfWeek, 12, archived: true); // archived: not today's class any more
-            Add(otherDay, 9);                          // another weekday
+            unmarkedId = (await Add(today.DayOfWeek, 8)).Id;
+            await Add(today.DayOfWeek, 12, archived: true); // archived: not today's class any more
+            await Add(otherDay, 9);                        // another weekday
 
-            f.Rolls.AddAsync(new ClassRoll(0, today, evening, [])).GetAwaiter().GetResult();
+            await f.Rolls.AddAsync(new ClassRoll(0, today, evening, []));
         });
 
         var todays = fixture.ViewModel.TodaysClasses;
@@ -115,7 +113,7 @@ public class DashboardViewModelTests
     [Fact]
     public async Task ClickingTheBanner_PlaysANootNoot()
     {
-        var fixture = Create();
+        var fixture = await CreateAsync();
 
         await fixture.ViewModel.PlayNootCommand.Execute();
 
@@ -125,7 +123,7 @@ public class DashboardViewModelTests
     [Fact]
     public async Task AddStudent_OpensTheNewStudentsPage()
     {
-        var fixture = Create();
+        var fixture = await CreateAsync();
         fixture.Dialogs.Answer<StudentEditViewModel>(new Student(0, "Judi", "Dench", "0400000000", null, true));
 
         await fixture.ViewModel.AddStudentCommand.Execute();
@@ -139,7 +137,7 @@ public class DashboardViewModelTests
     public async Task AddPass_PicksAStudentThenSavesThePassAgainstThem()
     {
         var studentId = 0;
-        var fixture = Create(f => studentId = AddStudent(f.Students, "Annie"));
+        var fixture = await CreateAsync(async f => studentId = await AddStudentAsync(f.Students, "Annie"));
         var student = (await fixture.Students.Query(new() { Id = (uint)studentId }).LoadSingle())!;
         var newPass = new CasualPass(0, studentId, 10, new ObservableCollection<PassAlteration>(), 0);
         fixture.Dialogs.Answer<StudentPickerViewModel>(student).Answer<PassEditViewModel>(newPass);
@@ -156,7 +154,7 @@ public class DashboardViewModelTests
     public async Task SearchStudent_OpensThePickedStudentsPage()
     {
         var studentId = 0;
-        var fixture = Create(f => studentId = AddStudent(f.Students, "Annie"));
+        var fixture = await CreateAsync(async f => studentId = await AddStudentAsync(f.Students, "Annie"));
         var student = (await fixture.Students.Query(new() { Id = (uint)studentId }).LoadSingle())!;
         fixture.Dialogs.Answer<StudentPickerViewModel>(student);
 
@@ -168,7 +166,7 @@ public class DashboardViewModelTests
     [Fact]
     public async Task SearchStudent_DoesNothing_WhenThePickerIsCancelled()
     {
-        var fixture = Create(f => AddStudent(f.Students, "Annie"));
+        var fixture = await CreateAsync(f => AddStudentAsync(f.Students, "Annie"));
 
         await fixture.ViewModel.SearchStudentCommand.Execute();
 
@@ -179,16 +177,15 @@ public class DashboardViewModelTests
     /// MarkRollCommand through $parent[ItemsControl] - a broken binding there fails silently at
     /// runtime, so check the rendered buttons are actually wired.</summary>
     [AvaloniaFact]
-    public void DashboardView_WiresMarkRollInBothClassSections()
+    public async Task DashboardView_WiresMarkRollInBothClassSections()
     {
         var today = DateOnly.FromDateTime(DateTime.Now);
-        var fixture = Create(f =>
+        var fixture = await CreateAsync(async f =>
         {
-            var scheduleId = f.Schedules.AddAsync(new ClassSchedule(0, DayOfWeek.Monday, new TimeOnly(9, 0), false))
-                .GetAwaiter().GetResult();
-            var schedule = f.Schedules.Query(new() { Id = (uint)scheduleId }).LoadSingle().GetAwaiter().GetResult()!;
-            f.Rolls.AddAsync(new ClassRoll(0, today, schedule, [])).GetAwaiter().GetResult();
-            f.Rolls.AddAsync(new ClassRoll(0, today.AddDays(-7), schedule, [])).GetAwaiter().GetResult();
+            var scheduleId = await f.Schedules.AddAsync(new ClassSchedule(0, DayOfWeek.Monday, new TimeOnly(9, 0), false));
+            var schedule = (await f.Schedules.Query(new() { Id = (uint)scheduleId }).LoadSingle())!;
+            await f.Rolls.AddAsync(new ClassRoll(0, today, schedule, []));
+            await f.Rolls.AddAsync(new ClassRoll(0, today.AddDays(-7), schedule, []));
         });
 
         var view = new Views.Dashboard.DashboardView { DataContext = fixture.ViewModel };

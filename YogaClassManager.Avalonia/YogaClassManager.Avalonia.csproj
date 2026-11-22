@@ -34,4 +34,61 @@
     <ProjectReference Include="..\YogaClassManager.Core\YogaClassManager.Core.csproj" />
     <ProjectReference Include="..\YogaClassManager.Core.SQLite\YogaClassManager.Core.SQLite.csproj" />
   </ItemGroup>
+
+  <!--
+    macOS app bundle. Publishing for a macOS runtime also wraps the output in a double-clickable .app:
+      dotnet publish YogaClassManager.Avalonia -c Release -r osx-arm64    (Apple silicon; osx-x64 for Intel)
+    -> bin/Release/net8.0/osx-arm64/Yoga Class Manager.app - drag it into /Applications.
+    Self-contained, so the Mac needs no .NET install. The bundle is ad-hoc signed only (no Apple Developer
+    ID): fine on the Mac that built it; on another Mac, Gatekeeper blocks it until right-click > Open.
+    App data (database, settings, logs) lives outside the bundle, so replacing the app keeps it.
+  -->
+  <PropertyGroup>
+    <MacAppName>Yoga Class Manager</MacAppName>
+    <MacBundleIdentifier>au.rowangray.yogaclassmanager</MacBundleIdentifier>
+    <MacMinimumSystemVersion>11.0</MacMinimumSystemVersion>
+    <Version>3.0.0</Version>
+    <IsMacPublish>false</IsMacPublish>
+    <IsMacPublish Condition="$(RuntimeIdentifier.StartsWith('osx'))">true</IsMacPublish>
+    <SelfContained Condition="'$(IsMacPublish)' == 'true'">true</SelfContained>
+  </PropertyGroup>
+
+  <Target Name="BundleMacApp" AfterTargets="Publish" Condition="'$(IsMacPublish)' == 'true'">
+    <PropertyGroup>
+      <MacAppBundle>$([System.IO.Path]::GetFullPath('$(PublishDir)../$(MacAppName).app'))</MacAppBundle>
+      <MacInfoPlist><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key><string>$(MacAppName)</string>
+    <key>CFBundleDisplayName</key><string>$(MacAppName)</string>
+    <key>CFBundleIdentifier</key><string>$(MacBundleIdentifier)</string>
+    <key>CFBundleVersion</key><string>$(Version)</string>
+    <key>CFBundleShortVersionString</key><string>$(Version)</string>
+    <key>CFBundleExecutable</key><string>$(AssemblyName)</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>LSMinimumSystemVersion</key><string>$(MacMinimumSystemVersion)</string>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>NSPrincipalClass</key><string>NSApplication</string>
+</dict>
+</plist>]]></MacInfoPlist>
+    </PropertyGroup>
+    <ItemGroup>
+      <MacPublishedFile Include="$(PublishDir)**\*" />
+    </ItemGroup>
+
+    <RemoveDir Directories="$(MacAppBundle)" />
+    <!-- Everything stays beside the executable: the app finds Assets/Sounds via AppContext.BaseDirectory. -->
+    <Copy SourceFiles="@(MacPublishedFile)"
+          DestinationFiles="@(MacPublishedFile->'$(MacAppBundle)/Contents/MacOS/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <!-- Generated once from Assets/appicon.ico (sips + iconutil). -->
+    <Copy SourceFiles="Platforms/macOS/AppIcon.icns" DestinationFolder="$(MacAppBundle)/Contents/Resources" />
+    <WriteLinesToFile File="$(MacAppBundle)/Contents/Info.plist" Lines="$(MacInfoPlist)" Overwrite="true" />
+    <!-- Apple silicon refuses to run unsigned native code; ad-hoc signing is enough locally. -->
+    <Exec Condition="$([MSBuild]::IsOSPlatform('OSX'))"
+          Command="chmod +x &quot;$(MacAppBundle)/Contents/MacOS/$(AssemblyName)&quot; &amp;&amp; codesign --force --deep --sign - &quot;$(MacAppBundle)&quot;" />
+    <Message Importance="high" Text="macOS app bundle: $(MacAppBundle)" />
+  </Target>
 </Project>

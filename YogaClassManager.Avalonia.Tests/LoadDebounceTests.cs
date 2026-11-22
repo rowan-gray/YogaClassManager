@@ -27,21 +27,33 @@ public class LoadDebounceCollection;
 [Collection(nameof(LoadDebounceTests))]
 public class LoadDebounceTests : IDisposable
 {
-    public LoadDebounceTests() => ViewModelBase.LoadDebounce = TimeSpan.FromMilliseconds(150);
+    public LoadDebounceTests() => ViewModelBase.LoadDebounce = TimeSpan.FromMilliseconds(500);
 
     public void Dispose() => ViewModelBase.LoadDebounce = TimeSpan.Zero;
 
-    private static void PumpFor(int milliseconds)
+    /// <summary>
+    ///     Pumps the UI thread until <paramref name="done" /> holds (or a generous timeout, after which the
+    ///     test's own asserts report what's wrong). Waiting on the condition rather than a fixed time keeps
+    ///     these tests independent of machine speed.
+    ///
+    ///     Running jobs alone isn't enough for anything visual: the headless platform only lays a window
+    ///     out when asked, so rows or templates that arrive after <c>Show()</c> are never realized unless
+    ///     <paramref name="window" /> is laid out here too.
+    /// </summary>
+    private static void PumpUntil(Func<bool> done, Window? window = null)
     {
-        var until = DateTime.UtcNow.AddMilliseconds(milliseconds);
-        while (DateTime.UtcNow < until)
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (true)
         {
             if (Dispatcher.UIThread.CheckAccess())
+            {
                 Dispatcher.UIThread.RunJobs();
+                window?.UpdateLayout();
+            }
+            if (done() || DateTime.UtcNow >= deadline)
+                return;
             Thread.Sleep(5);
         }
-        if (Dispatcher.UIThread.CheckAccess())
-            Dispatcher.UIThread.RunJobs();
     }
 
     private sealed class TestPage : CollectionPageModelBase<string>, IRoutableViewModel
@@ -94,7 +106,7 @@ public class LoadDebounceTests : IDisposable
         page.Select(3);
         Assert.Empty(page.DetailLoads);         // nothing fetched yet
 
-        PumpFor(400);
+        PumpUntil(() => page.DetailLoads.Count > 0 && !page.IsLoadingDetails);
         Assert.Equal([3], page.DetailLoads);    // only the one we stopped on
         Assert.False(page.IsLoadingDetails);
     }
@@ -110,7 +122,7 @@ public class LoadDebounceTests : IDisposable
         Assert.True(page.IsBusy);               // the list skeleton is up
         Assert.Equal(0, page.ListLoads);        // ...but nothing fetched yet
 
-        PumpFor(400);
+        PumpUntil(() => !page.IsBusy);
         Assert.Equal(1, page.ListLoads);
         Assert.Equal(["Ada"], page.Items);
         Assert.False(page.IsBusy);
@@ -143,12 +155,13 @@ public class LoadDebounceTests : IDisposable
             new ScriptedDialogService(), new FakeToastService(), new FakeNavigator());
         var window = new Window { Content = new IdentitiesView { DataContext = viewModel }, Width = 1200, Height = 800 };
         window.Show();
-        PumpFor(400); // the page's own first load
+        PumpUntil(() => viewModel.Items.Count > 0 && !viewModel.IsBusy, window); // the page's own first load
         viewModel.Selection = null;
         Dispatcher.UIThread.RunJobs();
 
         viewModel.Selection = viewModel.Items.Single(i => i.Id == judiId);
         Dispatcher.UIThread.RunJobs();
+        window.UpdateLayout(); // realize the details pane for the new selection (see PumpUntil)
 
         // The link-card placeholder - not the main list's card, which holds a SkeletonList of its own.
         Border SkeletonCard() => window.GetVisualDescendants().OfType<Border>()
@@ -159,7 +172,7 @@ public class LoadDebounceTests : IDisposable
         Assert.True(viewModel.IsLoadingDetails);
         Assert.True(SkeletonCard().IsVisible);
 
-        PumpFor(400);
+        PumpUntil(() => !viewModel.IsLoadingDetails && viewModel.LinkedStudent is not null, window);
         Assert.False(SkeletonCard().IsVisible);
         Assert.NotNull(viewModel.LinkedStudent); // the real Student card's data has arrived
         window.Close();
@@ -209,7 +222,7 @@ public class LoadDebounceTests : IDisposable
                         s.FindAncestorOfType<Avalonia.Controls.LinkedRecordsPanel>() is null);
         Assert.True(skeleton.IsVisible); // waiting out the debounce
 
-        PumpFor(400);
+        PumpUntil(() => !skeleton.IsVisible && window.GetVisualDescendants().OfType<ListBoxItem>().Any(), window);
         Assert.False(skeleton.IsVisible);
         Assert.NotEmpty(window.GetVisualDescendants().OfType<ListBoxItem>());
         window.Close();
