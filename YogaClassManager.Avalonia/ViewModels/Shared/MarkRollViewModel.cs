@@ -174,27 +174,18 @@ public class MarkRollViewModel : ViewModelBase
 
     private async Task AddStudentAsync(Student student)
     {
-        try
-        {
-            StartBusy();
+        // Cancelled = the instructor backed out of "Add pass" (no usable pass): they're not put on the
+        // roll without one, and the search (query and results) is left as it was so they can try
+        // again or pick someone else. See RollPassResolver for how the pass is chosen.
+        var choice = await passResolver.ChooseForNewAttendeeAsync(student, classSchedule, Date, Dialogs);
+        if (choice.Cancelled)
+            return;
 
-            // Cancelled = the instructor backed out of "Add pass" (no usable pass): they're not put on the
-            // roll without one, and the search (query and results) is left as it was so they can try
-            // again or pick someone else. See RollPassResolver for how the pass is chosen.
-            var choice = await passResolver.ChooseForNewAttendeeAsync(student, classSchedule, Date, Dialogs);
-            if (choice.Cancelled)
-                return;
+        await LoadHealthConcernsAsync(student);
+        Entries.Add(new ClassRollEntry(student, choice.Pass));
+        IsDirty = true;
 
-            await LoadHealthConcernsAsync(student);
-            Entries.Add(new ClassRollEntry(student, choice.Pass));
-            IsDirty = true;
-
-            Search.SearchQuery = null;
-        }
-        finally
-        {
-            EndBusy();
-        }
+        Search.SearchQuery = null;
     }
 
     private async Task LoadAttendeeHealthConcernsAsync()
@@ -234,21 +225,12 @@ public class MarkRollViewModel : ViewModelBase
     /// leaves the entry's current pass untouched rather than falling back to "no pass".</summary>
     private async Task ChangePassAsync(ClassRollEntry entry)
     {
-        try
-        {
-            StartBusy();
+        var choice = await passResolver.ChooseReplacementAsync(entry.Student, classSchedule, Date, Dialogs);
+        if (choice.Cancelled)
+            return;
 
-            var choice = await passResolver.ChooseReplacementAsync(entry.Student, classSchedule, Date, Dialogs);
-            if (choice.Cancelled)
-                return;
-
-            var index = Entries.IndexOf(entry);
-            Entries[index] = new ClassRollEntry(entry.Student, choice.Pass);
-            IsDirty = true;
-        }
-        finally
-        {
-            EndBusy();
-        }
+        var index = Entries.IndexOf(entry);
+        Entries[index] = new ClassRollEntry(entry.Student, choice.Pass);
+        IsDirty = true;
     }
 }

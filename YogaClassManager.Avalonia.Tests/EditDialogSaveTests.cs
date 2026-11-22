@@ -169,6 +169,64 @@ public class EditDialogSaveTests
     }
 
     [Fact]
+    public void PassEdit_NewDatedPass_DefaultsTo10Classes_OverFourMonthsFromToday()
+    {
+        var (dialog, _, _) = CreatePassDialog();
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        Assert.Equal(1, dialog.ClassCount); // casual first
+
+        dialog.Kind = PassKind.Dated;
+
+        Assert.Equal(10, dialog.ClassCount);
+        Assert.Equal(today, dialog.StartDate);
+        Assert.Equal(today.AddMonths(4), dialog.EndDate);
+
+        dialog.Kind = PassKind.Casual;
+        Assert.Equal(1, dialog.ClassCount);
+    }
+
+    [Fact]
+    public void PassEdit_NewPass_KeepsACountTheUserChose_WhenSwitchingKind()
+    {
+        var (dialog, _, _) = CreatePassDialog();
+        dialog.ClassCount = 5;
+
+        dialog.Kind = PassKind.Dated;
+        Assert.Equal(5, dialog.ClassCount);
+
+        dialog.Kind = PassKind.Casual;
+        Assert.Equal(5, dialog.ClassCount);
+    }
+
+    [Fact]
+    public void PassEdit_NewPass_EndDateFollowsTheStartDate_UntilTheUserPicksOne()
+    {
+        var (dialog, _, _) = CreatePassDialog();
+        dialog.Kind = PassKind.Dated;
+
+        dialog.StartDate = new DateOnly(2026, 2, 10);
+        Assert.Equal(new DateOnly(2026, 6, 10), dialog.EndDate);
+
+        dialog.EndDate = new DateOnly(2026, 5, 1);
+        dialog.StartDate = new DateOnly(2026, 2, 17);
+        Assert.Equal(new DateOnly(2026, 5, 1), dialog.EndDate);
+    }
+
+    [Fact]
+    public void PassEdit_EditingADatedPass_LeavesItsCountAndDatesAlone()
+    {
+        var editing = new DatedPass(3, 7, 6, new ObservableCollection<PassAlteration>(), 0, Start, End);
+        var (dialog, _, _) = CreatePassDialog(editing);
+
+        dialog.StartDate = Start.AddDays(7);
+        dialog.Kind = PassKind.Casual;
+        dialog.Kind = PassKind.Dated;
+
+        Assert.Equal(6, dialog.ClassCount);
+        Assert.Equal(End, dialog.EndDate);
+    }
+
+    [Fact]
     public async Task PassEdit_DatedPass_StaysOpen_WhenEndIsBeforeStart()
     {
         var (dialog, closed, _) = CreatePassDialog();

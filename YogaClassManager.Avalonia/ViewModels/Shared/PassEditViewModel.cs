@@ -22,8 +22,18 @@ public class PassEditViewModel : DialogViewModelBase<Pass>
     private readonly int studentId;
     private readonly int passId;
 
+    /// <summary>A new pass's suggested class count per kind - a casual pass is usually a single class, a
+    /// dated pass a block of 10.</summary>
+    private const int DefaultCasualClassCount = 1;
+    private const int DefaultDatedClassCount = 10;
+
+    /// <summary>A new dated pass runs this long from its start date.</summary>
+    private const int DefaultDatedPassMonths = 4;
+
     private PassKind kind;
-    private int classCount = 1;
+    private int classCount = DefaultCasualClassCount;
+    private bool classCountEdited;
+    private bool endDateEdited;
     private int classesUsed;
     private DateOnly startDate;
     private DateOnly endDate;
@@ -46,7 +56,7 @@ public class PassEditViewModel : DialogViewModelBase<Pass>
 
         var today = DateOnly.FromDateTime(DateTime.Now);
         startDate = today;
-        endDate = today.AddMonths(1);
+        endDate = today.AddMonths(DefaultDatedPassMonths);
 
         if (editingPass is not null)
         {
@@ -108,17 +118,32 @@ public class PassEditViewModel : DialogViewModelBase<Pass>
     public string Title => IsNew ? $"Add pass for {StudentName}" : $"Edit pass for {StudentName}";
     public IReadOnlyList<PassKind> KindOptions { get; } = [PassKind.Casual, PassKind.Dated, PassKind.Term];
 
+    /// <summary>On a new pass, switching kind also switches ClassCount to that kind's default - until the
+    /// user sets a count themselves, which is then kept across kinds.</summary>
     public PassKind Kind
     {
         get => kind;
-        set => this.RaiseAndSetIfChanged(ref kind, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref kind, value);
+            if (IsNew && !classCountEdited && value is PassKind.Casual or PassKind.Dated)
+            {
+                classCount = value == PassKind.Dated ? DefaultDatedClassCount : DefaultCasualClassCount;
+                this.RaisePropertyChanged(nameof(ClassCount));
+            }
+        }
     }
 
     /// <summary>Doubles as the "single-use pass" case when set to 1 for a Casual pass - no separate type exists.</summary>
     public int ClassCount
     {
         get => classCount;
-        set => this.RaiseAndSetIfChanged(ref classCount, value);
+        set
+        {
+            if (value != classCount)
+                classCountEdited = true;
+            this.RaiseAndSetIfChanged(ref classCount, value);
+        }
     }
 
     public int ClassesUsed
@@ -127,16 +152,31 @@ public class PassEditViewModel : DialogViewModelBase<Pass>
         set => this.RaiseAndSetIfChanged(ref classesUsed, value);
     }
 
+    /// <summary>On a new pass, moving the start date moves the end date with it (keeping the default
+    /// duration) until the user picks an end date themselves.</summary>
     public DateOnly StartDate
     {
         get => startDate;
-        set => this.RaiseAndSetIfChanged(ref startDate, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref startDate, value);
+            if (IsNew && !endDateEdited)
+            {
+                endDate = value.AddMonths(DefaultDatedPassMonths);
+                this.RaisePropertyChanged(nameof(EndDate));
+            }
+        }
     }
 
     public DateOnly EndDate
     {
         get => endDate;
-        set => this.RaiseAndSetIfChanged(ref endDate, value);
+        set
+        {
+            if (value != endDate)
+                endDateEdited = true;
+            this.RaiseAndSetIfChanged(ref endDate, value);
+        }
     }
 
     public ObservableCollection<Term> Terms { get; } = new();

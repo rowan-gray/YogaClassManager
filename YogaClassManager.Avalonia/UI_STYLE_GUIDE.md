@@ -735,6 +735,13 @@ Both compute emptiness via `Controls/CollectionEmptinessWatcher.cs`, which follo
 in place on every refresh, so a one-shot count at bind time would go stale immediately. Reuse the
 watcher rather than re-deriving emptiness if you add a third list control.
 
+**Item counts beside a list's heading** ("Attendees 12") are a `Caption`-styled number right after the
+heading text, kept live as items come and go. `LinkedRecordsPanel` does it with `ShowCount="True"`
+(its `ItemCount` rides on the same watcher); it's opt-in, used today only by the Class Rolls details
+pane's Attendees. Mark Roll's hand-built Attendees heading binds `Entries.Count` directly, which also
+updates live because `Entries` is an `ObservableCollection`. Show a count where the number itself
+matters, like how many came to a class, not on every list.
+
 Write empty text that reflects *why* it's empty — "No students match the current search." beats "No
 items", because on a filtered list the filter is usually the reason. Where "nothing yet" and "nothing
 matched" are genuinely different situations, say which: the student search (`PersonSearchViewModel.SearchEmptyText`)
@@ -809,8 +816,9 @@ than flashing a bar:
 
 Skeletons are **static**: no shimmer or pulse, since a looping animation would break the ~200ms
 ceiling under "Animation". `SkeletonBrush` (the theme's `SystemBaseLowColor`) fills them. A plain
-`ProgressBar` remains only where there's no content shape to mimic: Mark Roll's pass lookup and the
-database window.
+`ProgressBar` remains only where there's no content shape to mimic: the database window. Don't add
+one for a quick local lookup either: Mark Roll's pass lookup when adding a student had one, and against
+the local database it only flickered, so it was removed.
 
 **Loads are debounced** (`ViewModelBase.LoadDebounce`, 200ms). A page's first load waits it out with
 its list skeleton showing, and is skipped if you've already moved to another page by then

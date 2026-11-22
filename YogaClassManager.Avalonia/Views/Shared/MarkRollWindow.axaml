@@ -31,9 +31,8 @@
                         AutomationProperties.Name="Roll date"
                         SelectedDate="{Binding Date, Converter={x:Static localConv:DateOnlyToDateTimeConverter.Instance}}"
                         HorizontalAlignment="Stretch" />
-                    <!-- Resolving which pass a student should use hits the repository (StartBusy in
-                         AddStudentAsync/ChangePassAsync); without this the window just sat there. -->
-                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+                    <!-- No progress bar for the pass lookup when adding a student: against the local
+                         database it finishes in a few milliseconds, so one only flickered. -->
                 </StackPanel>
 
                 <controls:FillWrapPanel Grid.Row="2" Spacing="16">
@@ -48,8 +47,14 @@
                     </Grid>
 
                     <Grid controls:FillWrapPanel.WrapWidth="300" RowDefinitions="Auto,*">
-                        <TextBlock Grid.Row="0" Text="Attendees" FontWeight="{StaticResource FontWeightMedium}"
-                                   Margin="{StaticResource HeaderRowMargin}" />
+                        <!-- Entries is an ObservableCollection, so its Count updates as students are
+                             added and removed - same "Attendees 12" shape as the Class Rolls details pane. -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="{StaticResource HeaderRowMargin}">
+                            <TextBlock Text="Attendees" FontWeight="{StaticResource FontWeightMedium}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Entries.Count}" Classes="Caption" Margin="8,0,0,0"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
                         <Border Grid.Row="1" Classes="Card" Padding="4">
                           <Panel>
                             <TextBlock Text="No students marked present yet." Classes="Caption"

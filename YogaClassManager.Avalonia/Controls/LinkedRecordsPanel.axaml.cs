@@ -88,8 +88,15 @@ public partial class LinkedRecordsPanel : UserControl
     public static readonly DirectProperty<LinkedRecordsPanel, bool> IsEmptyProperty =
         AvaloniaProperty.RegisterDirect<LinkedRecordsPanel, bool>(nameof(IsEmpty), o => o.IsEmpty);
 
+    public static readonly StyledProperty<bool> ShowCountProperty =
+        AvaloniaProperty.Register<LinkedRecordsPanel, bool>(nameof(ShowCount));
+
+    public static readonly DirectProperty<LinkedRecordsPanel, int> ItemCountProperty =
+        AvaloniaProperty.RegisterDirect<LinkedRecordsPanel, int>(nameof(ItemCount), o => o.ItemCount);
+
     private readonly CollectionEmptinessWatcher emptiness;
     private bool isEmpty = true;
+    private int itemCount;
 
     static LinkedRecordsPanel()
     {
@@ -99,7 +106,12 @@ public partial class LinkedRecordsPanel : UserControl
 
     public LinkedRecordsPanel()
     {
-        emptiness = new CollectionEmptinessWatcher(empty => IsEmpty = empty);
+        // The watcher re-checks on every collection change, so the count rides along with it.
+        emptiness = new CollectionEmptinessWatcher(empty =>
+        {
+            IsEmpty = empty;
+            ItemCount = ItemsSource?.Cast<object>().Count() ?? 0;
+        });
         InitializeComponent();
     }
 
@@ -115,6 +127,20 @@ public partial class LinkedRecordsPanel : UserControl
     {
         get => isEmpty;
         private set => SetAndRaise(IsEmptyProperty, ref isEmpty, value);
+    }
+
+    /// <summary>Shows how many items the list holds beside the header ("Attendees 12"), kept current as
+    /// items are added and removed. Opt-in: most panels' counts aren't worth the space.</summary>
+    public bool ShowCount
+    {
+        get => GetValue(ShowCountProperty);
+        set => SetValue(ShowCountProperty, value);
+    }
+
+    public int ItemCount
+    {
+        get => itemCount;
+        private set => SetAndRaise(ItemCountProperty, ref itemCount, value);
     }
 
     public string? Header

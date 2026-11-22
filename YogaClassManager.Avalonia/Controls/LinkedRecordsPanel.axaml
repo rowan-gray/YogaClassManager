@@ -10,9 +10,16 @@
     <DockPanel>
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto"
               Margin="{StaticResource HeaderRowMargin}">
-            <TextBlock Grid.Column="0" Text="{Binding Header, ElementName=Control}"
-                       FontWeight="{StaticResource FontWeightSemiBold}" VerticalAlignment="Center"
-                       TextTrimming="CharacterEllipsis" />
+            <!-- Left-aligned "*,Auto": the header trims when space is tight while the count stays
+                 right beside it rather than drifting to the far edge. -->
+            <Grid Grid.Column="0" ColumnDefinitions="*,Auto" HorizontalAlignment="Left">
+                <TextBlock Grid.Column="0" Text="{Binding Header, ElementName=Control}"
+                           FontWeight="{StaticResource FontWeightSemiBold}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Classes="Caption" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Text="{Binding ItemCount, ElementName=Control}"
+                           IsVisible="{Binding ShowCount, ElementName=Control}" />
+            </Grid>
             <controls:SortByButton Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
                 SortOptions="{Binding SortOptions, ElementName=Control}"
                 SelectedSort="{Binding SelectedSort, ElementName=Control, Mode=TwoWay}"

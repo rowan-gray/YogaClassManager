@@ -84,7 +84,7 @@
                                  roll in the Mark Roll window: + adds one student, and each row's "..." has
                                  Change pass / Remove. Binds the page's observable Attendees (the roll
                                  model's StudentEntries is a plain List, so it can't refresh itself). -->
-                            <controls:LinkedRecordsPanel Header="Attendees"
+                            <controls:LinkedRecordsPanel Header="Attendees" ShowCount="True"
                                 EmptyText="No students marked present for this roll."
                                 ItemsSource="{Binding DataContext.Attendees, ElementName=Root}"
                                 AddCommand="{Binding DataContext.AddAttendeeCommand, ElementName=Root}"
